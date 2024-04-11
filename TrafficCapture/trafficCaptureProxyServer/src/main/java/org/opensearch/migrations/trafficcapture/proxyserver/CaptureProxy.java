@@ -16,7 +16,6 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.SaslConfigs;
-import org.opensearch.common.settings.Settings;
 import org.opensearch.migrations.tracing.ActiveContextTracker;
 import org.opensearch.migrations.tracing.ActiveContextTrackerByActivityType;
 import org.opensearch.migrations.tracing.CompositeContextTracker;
@@ -30,8 +29,6 @@ import org.opensearch.migrations.trafficcapture.kafkaoffloader.KafkaCaptureFacto
 import org.opensearch.migrations.trafficcapture.netty.HeaderValueFilteringCapturePredicate;
 import org.opensearch.migrations.trafficcapture.proxyserver.netty.BacksideConnectionPool;
 import org.opensearch.migrations.trafficcapture.proxyserver.netty.NettyScanningHttpProxy;
-import org.opensearch.security.ssl.DefaultSecurityKeyStore;
-import org.opensearch.security.ssl.util.SSLConfigConstants;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -169,23 +166,23 @@ public class CaptureProxy {
         }
     }
 
-    @SneakyThrows
-    protected static Settings getSettings(@NonNull String configFile) {
-        var builder = Settings.builder();
-        try (var lines = Files.lines(Paths.get(configFile))) {
-            lines
-                    .map(line->Optional.of(line.indexOf('#')).filter(i->i>=0).map(i->line.substring(0, i)).orElse(line))
-                    .filter(line->line.startsWith(HTTPS_CONFIG_PREFIX) && line.contains(":"))
-                    .forEach(line->{
-                        var parts = line.split(": *", 2);
-                        builder.put(parts[0], parts[1]);
-                    });
-        }
-        builder.put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLED, false);
-        var configParentDirStr = Paths.get(configFile).toAbsolutePath().getParent();
-        builder.put("path.home", configParentDirStr);
-        return builder.build();
-    }
+    // @SneakyThrows
+    // protected static Settings getSettings(@NonNull String configFile) {
+    //     var builder = Settings.builder();
+    //     try (var lines = Files.lines(Paths.get(configFile))) {
+    //         lines
+    //                 .map(line->Optional.of(line.indexOf('#')).filter(i->i>=0).map(i->line.substring(0, i)).orElse(line))
+    //                 .filter(line->line.startsWith(HTTPS_CONFIG_PREFIX) && line.contains(":"))
+    //                 .forEach(line->{
+    //                     var parts = line.split(": *", 2);
+    //                     builder.put(parts[0], parts[1]);
+    //                 });
+    //     }
+    //     builder.put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLED, false);
+    //     var configParentDirStr = Paths.get(configFile).toAbsolutePath().getParent();
+    //     builder.put("path.home", configParentDirStr);
+    //     return builder.build();
+    // }
 
     protected static IConnectionCaptureFactory<Object> getNullConnectionCaptureFactory() {
         System.err.println("No trace log directory specified.  Logging to /dev/null");
@@ -321,11 +318,11 @@ public class CaptureProxy {
                 RootOtelContext.initializeOpenTelemetryWithCollectorOrAsNoop(params.otelCollectorEndpoint, "capture"),
                 new CompositeContextTracker(new ActiveContextTracker(), new ActiveContextTrackerByActivityType()));
 
-        var sksOp = Optional.ofNullable(params.sslConfigFilePath)
-                .map(sslConfigFile->new DefaultSecurityKeyStore(getSettings(sslConfigFile),
-                        Paths.get(sslConfigFile).toAbsolutePath().getParent()));
+        // var sksOp = Optional.ofNullable(params.sslConfigFilePath)
+        //         .map(sslConfigFile->new DefaultSecurityKeyStore(getSettings(sslConfigFile),
+        //                 Paths.get(sslConfigFile).toAbsolutePath().getParent()));
 
-        sksOp.ifPresent(DefaultSecurityKeyStore::initHttpSSLConfig);
+        // sksOp.ifPresent(DefaultSecurityKeyStore::initHttpSSLConfig);
         var proxy = new NettyScanningHttpProxy(params.frontsidePort);
         try {
             var pooledConnectionTimeout = params.destinationConnectionPoolSize == 0 ? Duration.ZERO :
@@ -333,13 +330,7 @@ public class CaptureProxy {
             var backsideConnectionPool = new BacksideConnectionPool(backsideUri,
                     loadBacksideSslContext(backsideUri, params.allowInsecureConnectionsToBackside),
                     params.destinationConnectionPoolSize, pooledConnectionTimeout);
-            Supplier<SSLEngine> sslEngineSupplier = sksOp.map(sks -> (Supplier<SSLEngine>) () -> {
-                try {
-                    return sks.createHTTPSSLEngine();
-                } catch (Exception e) {
-                    throw Lombok.sneakyThrow(e);
-                }
-            }).orElse(null);
+            Supplier<SSLEngine> sslEngineSupplier = () -> null;
             var headerCapturePredicate =
                     new HeaderValueFilteringCapturePredicate(convertPairListToMap(params.suppressCaptureHeaderPairs));
             proxy.start(rootContext, backsideConnectionPool, params.numThreads, sslEngineSupplier,
