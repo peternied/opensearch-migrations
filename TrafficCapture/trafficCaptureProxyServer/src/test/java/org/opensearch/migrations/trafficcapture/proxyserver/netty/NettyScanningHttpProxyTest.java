@@ -1,10 +1,11 @@
 package org.opensearch.migrations.trafficcapture.proxyserver.netty;
 
+import lombok.Data;
+import lombok.Getter;
 import lombok.Lombok;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.opensearch.common.collect.Tuple;
 import org.opensearch.migrations.testutils.HttpRequestFirstLine;
 import org.opensearch.migrations.testutils.PortFinder;
 import org.opensearch.migrations.testutils.SimpleHttpClientForTesting;
@@ -96,7 +97,7 @@ class NettyScanningHttpProxyTest {
         var servers = startServers(rootCtx, captureFactory);
 
         try (var client = new SimpleHttpClientForTesting()) {
-            var nettyEndpoint = URI.create("http://localhost:" + servers.v1().getProxyPort() + "/");
+            var nettyEndpoint = URI.create("http://localhost:" + servers.port + "/");
             for (int i=0; i<NUM_INTERACTIONS; ++i) {
                 var responseBody = makeTestRequestViaClient(client, nettyEndpoint);
                 Assertions.assertEquals(UPSTREAM_SERVER_RESPONSE_BODY, responseBody);
@@ -175,7 +176,7 @@ class NettyScanningHttpProxyTest {
         return responseBody;
     }
 
-    private static Tuple<NettyScanningHttpProxy, Integer>
+    private static ProxyInstance
     startServers(RootWireLoggingContext rootCtx, IConnectionCaptureFactory connectionCaptureFactory) throws
             PortFinder.ExceededMaxPortAssigmentAttemptException
     {
@@ -213,7 +214,13 @@ class NettyScanningHttpProxyTest {
                 throw Lombok.sneakyThrow(e);
             }
         });
-        return new Tuple<>(nshp.get(), underlyingPort);
+        return new ProxyInstance(nshp.get(), underlyingPort);
+    }
+
+    @Data
+    private static class ProxyInstance {
+        private final NettyScanningHttpProxy proxyServer;
+        private final int port;
     }
 
     private static SimpleHttpResponse makeContext(HttpRequestFirstLine request) {
