@@ -105,6 +105,25 @@ allprojects {
     apply plugin: 'jacoco'
     apply plugin: 'org.owasp.dependencycheck'
 
+
+    dependencies {
+        constraints {
+            implementation('org.apache.logging.log4j:log4j-core:2.17.1')
+
+            implementation('io.opentelemetry:opentelemetry-bom:1.34.1')
+            implementation('io.opentelemetry:opentelemetry-exporter-otlp:1.34.1')
+            implementation('io.opentelemetry.semconv:opentelemetry-semconv:1.23.1-alpha')
+
+            implementation('org.apache.logging.log4j:log4j-bom:2.20.0')
+            implementation('org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0')
+
+            implementation('com.google.protobuf:protobuf-java:3.22.2')
+
+
+            implementation('com.squareup.okio:okio-jvm:3.4.0')
+        }
+    }
+
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(11)
