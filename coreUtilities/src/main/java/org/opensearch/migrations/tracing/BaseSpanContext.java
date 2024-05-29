@@ -12,15 +12,12 @@ import java.util.stream.Stream;
 
 public abstract class BaseSpanContext<S extends IInstrumentConstructor>
         implements IScopedInstrumentationAttributes, IHasRootInstrumentationScope<S>, AutoCloseable {
-    @Getter
     protected final S rootInstrumentationScope;
     @Getter
     final long startTimeNano;
     @Getter
     final Instant startTimeInstant;
-    @Getter
     Throwable observedExceptionToIncludeInMetrics;
-    @Getter
     private Span currentSpan;
 
     protected BaseSpanContext(S rootScope) {
