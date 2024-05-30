@@ -49,6 +49,8 @@ dependencies {
     implementation group: 'org.apache.lucene', name: 'lucene-analyzers-common'
     implementation group: 'org.apache.lucene', name: 'lucene-backward-codecs'
 
+    implementation group: 'io.opentelemetry', name: 'opentelemetry-exporter-logging'
+
     implementation platform('io.projectreactor:reactor-bom:2023.0.5') 
     implementation 'io.projectreactor.netty:reactor-netty-core' 
     implementation 'io.projectreactor.netty:reactor-netty-http'
@@ -67,7 +69,6 @@ dependencies {
     testImplementation group: 'org.mockito', name: 'mockito-junit-jupiter'
     testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine'
 
-
     // Integration tests
     testImplementation testFixtures(project(path: ':testHelperFixtures'))
     testImplementation testFixtures(project(path: ':coreUtilities'))
@@ -80,6 +81,12 @@ dependencies {
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-annotations'
+
+    implementation("io.opentelemetry:opentelemetry-api");
+    implementation("io.opentelemetry:opentelemetry-sdk");
+    implementation group: 'io.opentelemetry.semconv', name: 'opentelemetry-semconv'
+    implementation("io.opentelemetry:opentelemetry-exporter-logging");
+    implementation("io.opentelemetry:opentelemetry-sdk-extension-autoconfigure");
 }
 
 application {

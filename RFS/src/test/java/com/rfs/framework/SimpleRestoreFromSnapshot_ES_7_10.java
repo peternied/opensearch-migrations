@@ -55,16 +55,22 @@ public class SimpleRestoreFromSnapshot_ES_7_10 {
     public void updateTargetCluster(final List<IndexMetadata.Data> indices,
                                     final Path unpackedShardDataDir,
                                     final OpenSearchClient client) {
-        for (final IndexMetadata.Data index : indices) {
+            final var rootContext = TestContext.withConsoleDebugging();
+
+            for (final IndexMetadata.Data index : indices) {
             for (int shardId = 0; shardId < index.getNumberOfShards(); shardId++) {
                 final var documents = new LuceneDocumentsReader().readDocuments(unpackedShardDataDir, index.getName(), shardId);
 
                 final var finalShardId = shardId;
-                final var rootContext = TestContext.withAllTracking();
-                DocumentReindexer.reindex(index.getName(), documents, client, rootContext.createReindexContext())
-                    .doOnError(error -> logger.error("Error during reindexing: " + error))
-                    .doOnSuccess(done -> logger.info("Reindexing completed for index " + index.getName() + ", shard " + finalShardId))
-                    .block();
+
+                try (final var reindexContext = rootContext.createReindexContext()) {             
+                    reindexContext.addEvent("started");  
+                    DocumentReindexer.reindex(index.getName(), documents, client, reindexContext)
+                        .doOnError(error -> logger.error("Error during reindexing: " + error))
+                        .doOnSuccess(done -> logger.info("Reindexing completed for index " + index.getName() + ", shard " + finalShardId))
+                        .block();
+                    reindexContext.addEvent("done");
+                }
             }
         }
     }

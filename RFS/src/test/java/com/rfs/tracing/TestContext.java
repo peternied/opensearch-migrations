@@ -16,6 +16,10 @@ public class TestContext extends RootRfsContext {  @Getter
         return withTracking(true, true);
     }
 
+    public static RootRfsContext withConsoleDebugging() {
+        return new RootRfsContext(DebugContext.create(), new BacktracingContextTracker());
+    } 
+
     public static TestContext noOtelTracking() {
         return new TestContext(new InMemoryInstrumentationBundle(null, null), new BacktracingContextTracker());
     }

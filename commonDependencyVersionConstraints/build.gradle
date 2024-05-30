@@ -70,8 +70,10 @@ dependencies {
 
     def opentelemetry = '1.34.1'
     api group: 'io.opentelemetry', name: 'opentelemetry-api', version: opentelemetry
+    api group: 'io.opentelemetry', name: 'opentelemetry-exporter-logging', version: opentelemetry
     api group: 'io.opentelemetry', name: 'opentelemetry-exporter-otlp', version: opentelemetry
     api group: 'io.opentelemetry', name: 'opentelemetry-sdk', version: opentelemetry
+    api group: 'io.opentelemetry', name: 'opentelemetry-sdk-extension-autoconfigure', version: opentelemetry
     api group: 'io.opentelemetry', name: 'opentelemetry-sdk-testing', version: opentelemetry
 
     api group: 'io.opentelemetry.semconv', name: 'opentelemetry-semconv', version: '1.23.1-alpha'
