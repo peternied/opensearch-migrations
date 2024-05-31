@@ -9,6 +9,7 @@ import org.apache.lucene.document.Document;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.metrics.LongCounter;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import reactor.core.publisher.Flux;
@@ -49,7 +50,7 @@ public class DocumentReindexer {
                 .onErrorResume(e -> Mono.empty()) // Prevent the error from stopping the entire stream
             )
             .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)).maxBackoff(Duration.ofSeconds(5)))
-            .doOnComplete(() -> logger.debug("All batches processed"))
+            .doOnComplete(() -> { logger.debug("All batches processed"); Span.current().end(); })
             .then();
     }
 

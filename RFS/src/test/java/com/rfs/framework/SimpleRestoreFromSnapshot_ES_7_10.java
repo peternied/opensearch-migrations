@@ -3,6 +3,7 @@ package com.rfs.framework;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -19,11 +20,15 @@ import com.rfs.version_es_7_10.IndexMetadataFactory_ES_7_10;
 import com.rfs.version_es_7_10.ShardMetadataFactory_ES_7_10;
 import com.rfs.version_es_7_10.SnapshotRepoProvider_ES_7_10;
 
+import io.opentelemetry.exporter.logging.LoggingSpanExporter;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.data.MetricData;
 import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
+import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 
 /**
  * Simplified version of RFS for use in testing - ES 7.10 version.
@@ -36,13 +41,21 @@ public class SimpleRestoreFromSnapshot_ES_7_10 {
             .registerMetricReader(metricReader)
             .build();
 
+    private final InMemorySpanExporter spanExporter = InMemorySpanExporter.create();
+    private final SdkTracerProvider tracerProvider = SdkTracerProvider.builder()
+        .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
+        .build();
+
     public SimpleRestoreFromSnapshot_ES_7_10() {
         OpenTelemetrySdk.builder()
                 .setMeterProvider(meterProvider)
+                .setTracerProvider(tracerProvider)
                 .buildAndRegisterGlobal();
     }
 
     public List<MetricData> getMetrics(final String metricName) {
+        spanExporter.flush().join(10, TimeUnit.SECONDS);
+        spanExporter.getFinishedSpanItems().forEach(s -> logger.debug("Finished span:" + s.toString()));
         return metricReader.collectAllMetrics()
             .stream()
             .map(m -> { logger.debug("Metric: " + m.getName()); return m;})
