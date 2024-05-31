@@ -5,7 +5,7 @@ plugins {
     id "com.avast.gradle.docker-compose" version "0.17.4"
     id 'com.bmuschko.docker-remote-api'
     id 'io.freefair.lombok' version '8.6'
-    id 'com.ryandens.javaagent-application' version "0.5.1"
+    id 'com.ryandens.javaagent-test' version "0.5.1"
 }
 
 import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
