@@ -14,29 +14,27 @@ import com.rfs.common.IndexMetadata;
 import com.rfs.common.LuceneDocumentsReader;
 import com.rfs.common.OpenSearchClient;
 import com.rfs.common.SnapshotShardUnpacker;
-import com.rfs.version_es_7_10.IndexMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.ShardMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.SnapshotRepoProvider_ES_7_10;
-
-import lombok.ToString;
+import com.rfs.version_es_6_8.IndexMetadataFactory_ES_6_8;
+import com.rfs.version_es_6_8.SnapshotRepoProvider_ES_6_8;
+import com.rfs.version_es_6_8.ShardMetadataFactory_ES_6_8;
 
 /**
  * Simplified version of RFS for use in testing - ES 7.10 version.
  */
-public class SimpleRestoreFromSnapshot_ES_7_10 implements SimpleRestoreFromSnapshot {
+public class SimpleRestoreFromSnapshot_ES_6_8 implements SimpleRestoreFromSnapshot {
 
-    private static final Logger logger = LogManager.getLogger(SimpleRestoreFromSnapshot_ES_7_10.class);
+    private static final Logger logger = LogManager.getLogger(SimpleRestoreFromSnapshot_ES_6_8.class);
 
     public List<IndexMetadata.Data> extraSnapshotIndexData(final String localPath, final String snapshotName, final Path unpackedShardDataDir) throws Exception {
         IOUtils.rm(unpackedShardDataDir);
 
         final var repo = new FileSystemRepo(Path.of(localPath));
-        final var snapShotProvider = new SnapshotRepoProvider_ES_7_10(repo);
+        final var snapShotProvider = new SnapshotRepoProvider_ES_6_8(repo);
         final List<IndexMetadata.Data> indices = snapShotProvider.getIndicesInSnapshot(snapshotName)
             .stream()
             .map(index -> {
                 try {
-                    return new IndexMetadataFactory_ES_7_10().fromRepo(repo, snapShotProvider, snapshotName, index.getName());
+                    return new IndexMetadataFactory_ES_6_8().fromRepo(repo, snapShotProvider, snapshotName, index.getName());
                 } catch (final Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -45,7 +43,7 @@ public class SimpleRestoreFromSnapshot_ES_7_10 implements SimpleRestoreFromSnaps
         
         for (final IndexMetadata.Data index : indices) {
             for (int shardId = 0; shardId < index.getNumberOfShards(); shardId++) {
-                var shardMetadata = new ShardMetadataFactory_ES_7_10().fromRepo(repo, snapShotProvider, snapshotName, index.getName(), shardId);
+                var shardMetadata = new ShardMetadataFactory_ES_6_8().fromRepo(repo, snapShotProvider, snapshotName, index.getName(), shardId);
                 SnapshotShardUnpacker.unpack(repo, shardMetadata, unpackedShardDataDir, Integer.MAX_VALUE);
             }
         }

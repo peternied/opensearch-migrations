@@ -74,8 +74,8 @@ public class ElasticsearchContainer implements AutoCloseable {
     }
 
     public static enum Version {
-        V7_10_2("docker.elastic.co/elasticsearch/elasticsearch:7.10.2", "7.10.2");
-
+        V7_10_2("docker.elastic.co/elasticsearch/elasticsearch:7.10.2", "7.10.2"),
+        V6_8_23("docker.elastic.co/elasticsearch/elasticsearch:6.8.23", "6.8.23");
         final String imageName;
         final String prettyName;
         Version(final String imageName, final String prettyName) {
