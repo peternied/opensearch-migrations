@@ -72,13 +72,11 @@ public class SnapshotStateTest {
         cluster.copySnapshotData(snapshotCopy.getAbsolutePath());
 
         final var unpackedShardDataDir = Path.of(localDirectory.getAbsolutePath() + "/unpacked-shard-data");
-        final var indices = srfs.extractSnapshotIndexData(snapshotCopy.getAbsolutePath(), snapshotName, unpackedShardDataDir);
-
         final var client = mock(OpenSearchClient.class);
         when(client.sendBulkRequest(any(), any())).thenReturn(Mono.empty());
 
         // Action
-        srfs.updateTargetCluster(indices, unpackedShardDataDir, client);
+        srfs.copyDocs(snapshotCopy.getAbsolutePath(), snapshotName, unpackedShardDataDir, client);
 
         // Validation
         final var bodyCaptor = ArgumentCaptor.forClass(String.class);
