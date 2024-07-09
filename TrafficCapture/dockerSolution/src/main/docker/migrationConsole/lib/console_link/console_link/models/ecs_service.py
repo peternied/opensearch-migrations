@@ -47,7 +47,7 @@ class ECSService:
         desired_count = response["service"]["desiredCount"]
         return CommandResult(True, f"Service {self.service_name} set to {desired_count} desired count."
                              f" Currently {running_count} running and {pending_count} pending.")
-    
+
     def get_instance_statuses(self) -> Optional[InstanceStatuses]:
         logger.info(f"Getting instance statuses for service {self.service_name}")
         response = self.client.describe_services(

@@ -1,23 +1,5 @@
 package org.opensearch.migrations.replay.kafka;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Timestamp;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.MockConsumer;
-import org.apache.kafka.clients.consumer.OffsetResetStrategy;
-import org.apache.kafka.common.TopicPartition;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.opensearch.migrations.replay.tracing.ChannelContextManager;
-import org.opensearch.migrations.replay.tracing.ReplayContexts;
-import org.opensearch.migrations.replay.traffic.source.ITrafficStreamWithKey;
-import org.opensearch.migrations.tracing.InstrumentationTest;
-import org.opensearch.migrations.trafficcapture.protos.ReadObservation;
-import org.opensearch.migrations.trafficcapture.protos.TrafficObservation;
-import org.opensearch.migrations.trafficcapture.protos.TrafficStream;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +15,26 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Timestamp;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.MockConsumer;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
+import org.apache.kafka.common.TopicPartition;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import org.opensearch.migrations.replay.tracing.ChannelContextManager;
+import org.opensearch.migrations.replay.tracing.ReplayContexts;
+import org.opensearch.migrations.replay.traffic.source.ITrafficStreamWithKey;
+import org.opensearch.migrations.tracing.InstrumentationTest;
+import org.opensearch.migrations.trafficcapture.protos.ReadObservation;
+import org.opensearch.migrations.trafficcapture.protos.TrafficObservation;
+import org.opensearch.migrations.trafficcapture.protos.TrafficStream;
+
+import lombok.extern.slf4j.Slf4j;
+
 @Slf4j
 class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     public static final int NUM_READ_ITEMS_BOUND = 1000;
@@ -42,15 +44,14 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
 
     @Test
     public void testRecordToString() {
-        var ts = TrafficStream.newBuilder()
-                .setConnectionId("c")
-                .setNodeId("n")
-                .setNumber(7)
-                .build();
+        var ts = TrafficStream.newBuilder().setConnectionId("c").setNodeId("n").setNumber(7).build();
         var tsk = new TrafficStreamKeyWithKafkaRecordId(
-                k -> new ReplayContexts.KafkaRecordContext(rootContext,
-                        new ChannelContextManager(rootContext).retainOrCreateContext(k), "", 1),
-                ts, 1, 2, 123);
+            k -> new ReplayContexts.KafkaRecordContext(rootContext, new ChannelContextManager(rootContext).retainOrCreateContext(k), "", 1),
+            ts,
+            1,
+            2,
+            123
+        );
         Assertions.assertEquals("n.c.7|partition=2|offset=123", tsk.toString());
     }
 
@@ -58,8 +59,7 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     public void testSupplyTrafficFromSource() throws Exception {
         int numTrafficStreams = 10;
         MockConsumer<String, byte[]> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
-        try (var protobufConsumer = new KafkaTrafficCaptureSource(rootContext,
-                mockConsumer, TEST_TOPIC_NAME, Duration.ofHours(1))) {
+        try (var protobufConsumer = new KafkaTrafficCaptureSource(rootContext, mockConsumer, TEST_TOPIC_NAME, Duration.ofHours(1))) {
             initializeMockConsumerTopic(mockConsumer);
 
             List<Integer> substreamCounts = new ArrayList<>();
@@ -78,14 +78,18 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
             var tsCount = new AtomicInteger();
             Assertions.assertTimeoutPreemptively(TEST_TIMEOUT, () -> {
                 while (tsCount.get() < numTrafficStreams) {
-                    protobufConsumer.readNextTrafficStreamChunk(rootContext::createReadChunkContext).get().stream()
-                            .forEach(streamWithKey -> {
-                                tsCount.incrementAndGet();
-                                log.trace("Stream has substream count: " + streamWithKey.getStream().getSubStreamCount());
-                                Assertions.assertInstanceOf(ITrafficStreamWithKey.class, streamWithKey);
-                                Assertions.assertEquals(streamWithKey.getStream().getSubStreamCount(),
-                                        substreamCounts.get(foundStreamsCount.getAndIncrement()));
-                            });
+                    protobufConsumer.readNextTrafficStreamChunk(rootContext::createReadChunkContext)
+                        .get()
+                        .stream()
+                        .forEach(streamWithKey -> {
+                            tsCount.incrementAndGet();
+                            log.trace("Stream has substream count: " + streamWithKey.getStream().getSubStreamCount());
+                            Assertions.assertInstanceOf(ITrafficStreamWithKey.class, streamWithKey);
+                            Assertions.assertEquals(
+                                streamWithKey.getStream().getSubStreamCount(),
+                                substreamCounts.get(foundStreamsCount.getAndIncrement())
+                            );
+                        });
                 }
             });
             Assertions.assertEquals(foundStreamsCount.get(), numTrafficStreams);
@@ -96,8 +100,7 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     public void testSupplyTrafficWithUnformattedMessages() throws Exception {
         int numTrafficStreams = 10;
         MockConsumer<String, byte[]> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
-        try (var protobufConsumer = new KafkaTrafficCaptureSource(rootContext,
-                mockConsumer, TEST_TOPIC_NAME, Duration.ofHours(1))) {
+        try (var protobufConsumer = new KafkaTrafficCaptureSource(rootContext, mockConsumer, TEST_TOPIC_NAME, Duration.ofHours(1))) {
             initializeMockConsumerTopic(mockConsumer);
 
             List<Integer> substreamCounts = new ArrayList<>();
@@ -109,8 +112,15 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
                 // Add invalid records that can't be parsed and should be dropped
                 int partitionOffset = 1;
                 for (; partitionOffset < 3; partitionOffset++) {
-                    mockConsumer.addRecord(new ConsumerRecord(TEST_TOPIC_NAME, 0, partitionOffset, Instant.now().toString(),
-                            "Invalid Data".getBytes(StandardCharsets.UTF_8)));
+                    mockConsumer.addRecord(
+                        new ConsumerRecord(
+                            TEST_TOPIC_NAME,
+                            0,
+                            partitionOffset,
+                            Instant.now().toString(),
+                            "Invalid Data".getBytes(StandardCharsets.UTF_8)
+                        )
+                    );
                 }
 
                 // Add valid records
@@ -125,14 +135,18 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
             var tsCount = new AtomicInteger();
             Assertions.assertTimeoutPreemptively(TEST_TIMEOUT, () -> {
                 while (tsCount.get() < numTrafficStreams) {
-                    protobufConsumer.readNextTrafficStreamChunk(rootContext::createReadChunkContext).get().stream()
-                            .forEach(streamWithKey -> {
-                                tsCount.incrementAndGet();
-                                log.trace("Stream has substream count: " + streamWithKey.getStream().getSubStreamCount());
-                                Assertions.assertInstanceOf(ITrafficStreamWithKey.class, streamWithKey);
-                                Assertions.assertEquals(streamWithKey.getStream().getSubStreamCount(),
-                                        substreamCounts.get(foundStreamsCount.getAndIncrement()));
-                            });
+                    protobufConsumer.readNextTrafficStreamChunk(rootContext::createReadChunkContext)
+                        .get()
+                        .stream()
+                        .forEach(streamWithKey -> {
+                            tsCount.incrementAndGet();
+                            log.trace("Stream has substream count: " + streamWithKey.getStream().getSubStreamCount());
+                            Assertions.assertInstanceOf(ITrafficStreamWithKey.class, streamWithKey);
+                            Assertions.assertEquals(
+                                streamWithKey.getStream().getSubStreamCount(),
+                                substreamCounts.get(foundStreamsCount.getAndIncrement())
+                            );
+                        });
                 }
             });
 
@@ -183,20 +197,15 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     }
 
     private static TrafficStream makeTrafficStream(Instant t, String payload, int numReads) {
-        var fixedTimestamp = Timestamp.newBuilder()
-                .setSeconds(t.getEpochSecond())
-                .setNanos(t.getNano())
-                .build();
-        var builder = TrafficStream.newBuilder()
-                .setNodeId("testNode")
-                .setConnectionId("testStreamId")
-                .setNumberOfThisLastChunk(1);
+        var fixedTimestamp = Timestamp.newBuilder().setSeconds(t.getEpochSecond()).setNanos(t.getNano()).build();
+        var builder = TrafficStream.newBuilder().setNodeId("testNode").setConnectionId("testStreamId").setNumberOfThisLastChunk(1);
         for (int i = 0; i < numReads; ++i) {
-            builder = builder.addSubStream(TrafficObservation.newBuilder().setTs(fixedTimestamp)
-                    .setRead(ReadObservation.newBuilder()
-                            .setData(ByteString.copyFrom(payload.getBytes(StandardCharsets.UTF_8)))
-                            .build())
-                    .build());
+            builder = builder.addSubStream(
+                TrafficObservation.newBuilder()
+                    .setTs(fixedTimestamp)
+                    .setRead(ReadObservation.newBuilder().setData(ByteString.copyFrom(payload.getBytes(StandardCharsets.UTF_8))).build())
+                    .build()
+            );
         }
         return builder.build();
     }
@@ -218,11 +227,16 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
      * @param mockConsumer
      * @param substreamCountTracker
      */
-    private static void addGeneratedTrafficStreamsToTopic(int numTrafficStreams, int offsetStart, MockConsumer<String, byte[]> mockConsumer, List<Integer> substreamCountTracker) {
+    private static void addGeneratedTrafficStreamsToTopic(
+        int numTrafficStreams,
+        int offsetStart,
+        MockConsumer<String, byte[]> mockConsumer,
+        List<Integer> substreamCountTracker
+    ) {
         Random random = new Random(2);
         Supplier<Integer> integerSupplier = () -> random.nextInt(NUM_READ_ITEMS_BOUND);
         for (int i = 0; i < numTrafficStreams; ++i) {
-            var payload = (""+(char)('A'+(char)i)).repeat(10);
+            var payload = ("" + (char) ('A' + (char) i)).repeat(10);
             byte[] data = new byte[0];
             try {
                 int substreams = integerSupplier.get();
@@ -231,7 +245,7 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            var record = new ConsumerRecord(TEST_TOPIC_NAME, 0, offsetStart+i, Instant.now().toString(), data);
+            var record = new ConsumerRecord(TEST_TOPIC_NAME, 0, offsetStart + i, Instant.now().toString(), data);
             log.trace("adding record");
             mockConsumer.addRecord(record);
         }

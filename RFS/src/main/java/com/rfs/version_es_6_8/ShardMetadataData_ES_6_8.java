@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.lucene.util.BytesRef;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParser;
@@ -14,8 +12,9 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rfs.common.ShardMetadata;
+import org.apache.lucene.util.BytesRef;
 
+import com.rfs.common.ShardMetadata;
 
 public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Data {
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -32,16 +31,17 @@ public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Da
     private List<FileInfo> files;
 
     public ShardMetadataData_ES_6_8(
-            String snapshotName,
-            String indexName,
-            String indexId,
-            int shardId,
-            int indexVersion,
-            long startTime,
-            long time,
-            int numberOfFiles,
-            long totalSize,
-            List<FileInfoRaw> files) {
+        String snapshotName,
+        String indexName,
+        String indexId,
+        int shardId,
+        int indexVersion,
+        long startTime,
+        long time,
+        int numberOfFiles,
+        long totalSize,
+        List<FileInfoRaw> files
+    ) {
         this.snapshotName = snapshotName;
         this.indexName = indexName;
         this.indexId = indexId;
@@ -131,13 +131,14 @@ public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Da
 
         @JsonCreator
         public DataRaw(
-                @JsonProperty("name") String name,
-                @JsonProperty("index_version") int indexVersion,
-                @JsonProperty("start_time") long startTime,
-                @JsonProperty("time") long time,
-                @JsonProperty("number_of_files") int numberOfFiles,
-                @JsonProperty("total_size") long totalSize,
-                @JsonProperty("files") List<FileInfoRaw> files) {
+            @JsonProperty("name") String name,
+            @JsonProperty("index_version") int indexVersion,
+            @JsonProperty("start_time") long startTime,
+            @JsonProperty("time") long time,
+            @JsonProperty("number_of_files") int numberOfFiles,
+            @JsonProperty("total_size") long totalSize,
+            @JsonProperty("files") List<FileInfoRaw> files
+        ) {
             this.name = name;
             this.indexVersion = indexVersion;
             this.startTime = startTime;
@@ -160,24 +161,25 @@ public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Da
 
         public static FileInfo fromFileMetadataRaw(FileInfoRaw fileMetadataRaw) {
             return new FileInfo(
-                    fileMetadataRaw.name,
-                    fileMetadataRaw.physicalName,
-                    fileMetadataRaw.length,
-                    fileMetadataRaw.checksum,
-                    fileMetadataRaw.partSize,
-                    fileMetadataRaw.writtenBy,
-                    fileMetadataRaw.metaHash
+                fileMetadataRaw.name,
+                fileMetadataRaw.physicalName,
+                fileMetadataRaw.length,
+                fileMetadataRaw.checksum,
+                fileMetadataRaw.partSize,
+                fileMetadataRaw.writtenBy,
+                fileMetadataRaw.metaHash
             );
         }
 
         public FileInfo(
-                String name,
-                String physicalName,
-                long length,
-                String checksum,
-                long partSize,
-                String writtenBy,
-                BytesRef metaHash) {
+            String name,
+            String physicalName,
+            long length,
+            String checksum,
+            long partSize,
+            String writtenBy,
+            BytesRef metaHash
+        ) {
             this.name = name;
             this.physicalName = physicalName;
             this.length = length;
@@ -187,7 +189,8 @@ public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Da
             this.metaHash = metaHash;
 
             // Calculate the number of parts the file is chopped into; taken from Elasticsearch code
-            // See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/index/snapshots/blobstore/BlobStoreIndexShardSnapshot.java#L68
+            // See:
+            // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/index/snapshots/blobstore/BlobStoreIndexShardSnapshot.java#L68
             long partBytes = Long.MAX_VALUE;
             if (partSize != Long.MAX_VALUE) {
                 partBytes = partSize;
@@ -274,13 +277,14 @@ public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Da
         public final BytesRef metaHash;
 
         public FileInfoRaw(
-                String name,
-                String physicalName,
-                long length,
-                String checksum,
-                long partSize,
-                String writtenBy,
-                BytesRef metaHash) {
+            String name,
+            String physicalName,
+            long length,
+            String checksum,
+            long partSize,
+            String writtenBy,
+            BytesRef metaHash
+        ) {
             this.name = name;
             this.physicalName = physicalName;
             this.length = length;
@@ -293,18 +297,17 @@ public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Da
 
     public static class FileInfoRawDeserializer extends JsonDeserializer<FileInfoRaw> {
         @Override
-        public FileInfoRaw deserialize(JsonParser jp, DeserializationContext ctxt)
-                throws IOException, JsonProcessingException {
-                    
+        public FileInfoRaw deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+
             JsonNode rootNode = jp.getCodec().readTree(jp);
-            
+
             String name = rootNode.get("name").asText();
             String physicalName = rootNode.get("physical_name").asText();
             long length = rootNode.get("length").asLong();
             String checksum = rootNode.get("checksum").asText();
             long partSize = rootNode.get("part_size").asLong();
             String writtenBy = rootNode.get("written_by").asText();
-            
+
             BytesRef metaHash = null;
             if (rootNode.has("meta_hash")) {
                 metaHash = new BytesRef();
@@ -312,7 +315,7 @@ public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Da
                 metaHash.offset = 0;
                 metaHash.length = metaHash.bytes.length;
             }
-            
+
             return new FileInfoRaw(name, physicalName, length, checksum, partSize, writtenBy, metaHash);
         }
     }

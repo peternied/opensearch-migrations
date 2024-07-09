@@ -37,11 +37,11 @@ public class ConnectionDetails {
         // If the username is provided, the password must be as well, and vice versa
         if ((username == null && password != null) || (username != null && password == null)) {
             throw new IllegalArgumentException("Both username and password must be provided, or neither");
-        } else if (username != null){
+        } else if (username != null) {
             this.authType = AuthType.BASIC;
         } else {
             this.authType = AuthType.NONE;
-        }        
+        }
 
         this.username = username;
         this.password = password;
@@ -68,6 +68,6 @@ public class ConnectionDetails {
             } else {
                 throw new IllegalArgumentException("Invalid protocol");
             }
-        }        
+        }
     }
 }

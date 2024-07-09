@@ -68,5 +68,5 @@ public class Uid {
             default:
                 return decodeBase64Id(idBytes, offset, length);
         }
-    }    
+    }
 }

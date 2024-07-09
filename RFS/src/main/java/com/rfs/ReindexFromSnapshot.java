@@ -6,100 +6,118 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.lucene.document.Document;
+
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.lucene.document.Document;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-import reactor.core.publisher.Flux;
-
 import com.rfs.common.*;
 import com.rfs.transformers.*;
 import com.rfs.version_es_6_8.*;
 import com.rfs.version_es_7_10.*;
 import com.rfs.version_os_2_11.*;
+import reactor.core.publisher.Flux;
 
 public class ReindexFromSnapshot {
     private static final Logger logger = LogManager.getLogger(ReindexFromSnapshot.class);
 
     public static class Args {
-        @Parameter(names = {"-n", "--snapshot-name"}, description = "The name of the snapshot to migrate", required = true)
+        @Parameter(names = { "-n", "--snapshot-name" }, description = "The name of the snapshot to migrate", required = true)
         public String snapshotName;
 
-        @Parameter(names = {"--snapshot-dir"}, description = "The absolute path to the existing source snapshot directory on local disk", required = false)
+        @Parameter(names = {
+            "--snapshot-dir" }, description = "The absolute path to the existing source snapshot directory on local disk", required = false)
         public String snapshotDirPath = null;
 
-        @Parameter(names = {"--snapshot-local-repo-dir"}, description = "The absolute path to take and store a new snapshot on source, this location should be accessible by the source and this app", required = false)
+        @Parameter(names = {
+            "--snapshot-local-repo-dir" }, description = "The absolute path to take and store a new snapshot on source, this location should be accessible by the source and this app", required = false)
         public String snapshotLocalRepoDirPath = null;
 
-        @Parameter(names = {"--s3-local-dir"}, description = "The absolute path to the directory on local disk to download S3 files to", required = false)
+        @Parameter(names = {
+            "--s3-local-dir" }, description = "The absolute path to the directory on local disk to download S3 files to", required = false)
         public String s3LocalDirPath = null;
 
-        @Parameter(names = {"--s3-repo-uri"}, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2", required = false)
+        @Parameter(names = {
+            "--s3-repo-uri" }, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2", required = false)
         public String s3RepoUri = null;
 
-        @Parameter(names = {"--s3-region"}, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
+        @Parameter(names = { "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
         public String s3Region = null;
 
-        @Parameter(names = {"-l", "--lucene-dir"}, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
+        @Parameter(names = {
+            "-l",
+            "--lucene-dir" }, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
         public String luceneDirPath;
 
-        @Parameter(names = {"--source-host"}, description = "The source host and port (e.g. http://localhost:9200)", required = false)
+        @Parameter(names = { "--source-host" }, description = "The source host and port (e.g. http://localhost:9200)", required = false)
         public String sourceHost = null;
 
-        @Parameter(names = {"--source-username"}, description = "The source username; if not provided, will assume no auth on source", required = false)
+        @Parameter(names = {
+            "--source-username" }, description = "The source username; if not provided, will assume no auth on source", required = false)
         public String sourceUser = null;
 
-        @Parameter(names = {"--source-password"}, description = "The source password; if not provided, will assume no auth on source", required = false)
+        @Parameter(names = {
+            "--source-password" }, description = "The source password; if not provided, will assume no auth on source", required = false)
         public String sourcePass = null;
 
-        @Parameter(names = {"--target-host"}, description = "The target host and port (e.g. http://localhost:9200)", required = true)
+        @Parameter(names = { "--target-host" }, description = "The target host and port (e.g. http://localhost:9200)", required = true)
         public String targetHost;
 
-        @Parameter(names = {"--target-username"}, description = "The target username; if not provided, will assume no auth on target", required = false)
+        @Parameter(names = {
+            "--target-username" }, description = "The target username; if not provided, will assume no auth on target", required = false)
         public String targetUser = null;
 
-        @Parameter(names = {"--target-password"}, description = "The target password; if not provided, will assume no auth on target", required = false)
+        @Parameter(names = {
+            "--target-password" }, description = "The target password; if not provided, will assume no auth on target", required = false)
         public String targetPass = null;
 
-        @Parameter(names = {"-s", "--source-version"}, description = "The source cluster's version (e.g. 'es_6_8')", required = true, converter = ClusterVersion.ArgsConverter.class)
+        @Parameter(names = {
+            "-s",
+            "--source-version" }, description = "The source cluster's version (e.g. 'es_6_8')", required = true, converter = ClusterVersion.ArgsConverter.class)
         public ClusterVersion sourceVersion;
 
-        @Parameter(names = {"-t", "--target-version"}, description = "The target cluster's version (e.g. 'os_2_11')", required = true, converter = ClusterVersion.ArgsConverter.class)
+        @Parameter(names = {
+            "-t",
+            "--target-version" }, description = "The target cluster's version (e.g. 'os_2_11')", required = true, converter = ClusterVersion.ArgsConverter.class)
         public ClusterVersion targetVersion;
 
-        @Parameter(names = {"--movement-type"}, description = "What you want to move - everything, metadata, or data.  Default: 'everything'", required = false, converter = MovementType.ArgsConverter.class)
+        @Parameter(names = {
+            "--movement-type" }, description = "What you want to move - everything, metadata, or data.  Default: 'everything'", required = false, converter = MovementType.ArgsConverter.class)
         public MovementType movementType = MovementType.EVERYTHING;
 
-        //https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
-        @Parameter(names = {"--min-replicas"}, description = "The minimum number of replicas configured for migrated indices on the target. This can be useful for migrating to targets which use zonal deployments and require additional replicas to meet zone requirements", required = true)
+        // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
+        @Parameter(names = {
+            "--min-replicas" }, description = "The minimum number of replicas configured for migrated indices on the target. This can be useful for migrating to targets which use zonal deployments and require additional replicas to meet zone requirements", required = true)
         public int minNumberOfReplicas;
 
-        @Parameter(names = {"--template-whitelist"}, description = "List of template names to migrate. Note: For ES 6.8 this refers to legacy templates and for ES 7.10 this is index templates (e.g. 'posts_index_template1, posts_index_template2')", required = false)
+        @Parameter(names = {
+            "--template-whitelist" }, description = "List of template names to migrate. Note: For ES 6.8 this refers to legacy templates and for ES 7.10 this is index templates (e.g. 'posts_index_template1, posts_index_template2')", required = false)
         public List<String> templateWhitelist;
 
-        @Parameter(names = {"--component-template-whitelist"}, description = "List of component template names to migrate (e.g. 'posts_template1, posts_template2')", required = false)
+        @Parameter(names = {
+            "--component-template-whitelist" }, description = "List of component template names to migrate (e.g. 'posts_template1, posts_template2')", required = false)
         public List<String> componentTemplateWhitelist;
 
-        @Parameter(names = {"--enable-persistent-run"}, description = "If enabled, the java process will continue in an idle mode after the migration is completed.  Default: false", arity=0, required = false)
+        @Parameter(names = {
+            "--enable-persistent-run" }, description = "If enabled, the java process will continue in an idle mode after the migration is completed.  Default: false", arity = 0, required = false)
         public boolean enablePersistentRun;
 
-        @Parameter(names = {"--log-level"}, description = "What log level you want.  Default: 'info'", required = false, converter = Logging.ArgsConverter.class)
+        @Parameter(names = {
+            "--log-level" }, description = "What log level you want.  Default: 'info'", required = false, converter = Logging.ArgsConverter.class)
         public Level logLevel = Level.INFO;
 
-        @Parameter(names = {"--index_suffix"}, description = "An optional suffix to add to index names as they're transfered. Default: none", required = false)
+        @Parameter(names = {
+            "--index_suffix" }, description = "An optional suffix to add to index names as they're transfered. Default: none", required = false)
         public String indexSuffix = "";
     }
 
     public static void main(String[] args) throws InterruptedException {
         // Grab out args
         Args arguments = new Args();
-        JCommander.newBuilder()
-            .addObject(arguments)
-            .build()
-            .parse(args);
+        JCommander.newBuilder().addObject(arguments).build().parse(args);
 
         String snapshotName = arguments.snapshotName;
         Path snapshotDirPath = (arguments.snapshotDirPath != null) ? Paths.get(arguments.snapshotDirPath) : null;
@@ -146,17 +164,19 @@ public class ReindexFromSnapshot {
          * If you provide the source host, you still need to provide the S3 details or the snapshotLocalRepoDirPath to write the snapshot to.
          */
         if (snapshotDirPath != null && (sourceHost != null || s3RepoUri != null)) {
-            throw new IllegalArgumentException("If you specify a local directory to take the snapshot from, you cannot specify a source host or S3 URI");
+            throw new IllegalArgumentException(
+                "If you specify a local directory to take the snapshot from, you cannot specify a source host or S3 URI"
+            );
         } else if (sourceHost != null) {
-           if (s3RepoUri == null && s3Region == null && s3LocalDirPath == null && snapshotLocalRepoDirPath == null) {
+            if (s3RepoUri == null && s3Region == null && s3LocalDirPath == null && snapshotLocalRepoDirPath == null) {
                 throw new IllegalArgumentException(
-                    "If you specify a source host, you must also specify the S3 details or the snapshotLocalRepoDirPath to write the snapshot to as well");
+                    "If you specify a source host, you must also specify the S3 details or the snapshotLocalRepoDirPath to write the snapshot to as well"
+                );
             }
-           if ((s3RepoUri != null || s3Region != null || s3LocalDirPath != null) &&
-               (s3RepoUri == null || s3Region == null || s3LocalDirPath == null)) {
-               throw new IllegalArgumentException(
-                   "You must specify all S3 details (repo URI, region, local directory path)");
-           }
+            if ((s3RepoUri != null || s3Region != null || s3LocalDirPath != null)
+                && (s3RepoUri == null || s3Region == null || s3LocalDirPath == null)) {
+                throw new IllegalArgumentException("You must specify all S3 details (repo URI, region, local directory path)");
+            }
         }
 
         SourceRepo repo;
@@ -206,7 +226,7 @@ public class ReindexFromSnapshot {
                 repoDataProvider = new SnapshotRepoProvider_ES_7_10(repo);
             }
 
-            if (repoDataProvider.getSnapshots().size() > 1){
+            if (repoDataProvider.getSnapshots().size() > 1) {
                 // Avoid having to deal with things like incremental snapshots
                 throw new IllegalArgumentException("Only repos with a single snapshot are supported at this time");
             }
@@ -232,21 +252,24 @@ public class ReindexFromSnapshot {
             }
             logger.info("Snapshot data read successfully");
 
-            if (!snapshotMetadata.isIncludeGlobalState() && ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA))){
+            if (!snapshotMetadata.isIncludeGlobalState()
+                && ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA))) {
                 throw new IllegalArgumentException("Snapshot does not include global state, so we can't move metadata");
             }
 
-            if (!snapshotMetadata.isSuccessful()){
+            if (!snapshotMetadata.isSuccessful()) {
                 throw new IllegalArgumentException("Snapshot must be successful; its actual state is " + snapshotMetadata.getState());
             }
 
             // We might not actually get this far if the snapshot is the wrong version; we'll probably have failed to
             // parse one of the previous metadata files
-            if (sourceVersion != ClusterVersion.fromInt(snapshotMetadata.getVersionId())){
-                throw new IllegalArgumentException("Snapshot version is " + snapshotMetadata.getVersionId() + ", but source version is " + sourceVersion);
+            if (sourceVersion != ClusterVersion.fromInt(snapshotMetadata.getVersionId())) {
+                throw new IllegalArgumentException(
+                    "Snapshot version is " + snapshotMetadata.getVersionId() + ", but source version is " + sourceVersion
+                );
             }
 
-            if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA)){
+            if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA)) {
                 // ==========================================================================================================
                 // Read the Global Metadata
                 // ==========================================================================================================
@@ -268,12 +291,22 @@ public class ReindexFromSnapshot {
 
                 OpenSearchClient targetClient = new OpenSearchClient(targetConnection);
                 if (sourceVersion == ClusterVersion.ES_6_8) {
-                    GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(targetClient, templateWhitelist, componentTemplateWhitelist, List.of());
+                    GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
+                        targetClient,
+                        templateWhitelist,
+                        componentTemplateWhitelist,
+                        List.of()
+                    );
                     ObjectNode root = globalMetadata.toObjectNode();
                     ObjectNode transformedRoot = transformer.transformGlobalMetadata(root);
                     metadataCreator.create(transformedRoot);
                 } else if (sourceVersion == ClusterVersion.ES_7_10) {
-                    GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(targetClient, List.of(), componentTemplateWhitelist, templateWhitelist);
+                    GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
+                        targetClient,
+                        List.of(),
+                        componentTemplateWhitelist,
+                        templateWhitelist
+                    );
                     ObjectNode root = globalMetadata.toObjectNode();
                     ObjectNode transformedRoot = transformer.transformGlobalMetadata(root);
                     metadataCreator.create(transformedRoot);
@@ -299,7 +332,7 @@ public class ReindexFromSnapshot {
             logger.info("Index Metadata read successfully");
 
             OpenSearchClient targetClient = new OpenSearchClient(targetConnection);
-            if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA)){
+            if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.METADATA)) {
                 // ==========================================================================================================
                 // Recreate the Indices
                 // ==========================================================================================================
@@ -316,7 +349,7 @@ public class ReindexFromSnapshot {
                 }
             }
 
-            if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.DATA)){
+            if ((movementType == MovementType.EVERYTHING) || (movementType == MovementType.DATA)) {
                 // ==========================================================================================================
                 // Unpack the snapshot blobs
                 // ==========================================================================================================
@@ -330,7 +363,7 @@ public class ReindexFromSnapshot {
                     bufferSize = ElasticsearchConstants_ES_7_10.BUFFER_SIZE_IN_BYTES;
                 }
                 DefaultSourceRepoAccessor repoAccessor = new DefaultSourceRepoAccessor(repo);
-                SnapshotShardUnpacker.Factory unpackerFactory = new SnapshotShardUnpacker.Factory(repoAccessor,luceneDirPath, bufferSize);
+                SnapshotShardUnpacker.Factory unpackerFactory = new SnapshotShardUnpacker.Factory(repoAccessor, luceneDirPath, bufferSize);
 
                 for (IndexMetadata.Data indexMetadata : indexMetadatas) {
                     logger.info("Processing index: " + indexMetadata.getName());
@@ -340,9 +373,17 @@ public class ReindexFromSnapshot {
                         // Get the shard metadata
                         ShardMetadata.Data shardMetadata;
                         if (sourceVersion == ClusterVersion.ES_6_8) {
-                            shardMetadata = new ShardMetadataFactory_ES_6_8(repoDataProvider).fromRepo(snapshotName, indexMetadata.getName(), shardId);
+                            shardMetadata = new ShardMetadataFactory_ES_6_8(repoDataProvider).fromRepo(
+                                snapshotName,
+                                indexMetadata.getName(),
+                                shardId
+                            );
                         } else {
-                            shardMetadata = new ShardMetadataFactory_ES_7_10(repoDataProvider).fromRepo(snapshotName, indexMetadata.getName(), shardId);
+                            shardMetadata = new ShardMetadataFactory_ES_7_10(repoDataProvider).fromRepo(
+                                snapshotName,
+                                indexMetadata.getName(),
+                                shardId
+                            );
                         }
 
                         // Unpack the shard

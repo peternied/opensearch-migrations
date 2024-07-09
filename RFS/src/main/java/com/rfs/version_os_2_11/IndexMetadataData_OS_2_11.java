@@ -38,7 +38,7 @@ public class IndexMetadataData_OS_2_11 implements IndexMetadata.Data {
     @Override
     public int getNumberOfShards() {
         return this.getSettings().get("number_of_shards").asInt();
-    }   
+    }
 
     @Override
     public ObjectNode getSettings() {

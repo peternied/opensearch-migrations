@@ -1,13 +1,13 @@
 package org.opensearch.migrations.testutils;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This class doesn't do too much over the stock ResourceLeakDetector, but it does help
@@ -77,7 +77,7 @@ public class CountingNettyResourceLeakDetector<T> extends ResourceLeakDetector<T
 
     private static void setupMonitoringLogger() {
         var eventExecutor = new NioEventLoopGroup(1, new DefaultThreadFactory("leakMonitor"));
-        eventExecutor.scheduleAtFixedRate(()->{
+        eventExecutor.scheduleAtFixedRate(() -> {
             System.gc();
             System.runFinalization();
             var numLeaks = numLeaksFoundAtomic.get();

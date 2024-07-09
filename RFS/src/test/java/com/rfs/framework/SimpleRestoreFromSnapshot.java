@@ -20,19 +20,24 @@ public interface SimpleRestoreFromSnapshot {
         final var compressedSnapshotDirectory = "";
         final var unpackedShardDataDir = Path.of("");
         final var indices = extractSnapshotIndexData(compressedSnapshotDirectory, tempSnapshotName, unpackedShardDataDir);
-        final var targetClusterClient = new OpenSearchClient(new ConnectionDetails(targetClusterUrl, null, null)); 
+        final var targetClusterClient = new OpenSearchClient(new ConnectionDetails(targetClusterUrl, null, null));
 
         // TODO: This should update the following metdata:
-        //    - Global cluster state
-        //    - Index Templates
-        //    - Indices
-        //    - Documents
+        // - Global cluster state
+        // - Index Templates
+        // - Indices
+        // - Documents
 
         updateTargetCluster(indices, unpackedShardDataDir, targetClusterClient);
     }
 
-    public List<IndexMetadata.Data> extractSnapshotIndexData(final String localPath, final String snapshotName, final Path unpackedShardDataDir) throws Exception;
+    public List<IndexMetadata.Data> extractSnapshotIndexData(
+        final String localPath,
+        final String snapshotName,
+        final Path unpackedShardDataDir
+    ) throws Exception;
 
-    public void updateTargetCluster(final List<IndexMetadata.Data> indices, final Path unpackedShardDataDir, final OpenSearchClient client) throws Exception;
+    public void updateTargetCluster(final List<IndexMetadata.Data> indices, final Path unpackedShardDataDir, final OpenSearchClient client)
+        throws Exception;
 
 }

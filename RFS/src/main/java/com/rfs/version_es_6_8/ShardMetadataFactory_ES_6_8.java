@@ -5,10 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import lombok.RequiredArgsConstructor;
 
 import com.rfs.common.ShardMetadata;
 import com.rfs.common.SnapshotRepo;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class ShardMetadataFactory_ES_6_8 implements ShardMetadata.Factory {
@@ -23,23 +23,29 @@ public class ShardMetadataFactory_ES_6_8 implements ShardMetadata.Factory {
 
         try {
             ObjectNode objectNodeRoot = (ObjectNode) root;
-            ShardMetadataData_ES_6_8.DataRaw shardMetadataRaw = objectMapper.treeToValue(objectNodeRoot, ShardMetadataData_ES_6_8.DataRaw.class);
+            ShardMetadataData_ES_6_8.DataRaw shardMetadataRaw = objectMapper.treeToValue(
+                objectNodeRoot,
+                ShardMetadataData_ES_6_8.DataRaw.class
+            );
             return new ShardMetadataData_ES_6_8(
-                    shardMetadataRaw.name,
-                    indexName,
-                    indexId,
-                    shardId,
-                    shardMetadataRaw.indexVersion,
-                    shardMetadataRaw.startTime,
-                    shardMetadataRaw.time,
-                    shardMetadataRaw.numberOfFiles,
-                    shardMetadataRaw.totalSize,
-                    shardMetadataRaw.files
+                shardMetadataRaw.name,
+                indexName,
+                indexId,
+                shardId,
+                shardMetadataRaw.indexVersion,
+                shardMetadataRaw.startTime,
+                shardMetadataRaw.time,
+                shardMetadataRaw.numberOfFiles,
+                shardMetadataRaw.totalSize,
+                shardMetadataRaw.files
             );
         } catch (Exception e) {
-            throw new ShardMetadata.CouldNotParseShardMetadata("Could not parse shard metadata for Index " + indexId + ", Shard " + shardId, e);
+            throw new ShardMetadata.CouldNotParseShardMetadata(
+                "Could not parse shard metadata for Index " + indexId + ", Shard " + shardId,
+                e
+            );
         }
-        
+
     }
 
     @Override

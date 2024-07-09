@@ -34,7 +34,6 @@ tool:
     installations:
       - name: "Default"
         home: "/usr/bin/git"
-
 #unclassified:
 #  location:
 #    url: "http://your-jenkins-url.com"

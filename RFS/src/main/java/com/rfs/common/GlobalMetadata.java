@@ -1,7 +1,5 @@
 package com.rfs.common;
 
-import org.apache.lucene.codecs.CodecUtil;
-
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -11,7 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-
+import org.apache.lucene.codecs.CodecUtil;
 
 public class GlobalMetadata {
     /**
@@ -29,7 +27,8 @@ public class GlobalMetadata {
 
             try (InputStream fis = new FileInputStream(filePath.toFile())) {
                 // Don't fully understand what the value of this code is, but it progresses the stream so we need to do it
-                // See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
+                // See:
+                // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
                 byte[] bytes = fis.readAllBytes();
                 ByteArrayIndexInput indexInput = new ByteArrayIndexInput("global-metadata", bytes);
                 CodecUtil.checksumEntireFile(indexInput);
@@ -81,5 +80,5 @@ public class GlobalMetadata {
             super("Can't read the global metadata from snapshot: " + snapshotName, cause);
         }
     }
-    
+
 }

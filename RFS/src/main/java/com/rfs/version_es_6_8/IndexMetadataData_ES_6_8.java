@@ -2,6 +2,7 @@ package com.rfs.version_es_6_8;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import com.rfs.transformers.TransformFunctions;
 
 public class IndexMetadataData_ES_6_8 implements com.rfs.common.IndexMetadata.Data {
@@ -34,7 +35,7 @@ public class IndexMetadataData_ES_6_8 implements com.rfs.common.IndexMetadata.Da
         if (mappings != null) {
             return mappings;
         }
-        
+
         ArrayNode mappingsArray = (ArrayNode) root.get("mappings");
         ObjectNode mappingsNode = TransformFunctions.getMappingsFromBeneathIntermediate(mappingsArray);
         mappings = mappingsNode;
@@ -50,7 +51,7 @@ public class IndexMetadataData_ES_6_8 implements com.rfs.common.IndexMetadata.Da
     @Override
     public int getNumberOfShards() {
         return this.getSettings().get("index").get("number_of_shards").asInt();
-    }   
+    }
 
     @Override
     public ObjectNode getSettings() {
@@ -58,9 +59,7 @@ public class IndexMetadataData_ES_6_8 implements com.rfs.common.IndexMetadata.Da
             return settings;
         }
 
-        ObjectNode treeSettings = TransformFunctions.convertFlatSettingsToTree(
-            (ObjectNode) root.get("settings")
-        );
+        ObjectNode treeSettings = TransformFunctions.convertFlatSettingsToTree((ObjectNode) root.get("settings"));
 
         settings = treeSettings;
 

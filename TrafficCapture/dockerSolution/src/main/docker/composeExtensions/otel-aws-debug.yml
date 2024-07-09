@@ -1,6 +1,5 @@
-version: '3.7'
+version: "3.7"
 services:
-
   otel-collector:
     image: migrations/otel_collector:latest
     command: ["--config=/etc/otel-config-aws-debug.yaml", "${OTELCOL_ARGS}"]
@@ -8,7 +7,7 @@ services:
       - migrations
     ports:
       - "13133:13133" # health_check extension
-      - "4317:4317"   # otlp receiver
+      - "4317:4317" # otlp receiver
     volumes:
       - ~/.aws:/home/aoc/.aws
     environment:

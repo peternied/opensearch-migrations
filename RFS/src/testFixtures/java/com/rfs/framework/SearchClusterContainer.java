@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
+
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -18,25 +19,22 @@ import org.testcontainers.utility.DockerImageName;
 @Slf4j
 public class SearchClusterContainer extends GenericContainer<SearchClusterContainer> {
     public static final String CLUSTER_SNAPSHOT_DIR = "/usr/share/elasticsearch/snapshots";
-    public static final Version ES_V7_10_2 =
-            new ElasticsearchVersion("docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2", "7.10.2");
-    public static final Version ES_V7_17 =
-            new ElasticsearchVersion("docker.elastic.co/elasticsearch/elasticsearch:7.17.22", "7.17.22");
+    public static final Version ES_V7_10_2 = new ElasticsearchVersion("docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2", "7.10.2");
+    public static final Version ES_V7_17 = new ElasticsearchVersion("docker.elastic.co/elasticsearch/elasticsearch:7.17.22", "7.17.22");
 
-    public static final Version OS_V1_3_16 =
-            new OpenSearchVersion("opensearchproject/opensearch:1.3.16", "1.3.16");
-    public static final Version OS_V2_14_0 =
-            new OpenSearchVersion("opensearchproject/opensearch:2.14.0", "2.14.0");
+    public static final Version OS_V1_3_16 = new OpenSearchVersion("opensearchproject/opensearch:1.3.16", "1.3.16");
+    public static final Version OS_V2_14_0 = new OpenSearchVersion("opensearchproject/opensearch:2.14.0", "2.14.0");
 
     protected static Map<String, String> DEFAULT_ES_LAUNCH_ENV_VARIABLES = Map.of(
-                    "discovery.type", "single-node",
-                    "path.repo", CLUSTER_SNAPSHOT_DIR);
+        "discovery.type",
+        "single-node",
+        "path.repo",
+        CLUSTER_SNAPSHOT_DIR
+    );
 
-    protected static Map<String, String> DEFAULT_OS_LAUNCH_ENV_VARIABLES = new ImmutableMap.Builder<String, String>()
-        .putAll(DEFAULT_ES_LAUNCH_ENV_VARIABLES)
-                .put("plugins.security.disabled", "true")
-                .put("OPENSEARCH_INITIAL_ADMIN_PASSWORD", "SecurityIsDisabled123$%^")
-                .build();
+    protected static Map<String, String> DEFAULT_OS_LAUNCH_ENV_VARIABLES = new ImmutableMap.Builder<String, String>().putAll(
+        DEFAULT_ES_LAUNCH_ENV_VARIABLES
+    ).put("plugins.security.disabled", "true").put("OPENSEARCH_INITIAL_ADMIN_PASSWORD", "SecurityIsDisabled123$%^").build();
 
     private final Version version;
 
@@ -59,11 +57,8 @@ public class SearchClusterContainer extends GenericContainer<SearchClusterContai
     public SearchClusterContainer(final Version version, Map<String, String> environmentVariables) {
         super(DockerImageName.parse(version.imageName));
         this.withExposedPorts(9200, 9300)
-                .withEnv(environmentVariables)
-                .waitingFor(Wait.forHttp("/")
-                        .forPort(9200)
-                        .forStatusCode(200)
-                        .withStartupTimeout(Duration.ofMinutes(1)));
+            .withEnv(environmentVariables)
+            .waitingFor(Wait.forHttp("/").forPort(9200).forStatusCode(200).withStartupTimeout(Duration.ofMinutes(1)));
 
         this.version = version;
 

@@ -1,13 +1,12 @@
-version: '3.7'
+version: "3.7"
 services:
-
   # To run from this directory:
   # Start:
   # docker compose -f docker-compose-console-only.yml up
   # Tear Down:
   # docker compose -f docker-compose-console-only.yml down
   migration-console:
-    image: 'migrations/migration_console:latest'
+    image: "migrations/migration_console:latest"
     networks:
       - migrations
     volumes:

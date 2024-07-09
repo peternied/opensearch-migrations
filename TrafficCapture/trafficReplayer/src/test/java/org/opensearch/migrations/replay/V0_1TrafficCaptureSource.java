@@ -1,13 +1,13 @@
 package org.opensearch.migrations.replay;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Optional;
+
 import org.opensearch.migrations.replay.datatypes.PojoTrafficStreamAndKey;
 import org.opensearch.migrations.replay.tracing.RootReplayerContext;
 import org.opensearch.migrations.replay.traffic.source.ITrafficStreamWithKey;
 import org.opensearch.migrations.trafficcapture.protos.TrafficStream;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Optional;
 
 public class V0_1TrafficCaptureSource extends CompressedFileTrafficCaptureSource {
 
@@ -21,9 +21,7 @@ public class V0_1TrafficCaptureSource extends CompressedFileTrafficCaptureSource
     @Override
     protected ITrafficStreamWithKey modifyTrafficStream(ITrafficStreamWithKey streamWithKey) {
         var incoming = streamWithKey.getStream();
-        var outgoingBuilder = TrafficStream.newBuilder()
-                .setNodeId(incoming.getNodeId())
-                .setConnectionId(incoming.getConnectionId());
+        var outgoingBuilder = TrafficStream.newBuilder().setNodeId(incoming.getNodeId()).setConnectionId(incoming.getConnectionId());
         if (incoming.hasNumber()) {
             outgoingBuilder.setNumber(incoming.getNumber());
         } else {
@@ -52,8 +50,9 @@ public class V0_1TrafficCaptureSource extends CompressedFileTrafficCaptureSource
 
         public void add(TrafficStream incoming) {
             var list = incoming.getSubStreamList();
-            lastWasRead = list.isEmpty() ? lastWasRead :
-                    Optional.of(list.get(list.size() - 1)).map(tso -> tso.hasRead() || tso.hasReadSegment()).get();
+            lastWasRead = list.isEmpty()
+                ? lastWasRead
+                : Optional.of(list.get(list.size() - 1)).map(tso -> tso.hasRead() || tso.hasReadSegment()).get();
             requestCount += list.stream().filter(tso -> tso.hasRead() || tso.hasReadSegment()).count();
         }
     }

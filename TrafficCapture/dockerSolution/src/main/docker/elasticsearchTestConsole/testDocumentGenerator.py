@@ -97,13 +97,13 @@ def calculate_sleep_time(request_timestamps, target_requests_per_sec):
     """
     if not request_timestamps:
         return 0
-    
+
     target_time_per_iteration = 1.0 / target_requests_per_sec
     average_time_per_iteration = (datetime.now() -
                                   request_timestamps[0]).total_seconds() / (len(request_timestamps) + 1)
-    
+
     sleep_time = (target_time_per_iteration - average_time_per_iteration) * len(request_timestamps)
-    
+
     return max(0, sleep_time)
 
 
@@ -137,7 +137,7 @@ def main():
             response_pretty = "Response: N/A"
 
         throughput = calculate_throughput(request_timestamps)
-     
+
         summary_message = (
             f"Summary: 2xx responses = {total_counts['2xx']}, 4xx responses = {total_counts['4xx']}, "
             f"5xx responses = {total_counts['5xx']}, Error requests = {total_counts['error']}"
@@ -151,7 +151,7 @@ def main():
                     f"{response_pretty}\n" +
                     f"{summary_message}\n" +
                     f"{throughput_message}")
-        
+
         sleep_time = calculate_sleep_time(request_timestamps, args.requests_per_sec)
 
         # Flush the stdout buffer to ensure the log messages are displayed immediately and in sync
@@ -159,12 +159,12 @@ def main():
 
         if (sleep_time > 0):
             time.sleep(sleep_time)
-        
+
         if time.time() - start_time >= 5:
             session.close()
             session = requests.Session()
             start_time = time.time()
-        
+
         # Remove timestamps older than 5 seconds
         while request_timestamps and (datetime.now() - request_timestamps[0]).total_seconds() > 5:
             request_timestamps.popleft()

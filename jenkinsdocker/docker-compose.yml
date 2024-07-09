@@ -1,6 +1,5 @@
-version: '3.7'
+version: "3.7"
 services:
-
   jenkins:
     build:
       context: .
@@ -14,7 +13,7 @@ services:
     environment:
       - ADMIN_PASSWORD=admin
       #- repoPath=/opensearch-migrations-src
-#      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/configuration.yaml
+    #      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/configuration.yaml
     #- repoPath=https://github.com/opensearch-project/opensearch-migrations
     ports:
       - "8080:8080"

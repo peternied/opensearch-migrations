@@ -17,5 +17,5 @@ public class GlobalMetadataData_ES_6_8 implements com.rfs.common.GlobalMetadata.
     public ObjectNode getTemplates() {
         return (ObjectNode) root.get("templates");
     }
-    
+
 }

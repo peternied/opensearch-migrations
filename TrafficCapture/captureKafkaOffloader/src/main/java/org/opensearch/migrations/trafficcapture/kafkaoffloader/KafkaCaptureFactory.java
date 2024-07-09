@@ -1,17 +1,16 @@
 package org.opensearch.migrations.trafficcapture.kafkaoffloader;
 
-import com.google.protobuf.CodedOutputStream;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
-import lombok.AllArgsConstructor;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
+
+import com.google.protobuf.CodedOutputStream;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+
 import org.opensearch.migrations.tracing.commoncontexts.IConnectionContext;
 import org.opensearch.migrations.trafficcapture.CodedOutputStreamHolder;
 import org.opensearch.migrations.trafficcapture.IChannelConnectionCaptureSerializer;
@@ -20,6 +19,9 @@ import org.opensearch.migrations.trafficcapture.OrderedStreamLifecyleManager;
 import org.opensearch.migrations.trafficcapture.StreamChannelConnectionCaptureSerializer;
 import org.opensearch.migrations.trafficcapture.kafkaoffloader.tracing.IRootKafkaOffloaderContext;
 
+import lombok.AllArgsConstructor;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMetadata> {
@@ -36,8 +38,13 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
     private final String topicNameForTraffic;
     private final int bufferSize;
 
-    public KafkaCaptureFactory(IRootKafkaOffloaderContext rootScope, String nodeId, Producer<String, byte[]> producer,
-                               String topicNameForTraffic, int messageSize) {
+    public KafkaCaptureFactory(
+        IRootKafkaOffloaderContext rootScope,
+        String nodeId,
+        Producer<String, byte[]> producer,
+        String topicNameForTraffic,
+        int messageSize
+    ) {
         this.rootScope = rootScope;
         this.nodeId = nodeId;
         this.producer = producer;
@@ -50,16 +57,15 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
     }
 
     @Override
-    public IChannelConnectionCaptureSerializer<RecordMetadata>
-    createOffloader(IConnectionContext ctx) {
-        return new StreamChannelConnectionCaptureSerializer<>(nodeId, ctx.getConnectionId(),
-                new StreamManager(rootScope, ctx));
+    public IChannelConnectionCaptureSerializer<RecordMetadata> createOffloader(IConnectionContext ctx) {
+        return new StreamChannelConnectionCaptureSerializer<>(nodeId, ctx.getConnectionId(), new StreamManager(rootScope, ctx));
     }
 
     @AllArgsConstructor
     static class CodedOutputStreamWrapper implements CodedOutputStreamHolder {
         private final CodedOutputStream codedOutputStream;
         private final ByteBuffer byteBuffer;
+
         @Override
         public int getOutputStreamBytesLimit() {
             return byteBuffer.limit();
@@ -92,11 +98,9 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
         }
 
         @Override
-        public CompletableFuture<RecordMetadata>
-        kickoffCloseStream(CodedOutputStreamHolder outputStreamHolder, int index) {
+        public CompletableFuture<RecordMetadata> kickoffCloseStream(CodedOutputStreamHolder outputStreamHolder, int index) {
             if (!(outputStreamHolder instanceof CodedOutputStreamWrapper)) {
-                throw new IllegalArgumentException("Unknown outputStreamHolder sent back to StreamManager: " +
-                        outputStreamHolder);
+                throw new IllegalArgumentException("Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder);
             }
             var osh = (CodedOutputStreamWrapper) outputStreamHolder;
 
@@ -104,12 +108,19 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
 
             String recordId = String.format("%s.%d", connectionId, index);
             var byteBuffer = osh.byteBuffer;
-            ProducerRecord<String, byte[]> kafkaRecord = new ProducerRecord<>(topicNameForTraffic, recordId,
-                    Arrays.copyOfRange(byteBuffer.array(), 0, byteBuffer.position()));
+            ProducerRecord<String, byte[]> kafkaRecord = new ProducerRecord<>(
+                topicNameForTraffic,
+                recordId,
+                Arrays.copyOfRange(byteBuffer.array(), 0, byteBuffer.position())
+            );
             log.debug("Sending Kafka producer record: {} for topic: {}", recordId, topicNameForTraffic);
 
-            var flushContext = rootScope.createKafkaRecordContext(telemetryContext,
-                    topicNameForTraffic, recordId, kafkaRecord.value().length);
+            var flushContext = rootScope.createKafkaRecordContext(
+                telemetryContext,
+                topicNameForTraffic,
+                recordId,
+                kafkaRecord.value().length
+            );
             /*
              * The default KafkaProducer comes with built-in retry and error-handling logic that suits many cases. From the
              * documentation here for retry: https://kafka.apache.org/35/javadoc/org/apache/kafka/clients/producer/KafkaProducer.html
@@ -120,23 +131,25 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
              * retried or not retried at all: https://kafka.apache.org/35/javadoc/org/apache/kafka/common/errors/RetriableException.html
              * as well as basic retry backoff
              */
-            return sendFullyAsync(producer, kafkaRecord)
-                .whenComplete(((recordMetadata, throwable) -> {
-                    if (throwable != null) {
-                        flushContext.addTraceException(throwable, true);
-                        log.error("Error sending producer record: {}", recordId, throwable);
-                    } else {
-                        log.debug("Kafka producer record: {} has finished sending for topic: {} and partition {}",
-                            recordId, recordMetadata.topic(), recordMetadata.partition());
-                    }
-                    flushContext.close();
-                }));
+            return sendFullyAsync(producer, kafkaRecord).whenComplete(((recordMetadata, throwable) -> {
+                if (throwable != null) {
+                    flushContext.addTraceException(throwable, true);
+                    log.error("Error sending producer record: {}", recordId, throwable);
+                } else {
+                    log.debug(
+                        "Kafka producer record: {} has finished sending for topic: {} and partition {}",
+                        recordId,
+                        recordMetadata.topic(),
+                        recordMetadata.partition()
+                    );
+                }
+                flushContext.close();
+            }));
         }
     }
-    
+
     // Producer Send will block on actions such as retrieving cluster metadata, allows running fully async
-    public static <K, V> CompletableFuture<RecordMetadata> sendFullyAsync(Producer<K, V> producer,
-                                                                          ProducerRecord<K, V> kafkaRecord) {
+    public static <K, V> CompletableFuture<RecordMetadata> sendFullyAsync(Producer<K, V> producer, ProducerRecord<K, V> kafkaRecord) {
         CompletableFuture<RecordMetadata> completableFuture = new CompletableFuture<>();
 
         ForkJoinPool.commonPool().execute(() -> {
@@ -144,13 +157,11 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
                 producer.send(kafkaRecord, (metadata, exception) -> {
                     if (exception != null) {
                         completableFuture.completeExceptionally(exception);
-                    }
-                    else {
+                    } else {
                         completableFuture.complete(metadata);
                     }
                 });
-            }
-            catch (Exception exception) {
+            } catch (Exception exception) {
                 completableFuture.completeExceptionally(exception);
             }
         });

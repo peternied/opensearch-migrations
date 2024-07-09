@@ -1,7 +1,5 @@
-version: '3.7'
+version: "3.7"
 services:
-
-
   prometheus:
     container_name: prometheus
     image: prom/prometheus:v2.53.0
@@ -12,8 +10,8 @@ services:
     ports:
       - "9090:9090"
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--enable-feature=exemplar-storage'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--enable-feature=exemplar-storage"
 
   # Jaeger
   # Found regression with latest tag not being able to connect to port 4317 on docker startup, reverted to '1' tag
@@ -30,7 +28,7 @@ services:
       - COLLECTOR_OTLP_ENABLED=true
 
   grafana:
-    image: 'migrations/grafana:latest'
+    image: "migrations/grafana:latest"
     networks:
       - migrations
     ports:
@@ -51,22 +49,22 @@ services:
     environment:
       # see https://github.com/apache/kafka/blob/3.7/docker/examples/jvm/single-node/plaintext/docker-compose.yml
       KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT_HOST://kafka:9092,PLAINTEXT://kafka:19092'
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
-      KAFKA_LISTENERS: 'CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:19092'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      CLUSTER_ID: '4L6g3nShT-eMCtK--X86sw'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT_HOST://kafka:9092,PLAINTEXT://kafka:19092"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_LISTENERS: "CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:19092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
 
   replayer:
-    image: 'migrations/traffic_replayer:latest'
+    image: "migrations/traffic_replayer:latest"
     networks:
       - migrations
     volumes:
@@ -81,7 +79,7 @@ services:
     command: /bin/sh -c "/runJavaWithClasspath.sh org.opensearch.migrations.replay.TrafficReplayer --speedup-factor 2 https://opensearchtarget:9200 --auth-header-value Basic\\ YWRtaW46bXlTdHJvbmdQYXNzd29yZDEyMyE= --insecure --kafka-traffic-brokers kafka:9092 --kafka-traffic-topic logging-traffic-topic --kafka-traffic-group-id logging-group-default --otelCollectorEndpoint http://otel-collector:4317"
 
   opensearchtarget:
-    image: 'opensearchproject/opensearch:2.15.0'
+    image: "opensearchproject/opensearch:2.15.0"
     environment:
       - discovery.type=single-node
       - OPENSEARCH_INITIAL_ADMIN_PASSWORD=myStrongPassword123!
@@ -90,9 +88,8 @@ services:
     ports:
       - "29200:9200"
 
-
   migration-console:
-    image: 'migrations/migration_console:latest'
+    image: "migrations/migration_console:latest"
     networks:
       - migrations
     volumes:
@@ -105,7 +102,6 @@ services:
       - MIGRATION_KAFKA_BROKER_ENDPOINTS=kafka:9092
       - AWS_PROFILE=default
 #    command: ./runTestBenchmarks.sh
-
 
 volumes:
   sharedComparatorSqlResults:

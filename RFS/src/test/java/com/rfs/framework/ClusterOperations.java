@@ -1,12 +1,12 @@
 package com.rfs.framework;
 
+import java.io.IOException;
+
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpPut;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.io.entity.StringEntity;
-
-import java.io.IOException;
 
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -27,13 +27,13 @@ public class ClusterOperations {
 
     public void createSnapshotRepository() throws IOException {
         // Create snapshot repository
-        final var repositoryJson = "{\n" +
-        "  \"type\": \"fs\",\n" +
-        "  \"settings\": {\n" +
-        "    \"location\": \"/usr/share/elasticsearch/snapshots\",\n" +
-        "    \"compress\": false\n" +
-        "  }\n" +
-        "}";
+        final var repositoryJson = "{\n"
+            + "  \"type\": \"fs\",\n"
+            + "  \"settings\": {\n"
+            + "    \"location\": \"/usr/share/elasticsearch/snapshots\",\n"
+            + "    \"compress\": false\n"
+            + "  }\n"
+            + "}";
 
         final var createRepoRequest = new HttpPut(clusterUrl + "/_snapshot/test-repo");
         createRepoRequest.setEntity(new StringEntity(repositoryJson));
@@ -63,11 +63,13 @@ public class ClusterOperations {
     }
 
     public void takeSnapshot(final String snapshotName, final String indexPattern) throws IOException {
-        final var snapshotJson = "{\n" +
-                "  \"indices\": \"" + indexPattern + "\",\n" +
-                "  \"ignore_unavailable\": true,\n" +
-                "  \"include_global_state\": true\n" +
-                "}";
+        final var snapshotJson = "{\n"
+            + "  \"indices\": \""
+            + indexPattern
+            + "\",\n"
+            + "  \"ignore_unavailable\": true,\n"
+            + "  \"include_global_state\": true\n"
+            + "}";
 
         final var createSnapshotRequest = new HttpPut(clusterUrl + "/_snapshot/test-repo/" + snapshotName + "?wait_for_completion=true");
         createSnapshotRequest.setEntity(new StringEntity(snapshotJson));

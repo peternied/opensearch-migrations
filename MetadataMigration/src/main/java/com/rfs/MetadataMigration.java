@@ -1,13 +1,12 @@
 package com.rfs;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.ParameterException;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
 import com.rfs.common.ClusterVersion;
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.FileSystemRepo;
@@ -34,59 +33,61 @@ import lombok.extern.slf4j.Slf4j;
 public class MetadataMigration {
 
     public static class Args {
-        @Parameter(names = {"--snapshot-name"}, description = "The name of the snapshot to migrate", required = true)
+        @Parameter(names = { "--snapshot-name" }, description = "The name of the snapshot to migrate", required = true)
         public String snapshotName;
 
-        @Parameter(names = {"--file-system-repo-path"}, required = false, description = "The full path to the snapshot repo on the file system.")
+        @Parameter(names = {
+            "--file-system-repo-path" }, required = false, description = "The full path to the snapshot repo on the file system.")
         public String fileSystemRepoPath;
 
-        @Parameter(names = {"--s3-local-dir"}, description = "The absolute path to the directory on local disk to download S3 files to", required = false)
+        @Parameter(names = {
+            "--s3-local-dir" }, description = "The absolute path to the directory on local disk to download S3 files to", required = false)
         public String s3LocalDirPath;
 
-        @Parameter(names = {"--s3-repo-uri"}, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2", required = false)
+        @Parameter(names = {
+            "--s3-repo-uri" }, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2", required = false)
         public String s3RepoUri;
 
-        @Parameter(names = {"--s3-region"}, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
+        @Parameter(names = { "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
         public String s3Region;
 
-        @Parameter(names = {"--target-host"}, description = "The target host and port (e.g. http://localhost:9200)", required = true)
+        @Parameter(names = { "--target-host" }, description = "The target host and port (e.g. http://localhost:9200)", required = true)
         public String targetHost;
 
-        @Parameter(names = {"--target-username"}, description = "Optional.  The target username; if not provided, will assume no auth on target", required = false)
+        @Parameter(names = {
+            "--target-username" }, description = "Optional.  The target username; if not provided, will assume no auth on target", required = false)
         public String targetUser = null;
 
-        @Parameter(names = {"--target-password"}, description = "Optional.  The target password; if not provided, will assume no auth on target", required = false)
+        @Parameter(names = {
+            "--target-password" }, description = "Optional.  The target password; if not provided, will assume no auth on target", required = false)
         public String targetPass = null;
 
-        @Parameter(names = {"--target-insecure"}, description = "Allow untrusted SSL certificates for target", required = false)
+        @Parameter(names = { "--target-insecure" }, description = "Allow untrusted SSL certificates for target", required = false)
         public boolean targetInsecure = false;
 
-        @Parameter(names = {"--index-allowlist"}, description = ("Optional.  List of index names to migrate"
+        @Parameter(names = { "--index-allowlist" }, description = ("Optional.  List of index names to migrate"
             + " (e.g. 'logs_2024_01, logs_2024_02').  Default: all non-system indices (e.g. those not starting with '.')"), required = false)
         public List<String> indexAllowlist = List.of();
 
-        @Parameter(names = {"--index-template-allowlist"}, description = ("Optional.  List of index template names to migrate"
+        @Parameter(names = { "--index-template-allowlist" }, description = ("Optional.  List of index template names to migrate"
             + " (e.g. 'posts_index_template1, posts_index_template2').  Default: empty list"), required = false)
         public List<String> indexTemplateAllowlist = List.of();
 
-        @Parameter(names = {"--component-template-allowlist"}, description = ("Optional. List of component template names to migrate"
+        @Parameter(names = { "--component-template-allowlist" }, description = ("Optional. List of component template names to migrate"
             + " (e.g. 'posts_template1, posts_template2').  Default: empty list"), required = false)
         public List<String> componentTemplateAllowlist = List.of();
-        
-        //https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
-        @Parameter(names = {"--min-replicas"}, description = ("Optional.  The minimum number of replicas configured for migrated indices on the target."
-            + " This can be useful for migrating to targets which use zonal deployments and require additional replicas to meet zone requirements.  Default: 0")
-            , required = false)
+
+        // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
+        @Parameter(names = {
+            "--min-replicas" }, description = ("Optional.  The minimum number of replicas configured for migrated indices on the target."
+                + " This can be useful for migrating to targets which use zonal deployments and require additional replicas to meet zone requirements.  Default: 0"), required = false)
         public int minNumberOfReplicas = 0;
     }
 
     public static void main(String[] args) throws Exception {
         // Grab out args
         Args arguments = new Args();
-        JCommander.newBuilder()
-                .addObject(arguments)
-                .build()
-                .parse(args);
+        JCommander.newBuilder().addObject(arguments).build().parse(args);
 
         if (arguments.fileSystemRepoPath == null && arguments.s3RepoUri == null) {
             throw new ParameterException("Either file-system-repo-path or s3-repo-uri must be set");
@@ -99,7 +100,7 @@ public class MetadataMigration {
         }
 
         final String snapshotName = arguments.snapshotName;
-        final Path fileSystemRepoPath = arguments.fileSystemRepoPath != null ? Paths.get(arguments.fileSystemRepoPath): null;
+        final Path fileSystemRepoPath = arguments.fileSystemRepoPath != null ? Paths.get(arguments.fileSystemRepoPath) : null;
         final Path s3LocalDirPath = arguments.s3LocalDirPath != null ? Paths.get(arguments.s3LocalDirPath) : null;
         final String s3RepoUri = arguments.s3RepoUri;
         final String s3Region = arguments.s3Region;
@@ -114,18 +115,26 @@ public class MetadataMigration {
 
         final ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass, targetInsecure);
 
-
         TryHandlePhaseFailure.executeWithTryCatch(() -> {
             log.info("Running RfsWorker");
             OpenSearchClient targetClient = new OpenSearchClient(targetConnection);
 
             final SourceRepo sourceRepo = fileSystemRepoPath != null
-                    ? new FileSystemRepo(fileSystemRepoPath)
-                    : S3Repo.create(s3LocalDirPath, new S3Uri(s3RepoUri), s3Region);
+                ? new FileSystemRepo(fileSystemRepoPath)
+                : S3Repo.create(s3LocalDirPath, new S3Uri(s3RepoUri), s3Region);
             final SnapshotRepo.Provider repoDataProvider = new SnapshotRepoProvider_ES_7_10(sourceRepo);
             final GlobalMetadata.Factory metadataFactory = new GlobalMetadataFactory_ES_7_10(repoDataProvider);
-            final GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(targetClient, List.of(), componentTemplateAllowlist, indexTemplateAllowlist);
-            final Transformer transformer = TransformFunctions.getTransformer(ClusterVersion.ES_7_10, ClusterVersion.OS_2_11, awarenessDimensionality);
+            final GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
+                targetClient,
+                List.of(),
+                componentTemplateAllowlist,
+                indexTemplateAllowlist
+            );
+            final Transformer transformer = TransformFunctions.getTransformer(
+                ClusterVersion.ES_7_10,
+                ClusterVersion.OS_2_11,
+                awarenessDimensionality
+            );
             new MetadataRunner(snapshotName, metadataFactory, metadataCreator, transformer).migrateMetadata();
 
             final IndexMetadata.Factory indexMetadataFactory = new IndexMetadataFactory_ES_7_10(repoDataProvider);

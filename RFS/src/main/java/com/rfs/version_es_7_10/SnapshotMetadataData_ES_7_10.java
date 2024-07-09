@@ -6,8 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.rfs.common.SnapshotMetadata;
 
-
-public class SnapshotMetadataData_ES_7_10 implements SnapshotMetadata.Data{
+public class SnapshotMetadataData_ES_7_10 implements SnapshotMetadata.Data {
 
     private String name;
     private String uuid;

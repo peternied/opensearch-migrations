@@ -1,8 +1,5 @@
 package com.rfs.common;
 
-import org.apache.lucene.codecs.CodecUtil;
-import org.apache.lucene.util.BytesRef;
-
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -12,6 +9,8 @@ import java.util.List;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import org.apache.lucene.codecs.CodecUtil;
+import org.apache.lucene.util.BytesRef;
 
 public class ShardMetadata {
 
@@ -24,7 +23,8 @@ public class ShardMetadata {
 
             try (InputStream fis = new FileInputStream(filePath.toFile())) {
                 // Don't fully understand what the value of this code is, but it progresses the stream so we need to do it
-                // See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
+                // See:
+                // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
                 byte[] bytes = fis.readAllBytes();
                 ByteArrayIndexInput indexInput = new ByteArrayIndexInput("index-metadata", bytes);
                 CodecUtil.checksumEntireFile(indexInput);
@@ -35,7 +35,10 @@ public class ShardMetadata {
                 ObjectMapper smileMapper = new ObjectMapper(smileFactory);
                 return smileMapper.readTree(bis);
             } catch (Exception e) {
-                throw new CouldNotParseShardMetadata("Could not parse shard metadata for Snapshot " + snapshotId + ", Index " + indexId + ", Shard " + shardId, e);
+                throw new CouldNotParseShardMetadata(
+                    "Could not parse shard metadata for Snapshot " + snapshotId + ", Index " + indexId + ", Shard " + shardId,
+                    e
+                );
             }
         }
 
@@ -43,7 +46,7 @@ public class ShardMetadata {
             SmileFactory smileFactory = getSmileFactory();
             String snapshotId = getRepoDataProvider().getSnapshotId(snapshotName);
             String indexId = getRepoDataProvider().getIndexId(indexName);
-            JsonNode root = getJsonNode(snapshotId, indexId, shardId, smileFactory);            
+            JsonNode root = getJsonNode(snapshotId, indexId, shardId, smileFactory);
             return fromJsonNode(root, indexId, indexName, shardId);
         }
 
@@ -69,15 +72,24 @@ public class ShardMetadata {
     * See: https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/index/snapshots/blobstore/BlobStoreIndexShardSnapshot.java#L508
     */
     public static interface Data {
-        public String getSnapshotName();    
-        public String getIndexName();    
-        public String getIndexId();    
-        public int getShardId();    
-        public int getIndexVersion();    
-        public long getStartTime();    
-        public long getTime();    
-        public int getNumberOfFiles();    
+        public String getSnapshotName();
+
+        public String getIndexName();
+
+        public String getIndexId();
+
+        public int getShardId();
+
+        public int getIndexVersion();
+
+        public long getStartTime();
+
+        public long getTime();
+
+        public int getNumberOfFiles();
+
         public long getTotalSizeBytes();
+
         public List<FileInfo> getFiles();
     }
 
@@ -88,14 +100,22 @@ public class ShardMetadata {
     */
     public static interface FileInfo {
         public String getName();
+
         public String getPhysicalName();
+
         public long getLength();
+
         public String getChecksum();
+
         public long getPartSize();
+
         public String getWrittenBy();
+
         public BytesRef getMetaHash();
+
         public long getNumberOfParts();
+
         public String partName(long part);
     }
-    
+
 }

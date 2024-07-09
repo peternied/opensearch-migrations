@@ -5,8 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-
-import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.store.FSDirectory;
@@ -14,6 +12,8 @@ import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.NativeFSLockFactory;
 import org.apache.lucene.util.BytesRef;
+
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class SnapshotShardUnpacker {
@@ -49,12 +49,19 @@ public class SnapshotShardUnpacker {
 
             for (ShardMetadata.FileInfo fileMetadata : shardMetadata.getFiles()) {
                 logger.info("Unpacking - Blob Name: " + fileMetadata.getName() + ", Lucene Name: " + fileMetadata.getPhysicalName());
-                try (IndexOutput indexOutput = primaryDirectory.createOutput(fileMetadata.getPhysicalName(), IOContext.DEFAULT);){
+                try (IndexOutput indexOutput = primaryDirectory.createOutput(fileMetadata.getPhysicalName(), IOContext.DEFAULT);) {
                     if (fileMetadata.getName().startsWith("v__")) {
                         final BytesRef hash = fileMetadata.getMetaHash();
                         indexOutput.writeBytes(hash.bytes, hash.offset, hash.length);
                     } else {
-                        try (InputStream stream = new PartSliceStream(repoAccessor, fileMetadata, shardMetadata.getIndexId(), shardMetadata.getShardId())) {
+                        try (
+                            InputStream stream = new PartSliceStream(
+                                repoAccessor,
+                                fileMetadata,
+                                shardMetadata.getIndexId(),
+                                shardMetadata.getShardId()
+                            )
+                        ) {
                             final byte[] buffer = new byte[Math.toIntExact(Math.min(bufferSize, fileMetadata.getLength()))];
                             int length;
                             while ((length = stream.read(buffer)) > 0) {
@@ -66,7 +73,10 @@ public class SnapshotShardUnpacker {
             }
             return luceneIndexDir;
         } catch (Exception e) {
-            throw new CouldNotUnpackShard("Could not unpack shard: Index " + shardMetadata.getIndexId() + ", Shard " + shardMetadata.getShardId(), e);
+            throw new CouldNotUnpackShard(
+                "Could not unpack shard: Index " + shardMetadata.getIndexId() + ", Shard " + shardMetadata.getShardId(),
+                e
+            );
         }
     }
 

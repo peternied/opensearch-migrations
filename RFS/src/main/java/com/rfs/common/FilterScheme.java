@@ -6,7 +6,10 @@ import java.util.function.Predicate;
 
 public class FilterScheme {
 
-    public static Predicate<SnapshotRepo.Index> filterIndicesByAllowList(List<String> indexAllowlist, BiConsumer<String, Boolean> indexNameAcceptanceObserver) {
+    public static Predicate<SnapshotRepo.Index> filterIndicesByAllowList(
+        List<String> indexAllowlist,
+        BiConsumer<String, Boolean> indexNameAcceptanceObserver
+    ) {
         return index -> {
             boolean accepted;
             if (indexAllowlist.isEmpty()) {
@@ -19,5 +22,5 @@ public class FilterScheme {
 
             return accepted;
         };
-    }    
+    }
 }

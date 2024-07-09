@@ -1,10 +1,9 @@
 package com.rfs.transformers;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
     private static final Logger logger = LogManager.getLogger(Transformer_ES_6_8_to_OS_2_11.class);
@@ -51,7 +50,7 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
     }
 
     @Override
-    public ObjectNode transformIndexMetadata(ObjectNode root){
+    public ObjectNode transformIndexMetadata(ObjectNode root) {
         ObjectNode newRoot = root.deepCopy();
 
         TransformFunctions.removeIntermediateMappingsLevels(newRoot);
@@ -63,5 +62,5 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
         logger.debug("Original Object: " + root.toString());
         logger.debug("Transformed Object: " + newRoot.toString());
         return newRoot;
-    }    
+    }
 }

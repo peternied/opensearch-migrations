@@ -15,7 +15,7 @@ public class FileSystemRepo implements SourceRepo {
         Pattern pattern = Pattern.compile("^index-(\\d+)$");
         Path highestVersionedFile = null;
         int highestVersion = -1;
-        
+
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(repoRootDir)) {
             for (Path entry : stream) {
                 if (Files.isRegularFile(entry)) {
