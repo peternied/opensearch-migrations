@@ -16,6 +16,7 @@ dependencies {
 
     implementation project(":coreUtilities")
     implementation project(":RFS")
+    implementation project(':transformation')
 
     implementation group: 'com.beust', name: 'jcommander'
     implementation group: 'org.slf4j', name: 'slf4j-api'

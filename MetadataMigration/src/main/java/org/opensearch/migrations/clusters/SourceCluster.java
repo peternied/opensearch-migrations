@@ -1,5 +1,7 @@
 package org.opensearch.migrations.clusters;
 
+import org.opensearch.migrations.Version;
+
 import com.rfs.models.GlobalMetadata;
 import com.rfs.models.IndexMetadata;
 
