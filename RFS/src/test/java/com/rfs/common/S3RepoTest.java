@@ -58,7 +58,8 @@ public class S3RepoTest {
     void setUp() {
         GetObjectResponse mockResponse = GetObjectResponse.builder().build();
         CompletableFuture<GetObjectResponse> noopFuture = CompletableFuture.completedFuture(mockResponse);
-        lenient().when(mockS3Client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class))).thenReturn(noopFuture);
+        lenient().when(mockS3Client.getObject(any(GetObjectRequest.class), any(AsyncResponseTransformer.class)))
+            .thenReturn(noopFuture);
 
         testRepo = Mockito.spy(new TestableS3Repo(testDir, testRepoUri, testRegion, mockS3Client));
     }
@@ -87,7 +88,10 @@ public class S3RepoTest {
 
         Mockito.verify(testRepo, times(1)).ensureS3LocalDirectoryExists(expectedPath.getParent());
 
-        GetObjectRequest expectedRequest = GetObjectRequest.builder().bucket(expectedBucketName).key(expectedKey).build();
+        GetObjectRequest expectedRequest = GetObjectRequest.builder()
+            .bucket(expectedBucketName)
+            .key(expectedKey)
+            .build();
 
         verify(mockS3Client).getObject(eq(expectedRequest), any(AsyncResponseTransformer.class));
     }
@@ -109,7 +113,10 @@ public class S3RepoTest {
 
         Mockito.verify(testRepo, times(1)).ensureS3LocalDirectoryExists(expectedPath.getParent());
 
-        GetObjectRequest expectedRequest = GetObjectRequest.builder().bucket(expectedBucketName).key(expectedKey).build();
+        GetObjectRequest expectedRequest = GetObjectRequest.builder()
+            .bucket(expectedBucketName)
+            .key(expectedKey)
+            .build();
 
         verify(mockS3Client).getObject(eq(expectedRequest), any(AsyncResponseTransformer.class));
     }
@@ -132,7 +139,10 @@ public class S3RepoTest {
 
         Mockito.verify(testRepo, times(1)).ensureS3LocalDirectoryExists(expectedPath.getParent());
 
-        GetObjectRequest expectedRequest = GetObjectRequest.builder().bucket(expectedBucketName).key(expectedKey).build();
+        GetObjectRequest expectedRequest = GetObjectRequest.builder()
+            .bucket(expectedBucketName)
+            .key(expectedKey)
+            .build();
 
         verify(mockS3Client).getObject(eq(expectedRequest), any(AsyncResponseTransformer.class));
     }
@@ -156,7 +166,10 @@ public class S3RepoTest {
 
         Mockito.verify(testRepo, times(1)).ensureS3LocalDirectoryExists(expectedPath.getParent());
 
-        GetObjectRequest expectedRequest = GetObjectRequest.builder().bucket(expectedBucketName).key(expectedKey).build();
+        GetObjectRequest expectedRequest = GetObjectRequest.builder()
+            .bucket(expectedBucketName)
+            .key(expectedKey)
+            .build();
 
         verify(mockS3Client).getObject(eq(expectedRequest), any(AsyncResponseTransformer.class));
     }
@@ -196,7 +209,10 @@ public class S3RepoTest {
 
         Mockito.verify(testRepo, times(1)).ensureS3LocalDirectoryExists(expectedPath.getParent());
 
-        GetObjectRequest expectedRequest = GetObjectRequest.builder().bucket(expectedBucketName).key(expectedKey).build();
+        GetObjectRequest expectedRequest = GetObjectRequest.builder()
+            .bucket(expectedBucketName)
+            .key(expectedKey)
+            .build();
 
         verify(mockS3Client).getObject(eq(expectedRequest), any(AsyncResponseTransformer.class));
     }
@@ -221,7 +237,10 @@ public class S3RepoTest {
 
         Mockito.verify(testRepo, times(1)).ensureS3LocalDirectoryExists(expectedPath.getParent());
 
-        GetObjectRequest expectedRequest = GetObjectRequest.builder().bucket(expectedBucketName).key(expectedKey).build();
+        GetObjectRequest expectedRequest = GetObjectRequest.builder()
+            .bucket(expectedBucketName)
+            .key(expectedKey)
+            .build();
 
         verify(mockS3Client).getObject(eq(expectedRequest), any(AsyncResponseTransformer.class));
     }

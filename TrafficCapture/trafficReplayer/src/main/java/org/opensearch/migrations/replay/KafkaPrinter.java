@@ -121,7 +121,9 @@ public class KafkaPrinter {
         }
 
         if (params.combinePartitionOutput && params.outputDirectoryPath == null) {
-            throw new ParameterException("The '--output-directory' parameter is required for using '--combine-partition-output'.");
+            throw new ParameterException(
+                "The '--output-directory' parameter is required for using '--combine-partition-output'."
+            );
         }
 
         String bootstrapServers = params.kafkaTrafficBrokers;
@@ -145,7 +147,10 @@ public class KafkaPrinter {
             properties.setProperty("security.protocol", "SASL_SSL");
             properties.setProperty("sasl.mechanism", "AWS_MSK_IAM");
             properties.setProperty("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required;");
-            properties.setProperty("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMClientCallbackHandler");
+            properties.setProperty(
+                "sasl.client.callback.handler.class",
+                "software.amazon.msk.auth.iam.IAMClientCallbackHandler"
+            );
         }
         properties.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
@@ -160,7 +165,10 @@ public class KafkaPrinter {
                             + partitionLimit
                     );
                 }
-                TopicPartition partition = new TopicPartition(partitionElements[0], Integer.parseInt(partitionElements[1]));
+                TopicPartition partition = new TopicPartition(
+                    partitionElements[0],
+                    Integer.parseInt(partitionElements[1])
+                );
                 if (capturedRecords.containsKey(partition)) {
                     throw new ParameterException("Duplicate parameter limit detected for the partition: " + partition);
                 }
@@ -193,7 +201,9 @@ public class KafkaPrinter {
         if (capturedRecords.isEmpty()) {
             OutputStream os = params.outputDirectoryPath == null
                 ? System.out
-                : new FileOutputStream(String.format("%s%s_%s_%s.proto", baseOutputPath, params.kafkaTrafficTopic, "all", uuid));
+                : new FileOutputStream(
+                    String.format("%s%s_%s_%s.proto", baseOutputPath, params.kafkaTrafficTopic, "all", uuid)
+                );
             partitionOutputStreams.put(0, CodedOutputStream.newInstance(os));
         }
         // Only grab specific partition records based on limits
@@ -201,13 +211,21 @@ public class KafkaPrinter {
             if (params.combinePartitionOutput || params.outputDirectoryPath == null) {
                 OutputStream os = params.outputDirectoryPath == null
                     ? System.out
-                    : new FileOutputStream(String.format("%s%s_%s_%s.proto", baseOutputPath, params.kafkaTrafficTopic, "all", uuid));
+                    : new FileOutputStream(
+                        String.format("%s%s_%s_%s.proto", baseOutputPath, params.kafkaTrafficTopic, "all", uuid)
+                    );
                 partitionOutputStreams.put(0, CodedOutputStream.newInstance(os));
             } else {
                 for (TopicPartition partition : capturedRecords.keySet()) {
                     separatePartitionOutputs = true;
                     FileOutputStream fos = new FileOutputStream(
-                        String.format("%s%s_%d_%s.proto", baseOutputPath, partition.topic(), partition.partition(), uuid)
+                        String.format(
+                            "%s%s_%d_%s.proto",
+                            baseOutputPath,
+                            partition.topic(),
+                            partition.partition(),
+                            uuid
+                        )
                     );
                     partitionOutputStreams.put(partition.partition(), CodedOutputStream.newInstance(fos));
                 }
@@ -245,7 +263,8 @@ public class KafkaPrinter {
                             );
                         } else {
                             log.info(
-                                "Not changing fetch offsets because current offset is {} and startingOffset is {} " + "for partition {}",
+                                "Not changing fetch offsets because current offset is {} and startingOffset is {} "
+                                    + "for partition {}",
                                 currentOffset,
                                 offset,
                                 partition
@@ -334,8 +353,15 @@ public class KafkaPrinter {
                         codedOutputStream.writeUInt32NoTag(buffer.length);
                         codedOutputStream.writeRawBytes(buffer);
                     } else {
-                        TopicPartition partition = new TopicPartition(consumerRecord.topic(), consumerRecord.partition());
-                        log.debug("Incoming record for topic:{} and partition:{}", partition.topic(), partition.partition());
+                        TopicPartition partition = new TopicPartition(
+                            consumerRecord.topic(),
+                            consumerRecord.partition()
+                        );
+                        log.debug(
+                            "Incoming record for topic:{} and partition:{}",
+                            partition.topic(),
+                            partition.partition()
+                        );
                         PartitionTracker tracker = capturedRecords.get(partition);
                         boolean outputNeeded = false;
                         if (tracker != null && tracker.currentRecordCount < tracker.recordLimit) {

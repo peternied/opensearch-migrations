@@ -46,11 +46,14 @@ public class JsonAccumulatorTest {
             case TINY:
                 return "{\"name\":\"John\", \"age\":30}".getBytes(StandardCharsets.UTF_8);
             case MEDIUM:
-                return randomJsonGenerator.getRandomTreeFormattedAsString(false, 2, 200, 50).getBytes(StandardCharsets.UTF_8);
+                return randomJsonGenerator.getRandomTreeFormattedAsString(false, 2, 200, 50)
+                    .getBytes(StandardCharsets.UTF_8);
             case LARGE:
-                return randomJsonGenerator.getRandomTreeFormattedAsString(true, 3, 2000, 400).getBytes(StandardCharsets.UTF_8);
+                return randomJsonGenerator.getRandomTreeFormattedAsString(true, 3, 2000, 400)
+                    .getBytes(StandardCharsets.UTF_8);
             case LARGE_PACKED:
-                return randomJsonGenerator.getRandomTreeFormattedAsString(false, 4, 2000, 400).getBytes(StandardCharsets.UTF_8);
+                return randomJsonGenerator.getRandomTreeFormattedAsString(false, 4, 2000, 400)
+                    .getBytes(StandardCharsets.UTF_8);
             default:
                 throw new IllegalStateException("Unknown key: " + key);
         }
@@ -64,7 +67,15 @@ public class JsonAccumulatorTest {
      * @throws IOException
      */
     @ParameterizedTest
-    @CsvSource({ "tiny,2", "tiny,20000", "medium,2", "medium,20000", "large,2", "large,20000", "largeAndPacked,2", "largeAndPacked,20000" })
+    @CsvSource({
+        "tiny,2",
+        "tiny,20000",
+        "medium,2",
+        "medium,20000",
+        "large,2",
+        "large,20000",
+        "largeAndPacked,2",
+        "largeAndPacked,20000" })
     public void testAccumulation(String dataName, int chunkBound) throws IOException {
         var testFileBytes = getData(dataName);
         var outputJson = readJson(testFileBytes, 2);

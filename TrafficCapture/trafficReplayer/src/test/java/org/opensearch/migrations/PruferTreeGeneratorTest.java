@@ -22,7 +22,10 @@ public class PruferTreeGeneratorTest {
         final int numNodes = 5;
         var edges = IntStream.range(0, numNodes - 2).map(x -> random.nextInt(numNodes) + 1).toArray();
         var tree = ptg.makeTree(vn -> Integer.toString(vn), edges);
-        try (var baos = new ByteArrayOutputStream(); var printStream = new PrintStream(baos, false, StandardCharsets.UTF_8)) {
+        try (
+            var baos = new ByteArrayOutputStream();
+            var printStream = new PrintStream(baos, false, StandardCharsets.UTF_8)
+        ) {
             printTree(ptg, printStream, tree);
             printStream.flush();
             var expectedOutput = "5: { 3: {  1  2 } 4}";
@@ -31,7 +34,11 @@ public class PruferTreeGeneratorTest {
         }
     }
 
-    private static void printTree(PruferTreeGenerator<String> ptg, PrintStream out, PruferTreeGenerator.SimpleNode<String> tree) {
+    private static void printTree(
+        PruferTreeGenerator<String> ptg,
+        PrintStream out,
+        PruferTreeGenerator.SimpleNode<String> tree
+    ) {
         ptg.preOrderVisitTree(tree, new PruferTreeGenerator.Visitor<String>() {
             int nodeDepth;
 

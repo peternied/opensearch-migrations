@@ -61,7 +61,9 @@ public class BlockingTrafficSource implements ITrafficCaptureSource, BufferedFlo
         this.bufferTimeWindow = bufferTimeWindow;
         this.readGate = new Semaphore(0);
         this.executorForBlockingActivity = Executors.newSingleThreadExecutor(
-            new DefaultThreadFactory("BlockingTrafficSource-executorForBlockingActivity-" + System.identityHashCode(this))
+            new DefaultThreadFactory(
+                "BlockingTrafficSource-executorForBlockingActivity-" + System.identityHashCode(this)
+            )
         );
     }
 
@@ -76,7 +78,11 @@ public class BlockingTrafficSource implements ITrafficCaptureSource, BufferedFlo
         var newValue = Utils.setIfLater(stopReadingAtRef, prospectiveBarrier);
         if (newValue.equals(prospectiveBarrier)) {
             log.atLevel(Level.TRACE)
-                .setMessage(() -> "Releasing the block on readNextTrafficStreamChunk and set" + " the new stopReadingAtRef=" + newValue)
+                .setMessage(
+                    () -> "Releasing the block on readNextTrafficStreamChunk and set"
+                        + " the new stopReadingAtRef="
+                        + newValue
+                )
                 .log();
             // No reason to signal more than one reader. We don't support concurrent reads with the current contract
             readGate.drainPermits();
@@ -104,12 +110,13 @@ public class BlockingTrafficSource implements ITrafficCaptureSource, BufferedFlo
     ) {
         var readContext = readChunkContextSupplier.get();
         log.debug("BlockingTrafficSource::readNext");
-        var trafficStreamListFuture = CompletableFuture.supplyAsync(() -> blockIfNeeded(readContext), executorForBlockingActivity)
-            .thenCompose(v -> {
-                log.trace("BlockingTrafficSource::composing");
-                return underlyingSource.readNextTrafficStreamChunk(() -> readContext);
-            })
-            .whenComplete((v, t) -> readContext.close());
+        var trafficStreamListFuture = CompletableFuture.supplyAsync(
+            () -> blockIfNeeded(readContext),
+            executorForBlockingActivity
+        ).thenCompose(v -> {
+            log.trace("BlockingTrafficSource::composing");
+            return underlyingSource.readNextTrafficStreamChunk(() -> readContext);
+        }).whenComplete((v, t) -> readContext.close());
         return trafficStreamListFuture.whenComplete((v, t) -> {
             if (t != null) {
                 return;
@@ -122,7 +129,10 @@ public class BlockingTrafficSource implements ITrafficCaptureSource, BufferedFlo
                 .orElse(Instant.EPOCH);
             Utils.setIfLater(lastTimestampSecondsRef, maxLocallyObservedTimestamp);
             log.atTrace()
-                .setMessage(() -> "end of readNextTrafficStreamChunk trigger...lastTimestampSecondsRef=" + lastTimestampSecondsRef.get())
+                .setMessage(
+                    () -> "end of readNextTrafficStreamChunk trigger...lastTimestampSecondsRef="
+                        + lastTimestampSecondsRef.get()
+                )
                 .log();
         });
     }
@@ -139,7 +149,9 @@ public class BlockingTrafficSource implements ITrafficCaptureSource, BufferedFlo
             return null;
         }
         log.atTrace()
-            .setMessage(() -> "stopReadingAtRef=" + stopReadingAtRef + " lastTimestampSecondsRef=" + lastTimestampSecondsRef)
+            .setMessage(
+                () -> "stopReadingAtRef=" + stopReadingAtRef + " lastTimestampSecondsRef=" + lastTimestampSecondsRef
+            )
             .log();
         ITrafficSourceContexts.IBackPressureBlockContext blockContext = null;
         while (stopReadingAtRef.get().isBefore(lastTimestampSecondsRef.get())) {
@@ -163,14 +175,24 @@ public class BlockingTrafficSource implements ITrafficCaptureSource, BufferedFlo
                     final var nowTime = Instant.now();
                     var waitIntervalMs = Duration.between(nowTime, nextInstant).toMillis();
                     log.atDebug()
-                        .setMessage(() -> "Next touch at " + nextInstant + " ... in " + waitIntervalMs + "ms (now=" + nowTime + ")")
+                        .setMessage(
+                            () -> "Next touch at "
+                                + nextInstant
+                                + " ... in "
+                                + waitIntervalMs
+                                + "ms (now="
+                                + nowTime
+                                + ")"
+                        )
                         .log();
                     if (waitIntervalMs <= 0) {
                         underlyingSource.touch(blockContext);
                     } else {
                         // if this doesn't succeed, we'll loop around & likely do a touch, then loop around again.
                         // if it DOES succeed, we'll loop around and make sure that there's not another reason to stop
-                        log.atTrace().setMessage(() -> "acquiring readGate semaphore with timeout=" + waitIntervalMs).log();
+                        log.atTrace()
+                            .setMessage(() -> "acquiring readGate semaphore with timeout=" + waitIntervalMs)
+                            .log();
                         try (var waitContext = blockContext.createWaitForSignalContext()) {
                             readGate.tryAcquire(waitIntervalMs, TimeUnit.MILLISECONDS);
                         }
@@ -207,7 +229,9 @@ public class BlockingTrafficSource implements ITrafficCaptureSource, BufferedFlo
 
     @Override
     public String toString() {
-        return new StringJoiner(", ", BlockingTrafficSource.class.getSimpleName() + "[", "]").add("bufferTimeWindow=" + bufferTimeWindow)
+        return new StringJoiner(", ", BlockingTrafficSource.class.getSimpleName() + "[", "]").add(
+            "bufferTimeWindow=" + bufferTimeWindow
+        )
             .add("lastTimestampSecondsRef=" + lastTimestampSecondsRef)
             .add("stopReadingAtRef=" + stopReadingAtRef)
             .add("readGate=" + readGate)

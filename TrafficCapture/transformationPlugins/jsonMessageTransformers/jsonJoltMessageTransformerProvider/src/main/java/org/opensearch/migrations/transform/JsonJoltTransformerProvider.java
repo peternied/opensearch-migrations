@@ -61,7 +61,9 @@ public class JsonJoltTransformerProvider implements IJsonTransformerProvider {
             + "to be a Map<String,Object> or a List<Map<String,Object>>.  "
             + "Each of the Maps should have one key-value, either \"canned\" or \"script\".  "
             + "Canned values should be a string that specifies the name of the pre-built transformation to use "
-            + Arrays.stream(JsonJoltTransformBuilder.CANNED_OPERATION.values()).map(e -> e.toString()).collect(Collectors.joining(","))
+            + Arrays.stream(JsonJoltTransformBuilder.CANNED_OPERATION.values())
+                .map(e -> e.toString())
+                .collect(Collectors.joining(","))
             + ".  "
             + "Script values should be a fully-formed inlined Jolt transformation in json form.  "
             + "All of the values (canned or inlined) within a configuration will be concatenated "

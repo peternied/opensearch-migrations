@@ -62,14 +62,24 @@ public class ReplayEngine {
         // and run a daemon to update the contentTimeController if there isn't any work that will be doing that
         var bufferPeriodMs = getUpdatePeriodMs();
         updateContentTimeControllerScheduledFuture = networkSendOrchestrator.clientConnectionPool.eventLoopGroup.next()
-            .scheduleAtFixedRate(this::updateContentTimeControllerWhenIdling, bufferPeriodMs, bufferPeriodMs, TIME_UNIT_MILLIS);
+            .scheduleAtFixedRate(
+                this::updateContentTimeControllerWhenIdling,
+                bufferPeriodMs,
+                bufferPeriodMs,
+                TIME_UNIT_MILLIS
+            );
     }
 
     private long getUpdatePeriodMs() {
-        var bufferPeriodMs = contentTimeController.getBufferTimeWindow().dividedBy(BACKPRESSURE_UPDATE_FREQUENCY).toMillis();
+        var bufferPeriodMs = contentTimeController.getBufferTimeWindow()
+            .dividedBy(BACKPRESSURE_UPDATE_FREQUENCY)
+            .toMillis();
         if (bufferPeriodMs == 0) {
             throw new IllegalStateException(
-                "Buffer window time is too small, make it at least " + BACKPRESSURE_UPDATE_FREQUENCY + " " + TIME_UNIT_MILLIS.name()
+                "Buffer window time is too small, make it at least "
+                    + BACKPRESSURE_UPDATE_FREQUENCY
+                    + " "
+                    + TIME_UNIT_MILLIS.name()
             );
         }
         return bufferPeriodMs;
@@ -87,8 +97,12 @@ public class ReplayEngine {
             return;
         }
         var currentSourceTimeEpochMs = currentSourceTimeOp.get().toEpochMilli();
-        var lastUpdatedTimeEpochMs = Math.max(lastCompletedSourceTimeEpochMs.get(), lastIdleUpdatedTimestampEpochMs.get());
-        var maxSkipTimeEpochMs = lastUpdatedTimeEpochMs + (long) (getUpdatePeriodMs() * this.timeShifter.maxRateMultiplier());
+        var lastUpdatedTimeEpochMs = Math.max(
+            lastCompletedSourceTimeEpochMs.get(),
+            lastIdleUpdatedTimestampEpochMs.get()
+        );
+        var maxSkipTimeEpochMs = lastUpdatedTimeEpochMs + (long) (getUpdatePeriodMs() * this.timeShifter
+            .maxRateMultiplier());
         lastIdleUpdatedTimestampEpochMs.set(Math.min(currentSourceTimeEpochMs, maxSkipTimeEpochMs));
         contentTimeController.stopReadsPast(Instant.ofEpochMilli(lastIdleUpdatedTimestampEpochMs.get()));
     }
@@ -160,7 +174,11 @@ public class ReplayEngine {
         final String label = "processing";
         var start = timeShifter.transformSourceTimeToRealTime(originalStart);
         logStartOfWork(requestCtx, newCount, start, label);
-        var result = networkSendOrchestrator.scheduleWork(requestCtx, start.minus(EXPECTED_TRANSFORMATION_DURATION), task);
+        var result = networkSendOrchestrator.scheduleWork(
+            requestCtx,
+            start.minus(EXPECTED_TRANSFORMATION_DURATION),
+            task
+        );
         return hookWorkFinishingUpdates(result, originalStart, requestCtx, label);
     }
 

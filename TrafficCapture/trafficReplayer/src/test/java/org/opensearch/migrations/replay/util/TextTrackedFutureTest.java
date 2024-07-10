@@ -53,11 +53,23 @@ class TextTrackedFutureTest {
 
         Assertions.assertEquals(id1Bktd + "A[…]", TrackedFutureStringFormatter.format(stcf1));
         Assertions.assertEquals(id2Bktd + "B[…]<-" + id1Bktd + "A[…]", TrackedFutureStringFormatter.format(stcf2));
-        Assertions.assertEquals(id3Bktd + "C[…]<-" + id2Bktd + "B[…]<-" + id1Bktd + "A[…]", TrackedFutureStringFormatter.format(stcf3));
-
-        Assertions.assertEquals("[{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"…\"}]", TrackedFutureJsonFormatter.format(stcf1));
         Assertions.assertEquals(
-            "[" + "{\"idHash\":" + id2 + ",\"label\":\"B\",\"value\":\"…\"}," + "{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"…\"}]",
+            id3Bktd + "C[…]<-" + id2Bktd + "B[…]<-" + id1Bktd + "A[…]",
+            TrackedFutureStringFormatter.format(stcf3)
+        );
+
+        Assertions.assertEquals(
+            "[{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"…\"}]",
+            TrackedFutureJsonFormatter.format(stcf1)
+        );
+        Assertions.assertEquals(
+            "["
+                + "{\"idHash\":"
+                + id2
+                + ",\"label\":\"B\",\"value\":\"…\"},"
+                + "{\"idHash\":"
+                + id1
+                + ",\"label\":\"A\",\"value\":\"…\"}]",
             TrackedFutureJsonFormatter.format(stcf2)
         );
         Assertions.assertEquals(
@@ -77,15 +89,27 @@ class TextTrackedFutureTest {
         notifyAndWaitForGet(stcf1, notifier1);
         Assertions.assertEquals(id1Bktd + "A[^]", TrackedFutureStringFormatter.format(stcf1));
         Assertions.assertEquals(id2Bktd + "B[…]<-" + id1Bktd + "A[^]", TrackedFutureStringFormatter.format(stcf2));
-        Assertions.assertEquals(id3Bktd + "C[…]<-" + id2Bktd + "B[…]<-" + id1Bktd + "A[^]", TrackedFutureStringFormatter.format(stcf3));
+        Assertions.assertEquals(
+            id3Bktd + "C[…]<-" + id2Bktd + "B[…]<-" + id1Bktd + "A[^]",
+            TrackedFutureStringFormatter.format(stcf3)
+        );
         Assertions.assertEquals(
             id3Bktd + "C[…]<-" + id2Bktd + "B[…]<-" + id1Bktd + "A[1]",
             stcf3.formatAsString(TextTrackedFutureTest::formatCompletableFuture)
         );
 
-        Assertions.assertEquals("[{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"^\"}]", TrackedFutureJsonFormatter.format(stcf1));
         Assertions.assertEquals(
-            "[" + "{\"idHash\":" + id2 + ",\"label\":\"B\",\"value\":\"…\"}," + "{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"^\"}]",
+            "[{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"^\"}]",
+            TrackedFutureJsonFormatter.format(stcf1)
+        );
+        Assertions.assertEquals(
+            "["
+                + "{\"idHash\":"
+                + id2
+                + ",\"label\":\"B\",\"value\":\"…\"},"
+                + "{\"idHash\":"
+                + id1
+                + ",\"label\":\"A\",\"value\":\"^\"}]",
             TrackedFutureJsonFormatter.format(stcf2)
         );
         Assertions.assertEquals(
@@ -105,15 +129,27 @@ class TextTrackedFutureTest {
         notifyAndWaitForGet(stcf2, notifier2);
         Assertions.assertEquals(id2Bktd + "B[^]<-" + id1Bktd + "A[^]", TrackedFutureStringFormatter.format(stcf2));
         Assertions.assertEquals(id1Bktd + "A[^]", TrackedFutureStringFormatter.format(stcf1));
-        Assertions.assertEquals(id3Bktd + "C[…]<-" + id2Bktd + "B[^]<-" + id1Bktd + "A[^]", TrackedFutureStringFormatter.format(stcf3));
+        Assertions.assertEquals(
+            id3Bktd + "C[…]<-" + id2Bktd + "B[^]<-" + id1Bktd + "A[^]",
+            TrackedFutureStringFormatter.format(stcf3)
+        );
         Assertions.assertEquals(
             id3Bktd + "C[…]<-" + id2Bktd + "B[11]<-" + id1Bktd + "A[1]",
             stcf3.formatAsString(TextTrackedFutureTest::formatCompletableFuture)
         );
 
-        Assertions.assertEquals("[{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"^\"}]", TrackedFutureJsonFormatter.format(stcf1));
         Assertions.assertEquals(
-            "[" + "{\"idHash\":" + id2 + ",\"label\":\"B\",\"value\":\"^\"}," + "{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"^\"}]",
+            "[{\"idHash\":" + id1 + ",\"label\":\"A\",\"value\":\"^\"}]",
+            TrackedFutureJsonFormatter.format(stcf1)
+        );
+        Assertions.assertEquals(
+            "["
+                + "{\"idHash\":"
+                + id2
+                + ",\"label\":\"B\",\"value\":\"^\"},"
+                + "{\"idHash\":"
+                + id1
+                + ",\"label\":\"A\",\"value\":\"^\"}]",
             TrackedFutureJsonFormatter.format(stcf2)
         );
         Assertions.assertEquals(
@@ -172,7 +208,8 @@ class TextTrackedFutureTest {
         }
     }
 
-    private void notifyAndWaitForGet(TrackedFuture<String, Integer> stcf, CompletableFuture lockObject) throws Exception {
+    private void notifyAndWaitForGet(TrackedFuture<String, Integer> stcf, CompletableFuture lockObject)
+        throws Exception {
         notify(lockObject);
         stcf.get();
     }

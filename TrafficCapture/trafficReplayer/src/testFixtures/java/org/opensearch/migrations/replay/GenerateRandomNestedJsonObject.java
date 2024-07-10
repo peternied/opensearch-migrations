@@ -26,7 +26,8 @@ public class GenerateRandomNestedJsonObject {
         objectMapper = new ObjectMapper();
     }
 
-    public String getRandomTreeFormattedAsString(boolean pretty, int seed, int numNodes, int numArrays) throws JsonProcessingException {
+    public String getRandomTreeFormattedAsString(boolean pretty, int seed, int numNodes, int numArrays)
+        throws JsonProcessingException {
         Random random = new Random(seed);
         var jsonObj = makeRandomJsonObject(random, numNodes, numArrays);
         if (pretty) {
@@ -85,7 +86,9 @@ public class GenerateRandomNestedJsonObject {
                         )
                     )
             );
-            myMap.entrySet().stream().forEach(kvp -> parentAndBiggestChildPQ.add(new AbstractMap.SimpleEntry<>(myMap, kvp.getKey())));
+            myMap.entrySet()
+                .stream()
+                .forEach(kvp -> parentAndBiggestChildPQ.add(new AbstractMap.SimpleEntry<>(myMap, kvp.getKey())));
             return myMap;
         } else {
             return VALUE_PREFIX + treeNode.value;

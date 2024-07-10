@@ -65,9 +65,17 @@ public class NettyDecodedHttpRequestPreliminaryConvertHandler<R> extends Channel
                 originalHttpJsonMessage
             );
             try {
-                handlePayloadNeutralTransformationOrThrow(ctx, request, transform(transformer, originalHttpJsonMessage), authTransformer);
+                handlePayloadNeutralTransformationOrThrow(
+                    ctx,
+                    request,
+                    transform(transformer, originalHttpJsonMessage),
+                    authTransformer
+                );
             } catch (PayloadNotLoadedException pnle) {
-                log.debug("The transforms for this message require payload manipulation, " + "all content handlers are being loaded.");
+                log.debug(
+                    "The transforms for this message require payload manipulation, "
+                        + "all content handlers are being loaded."
+                );
                 // make a fresh message and its headers
                 requestPipelineOrchestrator.addJsonParsingHandlers(
                     ctx,
@@ -79,7 +87,8 @@ public class NettyDecodedHttpRequestPreliminaryConvertHandler<R> extends Channel
         } else if (msg instanceof HttpContent) {
             ctx.fireChannelRead(msg);
         } else {
-            assert false : "Only HttpRequest and HttpContent should come through here as per RequestPipelineOrchestrator";
+            assert false
+                : "Only HttpRequest and HttpContent should come through here as per RequestPipelineOrchestrator";
             // In case message comes through, pass downstream
             super.channelRead(ctx, msg);
         }
@@ -206,7 +215,11 @@ public class NettyDecodedHttpRequestPreliminaryConvertHandler<R> extends Channel
         return list != null && list.isEmpty() ? null : list;
     }
 
-    private boolean headerFieldIsIdentical(String headerName, HttpRequest request, HttpJsonMessageWithFaultingPayload httpJsonMessage) {
+    private boolean headerFieldIsIdentical(
+        String headerName,
+        HttpRequest request,
+        HttpJsonMessageWithFaultingPayload httpJsonMessage
+    ) {
         var originalValue = nullIfEmpty(request.headers().getAll(headerName));
         var newValue = nullIfEmpty(httpJsonMessage.headers().asStrictMap().get(headerName));
         if (originalValue != null && newValue != null) {

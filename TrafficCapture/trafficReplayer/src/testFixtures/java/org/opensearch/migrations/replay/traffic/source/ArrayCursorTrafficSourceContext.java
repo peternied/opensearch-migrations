@@ -20,7 +20,9 @@ public class ArrayCursorTrafficSourceContext implements Function<TestContext, IS
 
     public ISimpleTrafficCaptureSource apply(TestContext rootContext) {
         var rval = new ArrayCursorTrafficCaptureSource(rootContext, this);
-        log.info("trafficSource=" + rval + " readCursor=" + rval.readCursor.get() + " nextReadCursor=" + nextReadCursor.get());
+        log.info(
+            "trafficSource=" + rval + " readCursor=" + rval.readCursor.get() + " nextReadCursor=" + nextReadCursor.get()
+        );
         return rval;
     }
 }

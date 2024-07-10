@@ -89,8 +89,13 @@ public class SimpleCapturedTrafficToHttpTransactionAccumulatorTest extends Instr
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("loadSimpleCombinations")
-    void generateAndTest(String testName, int bufferSize, int skipCount, List<ObservationDirective> directives, List<Integer> expectedSizes)
-        throws Exception {
+    void generateAndTest(
+        String testName,
+        int bufferSize,
+        int skipCount,
+        List<ObservationDirective> directives,
+        List<Integer> expectedSizes
+    ) throws Exception {
         final var trafficStreamsArray = TrafficStreamGenerator.makeTrafficStream(
             bufferSize,
             0,
@@ -101,9 +106,18 @@ public class SimpleCapturedTrafficToHttpTransactionAccumulatorTest extends Instr
         var trafficStreams = Arrays.stream(trafficStreamsArray).skip(skipCount);
         List<RequestResponsePacketPair> reconstructedTransactions = new ArrayList<>();
         AtomicInteger requestsReceived = new AtomicInteger(0);
-        accumulateTrafficStreamsWithNewAccumulator(rootContext, trafficStreams, reconstructedTransactions, requestsReceived);
+        accumulateTrafficStreamsWithNewAccumulator(
+            rootContext,
+            trafficStreams,
+            reconstructedTransactions,
+            requestsReceived
+        );
         var splitSizes = ExhaustiveTrafficStreamGenerator.unzipRequestResponseSizes(expectedSizes);
-        assertReconstructedTransactionsMatchExpectations(reconstructedTransactions, splitSizes.requestSizes, splitSizes.responseSizes);
+        assertReconstructedTransactionsMatchExpectations(
+            reconstructedTransactions,
+            splitSizes.requestSizes,
+            splitSizes.responseSizes
+        );
         Assertions.assertEquals(requestsReceived.get(), reconstructedTransactions.size());
     }
 
@@ -121,10 +135,8 @@ public class SimpleCapturedTrafficToHttpTransactionAccumulatorTest extends Instr
         AtomicInteger requestsReceived
     ) {
         var tsIndicesReceived = new TreeSet<Integer>();
-        CapturedTrafficToHttpTransactionAccumulator trafficAccumulator = new CapturedTrafficToHttpTransactionAccumulator(
-            Duration.ofSeconds(30),
-            null,
-            new AccumulationCallbacks() {
+        CapturedTrafficToHttpTransactionAccumulator trafficAccumulator =
+            new CapturedTrafficToHttpTransactionAccumulator(Duration.ofSeconds(30), null, new AccumulationCallbacks() {
                 @Override
                 public Consumer<RequestResponsePacketPair> onRequestReceived(
                     @NonNull IReplayContexts.IReplayerHttpTransactionContext ctx,
@@ -136,7 +148,9 @@ public class SimpleCapturedTrafficToHttpTransactionAccumulatorTest extends Instr
                         if (fullPair.completionStatus == RequestResponsePacketPair.ReconstructionStatus.CLOSED_PREMATURELY) {
                             return;
                         }
-                        fullPair.getTrafficStreamsHeld().stream().forEach(tsk -> tsIndicesReceived.add(tsk.getTrafficStreamIndex()));
+                        fullPair.getTrafficStreamsHeld()
+                            .stream()
+                            .forEach(tsk -> tsIndicesReceived.add(tsk.getTrafficStreamIndex()));
                         if (aggregations.size() > sourceIdx) {
                             var oldVal = aggregations.set(sourceIdx, fullPair);
                             if (oldVal != null) {
@@ -169,14 +183,16 @@ public class SimpleCapturedTrafficToHttpTransactionAccumulatorTest extends Instr
                 public void onTrafficStreamIgnored(@NonNull IReplayContexts.ITrafficStreamsLifecycleContext ctx) {
                     tsIndicesReceived.add(ctx.getTrafficStreamKey().getTrafficStreamIndex());
                 }
-            }
-        );
+            });
         var tsList = trafficStreams.collect(Collectors.toList());
         trafficStreams = tsList.stream();
 
         trafficStreams.forEach(
             ts -> trafficAccumulator.accept(
-                new PojoTrafficStreamAndKey(ts, PojoTrafficStreamKeyAndContext.build(ts, context::createTrafficStreamContextForTest))
+                new PojoTrafficStreamAndKey(
+                    ts,
+                    PojoTrafficStreamKeyAndContext.build(ts, context::createTrafficStreamContextForTest)
+                )
             )
         );
         trafficAccumulator.close();

@@ -81,7 +81,8 @@ class NettyScanningHttpProxyTest {
     public static final String TEST_NODE_ID_STRING = "test_node_id";
 
     @Test
-    public void testRoundTrip() throws IOException, InterruptedException, PortFinder.ExceededMaxPortAssigmentAttemptException {
+    public void testRoundTrip() throws IOException, InterruptedException,
+        PortFinder.ExceededMaxPortAssigmentAttemptException {
         final int NUM_EXPECTED_TRAFFIC_STREAMS = 1;
         final int NUM_INTERACTIONS = 3;
         CountDownLatch interactionsCapturedCountdown = new CountDownLatch(NUM_EXPECTED_TRAFFIC_STREAMS);
@@ -91,7 +92,10 @@ class NettyScanningHttpProxyTest {
             () -> interactionsCapturedCountdown.countDown()
         );
         var inMemoryInstrumentationBundle = new InMemoryInstrumentationBundle(true, true);
-        var rootCtx = new RootWireLoggingContext(inMemoryInstrumentationBundle.openTelemetrySdk, IContextTracker.DO_NOTHING_TRACKER);
+        var rootCtx = new RootWireLoggingContext(
+            inMemoryInstrumentationBundle.openTelemetrySdk,
+            IContextTracker.DO_NOTHING_TRACKER
+        );
         var servers = startServers(rootCtx, captureFactory);
 
         try (var client = new SimpleHttpClientForTesting()) {
@@ -110,13 +114,20 @@ class NettyScanningHttpProxyTest {
         var coalescedTrafficList = coalesceObservations(recordedTrafficStreams[0]);
         Assertions.assertEquals(NUM_INTERACTIONS * 2, coalescedTrafficList.size());
         int counter = 0;
-        final var expectedMessages = new String[] { normalizeMessage(EXPECTED_REQUEST_STRING), normalizeMessage(EXPECTED_RESPONSE_STRING) };
+        final var expectedMessages = new String[] {
+            normalizeMessage(EXPECTED_REQUEST_STRING),
+            normalizeMessage(EXPECTED_RESPONSE_STRING) };
         for (var httpMessage : coalescedTrafficList) {
-            Assertions.assertEquals(expectedMessages[(counter++) % 2], normalizeMessage(new String(httpMessage, StandardCharsets.UTF_8)));
+            Assertions.assertEquals(
+                expectedMessages[(counter++) % 2],
+                normalizeMessage(new String(httpMessage, StandardCharsets.UTF_8))
+            );
         }
 
         var observations = recordedTrafficStreams[0].getSubStreamList();
-        var eomIndices = IntStream.range(0, observations.size()).filter(i -> observations.get(i).hasEndOfMessageIndicator()).toArray();
+        var eomIndices = IntStream.range(0, observations.size())
+            .filter(i -> observations.get(i).hasEndOfMessageIndicator())
+            .toArray();
         Assertions.assertEquals(NUM_INTERACTIONS, eomIndices.length);
         for (int eomIndex : eomIndices) {
             Assertions.assertTrue(observations.get(eomIndex - 1).hasRead());
@@ -144,7 +155,9 @@ class NettyScanningHttpProxyTest {
                     rval.add(accumOutputStream.toByteArray());
                     accumOutputStream.reset();
                 }
-                accumOutputStream.write((obs.hasRead() ? obs.getRead().getData() : obs.getWrite().getData()).toByteArray());
+                accumOutputStream.write(
+                    (obs.hasRead() ? obs.getRead().getData() : obs.getWrite().getData()).toByteArray()
+                );
             }
             var remaining = accumOutputStream.toByteArray();
             if (remaining.length > 0) {
@@ -193,7 +206,8 @@ class NettyScanningHttpProxyTest {
             try {
                 var connectionPool = new BacksideConnectionPool(testServerUri, null, 10, Duration.ofSeconds(10));
 
-                nshp.get().start(rootCtx, connectionPool, 1, null, connectionCaptureFactory, new RequestCapturePredicate());
+                nshp.get()
+                    .start(rootCtx, connectionPool, 1, null, connectionCaptureFactory, new RequestCapturePredicate());
                 System.out.println("proxy port = " + port);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -204,7 +218,14 @@ class NettyScanningHttpProxyTest {
     }
 
     private static SimpleHttpResponse makeContext(HttpRequestFirstLine request) {
-        var headers = Map.of("Content-Type", "text/plain", "Funtime", "checkIt!", "Content-Transfer-Encoding", "chunked");
+        var headers = Map.of(
+            "Content-Type",
+            "text/plain",
+            "Funtime",
+            "checkIt!",
+            "Content-Transfer-Encoding",
+            "chunked"
+        );
         var payloadBytes = UPSTREAM_SERVER_RESPONSE_BODY.getBytes(StandardCharsets.UTF_8);
         return new SimpleHttpResponse(headers, payloadBytes, "OK", 200);
     }

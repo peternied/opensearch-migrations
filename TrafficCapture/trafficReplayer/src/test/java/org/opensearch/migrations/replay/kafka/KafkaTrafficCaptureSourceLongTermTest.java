@@ -31,7 +31,9 @@ public class KafkaTrafficCaptureSourceLongTermTest extends InstrumentationTest {
     @Container
     // see
     // https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
-    private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
+    private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(
+        DockerImageName.parse("confluentinc/cp-kafka:7.5.0")
+    );
 
     @Test
     @Tag("longTest")
@@ -69,10 +71,18 @@ public class KafkaTrafficCaptureSourceLongTermTest extends InstrumentationTest {
 
         for (int i = 0; i < TEST_RECORD_COUNT;) {
             Thread.sleep(getSleepAmountMsForProducerRun(i));
-            var nextChunkFuture = kafkaTrafficCaptureSource.readNextTrafficStreamChunk(rootContext::createReadChunkContext);
-            var recordsList = nextChunkFuture.get((2 * TEST_RECORD_COUNT) * PRODUCER_SLEEP_INTERVAL_MS, TimeUnit.MILLISECONDS);
+            var nextChunkFuture = kafkaTrafficCaptureSource.readNextTrafficStreamChunk(
+                rootContext::createReadChunkContext
+            );
+            var recordsList = nextChunkFuture.get(
+                (2 * TEST_RECORD_COUNT) * PRODUCER_SLEEP_INTERVAL_MS,
+                TimeUnit.MILLISECONDS
+            );
             for (int j = 0; j < recordsList.size(); ++j) {
-                Assertions.assertEquals(KafkaTestUtils.getConnectionId(i + j), recordsList.get(j).getStream().getConnectionId());
+                Assertions.assertEquals(
+                    KafkaTestUtils.getConnectionId(i + j),
+                    recordsList.get(j).getStream().getConnectionId()
+                );
             }
             log.info("Got " + recordsList.size() + " records and already had " + i);
             i += recordsList.size();
@@ -86,7 +96,8 @@ public class KafkaTrafficCaptureSourceLongTermTest extends InstrumentationTest {
                 // TimeoutExceptions cannot be thrown by the supplier of the CompletableFuture today, BUT we
                 // could long-poll on the broker for longer than the timeout value supplied in the get() call above
                 throw new TimeoutException(
-                    "read actually returned 0 items, but transforming this to a " + "TimeoutException because either result would be valid."
+                    "read actually returned 0 items, but transforming this to a "
+                        + "TimeoutException because either result would be valid."
                 );
             }
             log.error("rogue chunk: " + rogueChunk);

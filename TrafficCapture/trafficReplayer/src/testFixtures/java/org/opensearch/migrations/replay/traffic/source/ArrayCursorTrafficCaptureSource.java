@@ -23,7 +23,10 @@ public class ArrayCursorTrafficCaptureSource implements ISimpleTrafficCaptureSou
     ArrayCursorTrafficSourceContext arrayCursorTrafficSourceContext;
     TestContext rootContext;
 
-    public ArrayCursorTrafficCaptureSource(TestContext rootContext, ArrayCursorTrafficSourceContext arrayCursorTrafficSourceContext) {
+    public ArrayCursorTrafficCaptureSource(
+        TestContext rootContext,
+        ArrayCursorTrafficSourceContext arrayCursorTrafficSourceContext
+    ) {
         var startingCursor = arrayCursorTrafficSourceContext.nextReadCursor.get();
         log.info("startingCursor = " + startingCursor);
         this.readCursor = new AtomicInteger(startingCursor);
@@ -62,10 +65,12 @@ public class ArrayCursorTrafficCaptureSource implements ISimpleTrafficCaptureSou
             }
             assert didRemove;
             if (topCursor == incomingCursor) {
-                topCursor = Optional.ofNullable(pQueue.peek()).map(k -> k.getArrayIndex()).orElse(cursorHighWatermark + 1); // most recent
-                                                                                                                            // cursor was
-                                                                                                                            // previously
-                                                                                                                            // popped
+                topCursor = Optional.ofNullable(pQueue.peek())
+                    .map(k -> k.getArrayIndex())
+                    .orElse(cursorHighWatermark + 1); // most recent
+                                                      // cursor was
+                                                      // previously
+                                                      // popped
                 log.info("Commit called for " + trafficStreamKey + ", and new topCursor=" + topCursor);
                 arrayCursorTrafficSourceContext.nextReadCursor.set(topCursor);
             } else {

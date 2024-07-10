@@ -12,9 +12,8 @@ public class PreloadedSearchClusterContainer extends SearchClusterContainer {
     ) throws InterruptedException, IOException {
         super(
             new ElasticsearchVersion(
-                new PreloadedDataContainerOrchestrator(baseVersion, serverAlias, dataLoaderImageName, generatorArgs).getReadyImageName(
-                    pullIfUnavailable
-                ),
+                new PreloadedDataContainerOrchestrator(baseVersion, serverAlias, dataLoaderImageName, generatorArgs)
+                    .getReadyImageName(pullIfUnavailable),
                 baseVersion.prettyName + "_preloaded"
             )
         );

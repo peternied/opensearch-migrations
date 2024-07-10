@@ -55,7 +55,8 @@ public class TypeMappingsExcisionTest {
         }
     }
 
-    private static void transformAndVerifyResult(Map<String, Object> json, String expectedValueSource) throws Exception {
+    private static void transformAndVerifyResult(Map<String, Object> json, String expectedValueSource)
+        throws Exception {
         var jsonTransformer = getJsonTransformer();
         json = jsonTransformer.transformJson(json);
         var jsonAsStr = objectMapper.writeValueAsString(json);

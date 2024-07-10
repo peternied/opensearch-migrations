@@ -61,7 +61,8 @@ public class CaptureProxy {
     public static final String DEFAULT_KAFKA_CLIENT_ID = "HttpCaptureProxyProducer";
 
     public static class Parameters {
-        @Parameter(required = false, names = { "--traceDirectory" }, arity = 1, description = "Directory to store trace files in.")
+        @Parameter(required = false, names = {
+            "--traceDirectory" }, arity = 1, description = "Directory to store trace files in.")
         public String traceDirectory;
         @Parameter(required = false, names = {
             "--noCapture" }, arity = 0, description = "If enabled, Does NOT capture traffic to ANY sink.")
@@ -69,7 +70,8 @@ public class CaptureProxy {
         @Parameter(required = false, names = {
             "--kafkaConfigFile" }, arity = 1, description = "Kafka properties file for additional client customization.")
         public String kafkaPropertiesFile;
-        @Parameter(required = false, names = { "--kafkaClientId" }, arity = 1, description = "clientId to use for interfacing with Kafka.")
+        @Parameter(required = false, names = {
+            "--kafkaClientId" }, arity = 1, description = "clientId to use for interfacing with Kafka.")
         public String kafkaClientId = DEFAULT_KAFKA_CLIENT_ID;
         @Parameter(required = false, names = {
             "--kafkaConnection" }, arity = 1, description = "Sequence of <HOSTNAME:PORT> values delimited by ','.")
@@ -121,7 +123,9 @@ public class CaptureProxy {
         try {
             jCommander.parse(args);
             // Exactly one these 3 options are required. See that exactly one is set by summing up their presence
-            if (Stream.of(p.traceDirectory, p.kafkaConnection, (p.noCapture ? "" : null)).mapToInt(s -> s != null ? 1 : 0).sum() != 1) {
+            if (Stream.of(p.traceDirectory, p.kafkaConnection, (p.noCapture ? "" : null))
+                .mapToInt(s -> s != null ? 1 : 0)
+                .sum() != 1) {
                 throw new ParameterException(
                     "Expected exactly one of '--traceDirectory', '--kafkaConnection', or " + "'--noCapture' to be set"
                 );
@@ -140,12 +144,12 @@ public class CaptureProxy {
     protected static Settings getSettings(@NonNull String configFile) {
         var builder = Settings.builder();
         try (var lines = Files.lines(Paths.get(configFile))) {
-            lines.map(line -> Optional.of(line.indexOf('#')).filter(i -> i >= 0).map(i -> line.substring(0, i)).orElse(line))
-                .filter(line -> line.startsWith(HTTPS_CONFIG_PREFIX) && line.contains(":"))
-                .forEach(line -> {
-                    var parts = line.split(": *", 2);
-                    builder.put(parts[0], parts[1]);
-                });
+            lines.map(
+                line -> Optional.of(line.indexOf('#')).filter(i -> i >= 0).map(i -> line.substring(0, i)).orElse(line)
+            ).filter(line -> line.startsWith(HTTPS_CONFIG_PREFIX) && line.contains(":")).forEach(line -> {
+                var parts = line.split(": *", 2);
+                builder.put(parts[0], parts[1]);
+            });
         }
         builder.put(SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLED, false);
         var configParentDirStr = Paths.get(configFile).toAbsolutePath().getParent();
@@ -155,29 +159,35 @@ public class CaptureProxy {
 
     protected static IConnectionCaptureFactory<Object> getNullConnectionCaptureFactory() {
         System.err.println("No trace log directory specified.  Logging to /dev/null");
-        return ctx -> new StreamChannelConnectionCaptureSerializer<>(null, ctx.getConnectionId(), new StreamLifecycleManager<>() {
-            @Override
-            public CodedOutputStreamHolder createStream() {
-                return new CodedOutputStreamHolder() {
-                    final CodedOutputStream nullOutputStream = CodedOutputStream.newInstance(OutputStream.nullOutputStream());
+        return ctx -> new StreamChannelConnectionCaptureSerializer<>(
+            null,
+            ctx.getConnectionId(),
+            new StreamLifecycleManager<>() {
+                @Override
+                public CodedOutputStreamHolder createStream() {
+                    return new CodedOutputStreamHolder() {
+                        final CodedOutputStream nullOutputStream = CodedOutputStream.newInstance(
+                            OutputStream.nullOutputStream()
+                        );
 
-                    @Override
-                    public int getOutputStreamBytesLimit() {
-                        return -1;
-                    }
+                        @Override
+                        public int getOutputStreamBytesLimit() {
+                            return -1;
+                        }
 
-                    @Override
-                    public @NonNull CodedOutputStream getOutputStream() {
-                        return nullOutputStream;
-                    }
-                };
+                        @Override
+                        public @NonNull CodedOutputStream getOutputStream() {
+                            return nullOutputStream;
+                        }
+                    };
+                }
+
+                @Override
+                public CompletableFuture<Object> closeStream(CodedOutputStreamHolder outputStreamHolder, int index) {
+                    return CompletableFuture.completedFuture(null);
+                }
             }
-
-            @Override
-            public CompletableFuture<Object> closeStream(CodedOutputStreamHolder outputStreamHolder, int index) {
-                return CompletableFuture.completedFuture(null);
-            }
-        });
+        );
     }
 
     protected static String getNodeId() {
@@ -186,8 +196,14 @@ public class CaptureProxy {
 
     static Properties buildKafkaProperties(Parameters params) throws IOException {
         var kafkaProps = new Properties();
-        kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
-        kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArraySerializer");
+        kafkaProps.put(
+            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+            "org.apache.kafka.common.serialization.StringSerializer"
+        );
+        kafkaProps.put(
+            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+            "org.apache.kafka.common.serialization.ByteArraySerializer"
+        );
         // Property details:
         // https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#delivery-timeout-ms
         kafkaProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 10000);
@@ -198,7 +214,9 @@ public class CaptureProxy {
             try (var fileReader = new FileReader(params.kafkaPropertiesFile)) {
                 kafkaProps.load(fileReader);
             } catch (IOException e) {
-                log.error("Unable to locate provided Kafka producer properties file path: " + params.kafkaPropertiesFile);
+                log.error(
+                    "Unable to locate provided Kafka producer properties file path: " + params.kafkaPropertiesFile
+                );
                 throw e;
             }
         }
@@ -208,14 +226,22 @@ public class CaptureProxy {
         if (params.mskAuthEnabled) {
             kafkaProps.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
             kafkaProps.setProperty(SaslConfigs.SASL_MECHANISM, "AWS_MSK_IAM");
-            kafkaProps.setProperty(SaslConfigs.SASL_JAAS_CONFIG, "software.amazon.msk.auth.iam.IAMLoginModule required;");
-            kafkaProps.setProperty(SaslConfigs.SASL_CLIENT_CALLBACK_HANDLER_CLASS, "software.amazon.msk.auth.iam.IAMClientCallbackHandler");
+            kafkaProps.setProperty(
+                SaslConfigs.SASL_JAAS_CONFIG,
+                "software.amazon.msk.auth.iam.IAMLoginModule required;"
+            );
+            kafkaProps.setProperty(
+                SaslConfigs.SASL_CLIENT_CALLBACK_HANDLER_CLASS,
+                "software.amazon.msk.auth.iam.IAMClientCallbackHandler"
+            );
         }
         return kafkaProps;
     }
 
-    protected static IConnectionCaptureFactory getConnectionCaptureFactory(Parameters params, RootCaptureContext rootContext)
-        throws IOException {
+    protected static IConnectionCaptureFactory getConnectionCaptureFactory(
+        Parameters params,
+        RootCaptureContext rootContext
+    ) throws IOException {
         var nodeId = getNodeId();
         // Resist the urge for now though until it comes in as a request/need.
         if (params.traceDirectory != null) {
@@ -258,7 +284,8 @@ public class CaptureProxy {
         return serverUri;
     }
 
-    protected static SslContext loadBacksideSslContext(URI serverUri, boolean allowInsecureConnections) throws SSLException {
+    protected static SslContext loadBacksideSslContext(URI serverUri, boolean allowInsecureConnections)
+        throws SSLException {
         if (serverUri.getScheme().equalsIgnoreCase("https")) {
             var sslContextBuilder = SslContextBuilder.forClient();
             if (allowInsecureConnections) {
@@ -317,7 +344,9 @@ public class CaptureProxy {
                     throw Lombok.sneakyThrow(e);
                 }
             }).orElse(null);
-            var headerCapturePredicate = new HeaderValueFilteringCapturePredicate(convertPairListToMap(params.suppressCaptureHeaderPairs));
+            var headerCapturePredicate = new HeaderValueFilteringCapturePredicate(
+                convertPairListToMap(params.suppressCaptureHeaderPairs)
+            );
             proxy.start(
                 rootContext,
                 backsideConnectionPool,

@@ -11,7 +11,8 @@ import org.testcontainers.containers.ToxiproxyContainer;
 
 public class ToxiproxyContainerTestBase extends TestContainerTestBase<ToxiproxyContainer> {
 
-    private static final ToxiproxyContainer toxiproxy = new ToxiproxyContainer("ghcr.io/shopify/toxiproxy:latest").withAccessToHost(true);
+    private static final ToxiproxyContainer toxiproxy = new ToxiproxyContainer("ghcr.io/shopify/toxiproxy:latest")
+        .withAccessToHost(true);
 
     final ConcurrentSkipListSet<Integer> toxiproxyUnusedExposedPorts = new ConcurrentSkipListSet<>();
 
@@ -50,11 +51,17 @@ public class ToxiproxyContainerTestBase extends TestContainerTestBase<ToxiproxyC
 
     public Proxy getProxy(GenericContainer<?> container) {
         var containerPort = container.getFirstMappedPort();
-        final ToxiproxyClient toxiproxyClient = new ToxiproxyClient(toxiproxy.getHost(), getContainer().getControlPort());
+        final ToxiproxyClient toxiproxyClient = new ToxiproxyClient(
+            toxiproxy.getHost(),
+            getContainer().getControlPort()
+        );
         org.testcontainers.Testcontainers.exposeHostPorts(containerPort);
         try {
-            var containerName = (container.getDockerImageName() + "_" + container.getContainerName() + "_" + Thread.currentThread().getId())
-                .replaceAll("[^a-zA-Z0-9_]+", "_");
+            var containerName = (container.getDockerImageName()
+                + "_"
+                + container.getContainerName()
+                + "_"
+                + Thread.currentThread().getId()).replaceAll("[^a-zA-Z0-9_]+", "_");
             synchronized (toxiproxyUnusedExposedPorts) {
                 var proxyPort = toxiproxyUnusedExposedPorts.first();
                 var proxy = toxiproxyClient.createProxy(

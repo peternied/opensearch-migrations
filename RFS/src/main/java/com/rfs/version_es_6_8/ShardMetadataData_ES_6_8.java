@@ -297,7 +297,8 @@ public class ShardMetadataData_ES_6_8 implements com.rfs.common.ShardMetadata.Da
 
     public static class FileInfoRawDeserializer extends JsonDeserializer<FileInfoRaw> {
         @Override
-        public FileInfoRaw deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+        public FileInfoRaw deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException,
+            JsonProcessingException {
 
             JsonNode rootNode = jp.getCodec().readTree(jp);
 

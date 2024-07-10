@@ -49,7 +49,11 @@ public class TimeShifter {
         }
         // realtime = systemTimeStart + ((sourceTime-sourceTimeStart) / rateMultiplier) + targetOffset
         return systemTimeStart.get()
-            .plus(Duration.ofMillis((long) (Duration.between(sourceTimeStart.get(), sourceTime).toMillis() / rateMultiplier)))
+            .plus(
+                Duration.ofMillis(
+                    (long) (Duration.between(sourceTimeStart.get(), sourceTime).toMillis() / rateMultiplier)
+                )
+            )
             .plus(realtimeOffset);
     }
 
@@ -57,7 +61,10 @@ public class TimeShifter {
         return Optional.ofNullable(sourceTimeStart.get()).map(start ->
         // sourceTime = sourceTimeStart + (realTime-systemTimeStart-targetOffset) * rateMultiplier
         start.plus(
-            Duration.ofMillis((long) (Duration.between(systemTimeStart.get(), realTime.minus(realtimeOffset)).toMillis() * rateMultiplier))
+            Duration.ofMillis(
+                (long) (Duration.between(systemTimeStart.get(), realTime.minus(realtimeOffset)).toMillis()
+                    * rateMultiplier)
+            )
         ));
     }
 

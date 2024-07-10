@@ -84,7 +84,9 @@ public class NettyJsonContentStreamToByteBufHandler extends ChannelInboundHandle
     private void handleReadJsonMessageObject(ChannelHandlerContext ctx, HttpJsonMessageWithFaultingPayload msg) {
         bufferedJsonMessage = msg;
         var transferEncoding = bufferedJsonMessage.headers().asStrictMap().get("transfer-encoding");
-        streamMode = (transferEncoding != null && transferEncoding.contains(TRANSFER_ENCODING_CHUNKED_VALUE)) ? MODE.CHUNKED : MODE.FIXED;
+        streamMode = (transferEncoding != null && transferEncoding.contains(TRANSFER_ENCODING_CHUNKED_VALUE))
+            ? MODE.CHUNKED
+            : MODE.FIXED;
         if (streamMode == MODE.CHUNKED) {
             bufferedJsonMessage.headers().asStrictMap().remove(CONTENT_LENGTH_HEADER_NAME);
             ctx.fireChannelRead(bufferedJsonMessage);
@@ -94,7 +96,9 @@ public class NettyJsonContentStreamToByteBufHandler extends ChannelInboundHandle
     }
 
     private void handleAsChunked(ChannelHandlerContext ctx, ByteBuf dataByteBuf) {
-        var chunkSizePreamble = (Integer.toHexString(dataByteBuf.readableBytes()) + "\r\n").getBytes(StandardCharsets.UTF_8);
+        var chunkSizePreamble = (Integer.toHexString(dataByteBuf.readableBytes()) + "\r\n").getBytes(
+            StandardCharsets.UTF_8
+        );
         var compositeWrappedData = ctx.alloc().compositeBuffer(2);
         compositeWrappedData.addComponents(true, Unpooled.wrappedBuffer(chunkSizePreamble));
         compositeWrappedData.addComponents(true, dataByteBuf);

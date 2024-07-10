@@ -20,7 +20,12 @@ class RefSafeStreamUtilsTest {
         Stream<String> inputStream = Stream.of("a", "b", "c");
 
         List<TestReferenceCounted> result;
-        try (Stream<TestReferenceCounted> mappedStream = RefSafeStreamUtils.refSafeMap(inputStream, TestReferenceCounted::new)) {
+        try (
+            Stream<TestReferenceCounted> mappedStream = RefSafeStreamUtils.refSafeMap(
+                inputStream,
+                TestReferenceCounted::new
+            )
+        ) {
             result = mappedStream.collect(Collectors.toList());
         }
 

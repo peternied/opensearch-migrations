@@ -40,7 +40,10 @@ public class CaptureProxyConfigurationTest {
     }
 
     private static void assertLessThan(long ceiling, long actual) {
-        Assertions.assertTrue(actual < ceiling, () -> "Expected actual value to be less than " + ceiling + " but was " + actual + ".");
+        Assertions.assertTrue(
+            actual < ceiling,
+            () -> "Expected actual value to be less than " + ceiling + " but was " + actual + "."
+        );
     }
 
     @Test

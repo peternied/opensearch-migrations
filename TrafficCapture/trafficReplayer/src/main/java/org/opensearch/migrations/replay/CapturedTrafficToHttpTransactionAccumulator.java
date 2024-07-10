@@ -93,7 +93,10 @@ public class CapturedTrafficToHttpTransactionAccumulator {
                             + accumulation
                     )
                     .log();
-                fireAccumulationsCallbacksAndClose(accumulation, RequestResponsePacketPair.ReconstructionStatus.EXPIRED_PREMATURELY);
+                fireAccumulationsCallbacksAndClose(
+                    accumulation,
+                    RequestResponsePacketPair.ReconstructionStatus.EXPIRED_PREMATURELY
+                );
             }
         });
         this.listener = new SpanWrappingAccumulationCallbacks(accumulationCallbacks);
@@ -191,7 +194,9 @@ public class CapturedTrafficToHttpTransactionAccumulator {
 
     public void accept(ITrafficStreamWithKey trafficStreamAndKey) {
         var yetToBeSequencedTrafficStream = trafficStreamAndKey.getStream();
-        log.atTrace().setMessage(() -> "Got trafficStream: " + summarizeTrafficStream(yetToBeSequencedTrafficStream)).log();
+        log.atTrace()
+            .setMessage(() -> "Got trafficStream: " + summarizeTrafficStream(yetToBeSequencedTrafficStream))
+            .log();
         var partitionId = yetToBeSequencedTrafficStream.getNodeId();
         var connectionId = yetToBeSequencedTrafficStream.getConnectionId();
         var tsk = trafficStreamAndKey.getKey();
@@ -202,7 +207,13 @@ public class CapturedTrafficToHttpTransactionAccumulator {
             var connectionStatus = addObservationToAccumulation(accum, tsk, o);
             if (CONNECTION_STATUS.CLOSED == connectionStatus) {
                 log.atInfo()
-                    .setMessage(() -> "Connection terminated: removing " + partitionId + ":" + connectionId + " from liveStreams map")
+                    .setMessage(
+                        () -> "Connection terminated: removing "
+                            + partitionId
+                            + ":"
+                            + connectionId
+                            + " from liveStreams map"
+                    )
                     .log();
                 liveStreams.remove(partitionId, connectionId);
                 break;
@@ -222,7 +233,8 @@ public class CapturedTrafficToHttpTransactionAccumulator {
         var stream = streamWithKey.getStream();
         var key = streamWithKey.getKey();
 
-        if (key.getTrafficStreamIndex() == 0 && (stream.getPriorRequestsReceived() > 0 || stream.getLastObservationWasUnterminatedRead())) {
+        if (key.getTrafficStreamIndex() == 0
+            && (stream.getPriorRequestsReceived() > 0 || stream.getLastObservationWasUnterminatedRead())) {
             log.atWarn()
                 .setMessage(
                     () -> "Encountered a TrafficStream object with inconsistent values between "
@@ -253,7 +265,10 @@ public class CapturedTrafficToHttpTransactionAccumulator {
         @NonNull ITrafficStreamKey trafficStreamKey,
         TrafficObservation observation
     ) {
-        log.atTrace().setMessage("{}").addArgument(() -> "Adding observation: " + observation + " with state=" + accum.state).log();
+        log.atTrace()
+            .setMessage("{}")
+            .addArgument(() -> "Adding observation: " + observation + " with state=" + accum.state)
+            .log();
         var timestamp = TrafficStreamUtils.instantFromProtoTimestamp(observation.getTs());
         liveStreams.expireOldEntries(trafficStreamKey, accum, timestamp);
 
@@ -263,12 +278,19 @@ public class CapturedTrafficToHttpTransactionAccumulator {
             .or(() -> handleObservationForReadState(accum, observation, trafficStreamKey, timestamp))
             .or(() -> handleObservationForWriteState(accum, observation, trafficStreamKey, timestamp))
             .orElseGet(() -> {
-                log.atWarn().setMessage(() -> "unaccounted for observation type " + observation + " for " + accum.trafficChannelKey).log();
+                log.atWarn()
+                    .setMessage(
+                        () -> "unaccounted for observation type " + observation + " for " + accum.trafficChannelKey
+                    )
+                    .log();
                 return CONNECTION_STATUS.ALIVE;
             });
     }
 
-    private Optional<CONNECTION_STATUS> handleObservationForSkipState(Accumulation accum, TrafficObservation observation) {
+    private Optional<CONNECTION_STATUS> handleObservationForSkipState(
+        Accumulation accum,
+        TrafficObservation observation
+    ) {
         assert !observation.hasClose() : "close will be handled earlier in handleCloseObservationThatAffectEveryState";
         if (accum.state == Accumulation.State.IGNORING_LAST_REQUEST) {
             if (observation.hasWrite() || observation.hasWriteSegment() || observation.hasEndOfMessageIndicator()) {
@@ -307,7 +329,12 @@ public class CapturedTrafficToHttpTransactionAccumulator {
                 heldTrafficStreams = List.of();
             }
             closedConnectionCounter.incrementAndGet();
-            listener.onConnectionClose(accum, RequestResponsePacketPair.ReconstructionStatus.COMPLETE, timestamp, heldTrafficStreams);
+            listener.onConnectionClose(
+                accum,
+                RequestResponsePacketPair.ReconstructionStatus.COMPLETE,
+                timestamp,
+                heldTrafficStreams
+            );
             return Optional.of(CONNECTION_STATUS.CLOSED);
         } else if (observation.hasConnectionException()) {
             accum.getOrCreateTransactionPair(trafficStreamKey, originTimestamp).holdTrafficStream(trafficStreamKey);
@@ -475,12 +502,18 @@ public class CapturedTrafficToHttpTransactionAccumulator {
     public void close() {
         liveStreams.values().forEach(accum -> {
             requestsTerminatedUponAccumulatorCloseCounter.incrementAndGet();
-            fireAccumulationsCallbacksAndClose(accum, RequestResponsePacketPair.ReconstructionStatus.CLOSED_PREMATURELY);
+            fireAccumulationsCallbacksAndClose(
+                accum,
+                RequestResponsePacketPair.ReconstructionStatus.CLOSED_PREMATURELY
+            );
         });
         liveStreams.clear();
     }
 
-    private void fireAccumulationsCallbacksAndClose(Accumulation accumulation, RequestResponsePacketPair.ReconstructionStatus status) {
+    private void fireAccumulationsCallbacksAndClose(
+        Accumulation accumulation,
+        RequestResponsePacketPair.ReconstructionStatus status
+    ) {
         try {
             switch (accumulation.state) {
                 case ACCUMULATING_READS:

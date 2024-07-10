@@ -22,7 +22,9 @@ public class NettyJsonBodySerializeHandler extends ChannelInboundHandlerAdapter 
             var jsonMessage = (HttpJsonMessageWithFaultingPayload) msg;
             var payload = jsonMessage.payload();
             jsonMessage.setPayloadFaultMap(null);
-            var payloadContents = (Map<String, Object>) payload.get(JsonKeysForHttpMessage.INLINED_JSON_BODY_DOCUMENT_KEY);
+            var payloadContents = (Map<String, Object>) payload.get(
+                JsonKeysForHttpMessage.INLINED_JSON_BODY_DOCUMENT_KEY
+            );
             ctx.fireChannelRead(msg);
             if (payloadContents != null) {
                 serializePayload(ctx, payloadContents);

@@ -45,7 +45,10 @@ public class ParsedHttpMessagesAsDicts {
         this(tuple, Optional.ofNullable(tuple.sourcePair));
     }
 
-    protected ParsedHttpMessagesAsDicts(@NonNull SourceTargetCaptureTuple tuple, Optional<RequestResponsePacketPair> sourcePairOp) {
+    protected ParsedHttpMessagesAsDicts(
+        @NonNull SourceTargetCaptureTuple tuple,
+        Optional<RequestResponsePacketPair> sourcePairOp
+    ) {
         this(
             tuple.context,
             getSourceRequestOp(tuple.context, sourcePairOp),
@@ -93,7 +96,9 @@ public class ParsedHttpMessagesAsDicts {
         Optional<RequestResponsePacketPair> sourcePairOp
     ) {
         return sourcePairOp.flatMap(
-            p -> Optional.ofNullable(p.requestData).flatMap(d -> Optional.ofNullable(d.packetBytes)).map(d -> convertRequest(context, d))
+            p -> Optional.ofNullable(p.requestData)
+                .flatMap(d -> Optional.ofNullable(d.packetBytes))
+                .map(d -> convertRequest(context, d))
         );
     }
 
@@ -121,7 +126,11 @@ public class ParsedHttpMessagesAsDicts {
         targetResponseOp.ifPresent(r -> context.setTargetStatus((Integer) r.get(STATUS_CODE_KEY)));
     }
 
-    private static Map<String, Object> fillMap(LinkedHashMap<String, Object> map, HttpHeaders headers, ByteBuf content) {
+    private static Map<String, Object> fillMap(
+        LinkedHashMap<String, Object> map,
+        HttpHeaders headers,
+        ByteBuf content
+    ) {
         try (var encodedBufHolder = RefSafeHolder.create(Base64.encode(content, false, Base64Dialect.STANDARD))) {
             var encodedBuf = encodedBufHolder.get();
             assert encodedBuf != null : "Base64.encode should not return null";
@@ -152,7 +161,10 @@ public class ParsedHttpMessagesAsDicts {
         }
     }
 
-    private static Map<String, Object> convertRequest(@NonNull IReplayContexts.ITupleHandlingContext context, @NonNull List<byte[]> data) {
+    private static Map<String, Object> convertRequest(
+        @NonNull IReplayContexts.ITupleHandlingContext context,
+        @NonNull List<byte[]> data
+    ) {
         return makeSafeMap(context, () -> {
             var map = new LinkedHashMap<String, Object>();
             try (

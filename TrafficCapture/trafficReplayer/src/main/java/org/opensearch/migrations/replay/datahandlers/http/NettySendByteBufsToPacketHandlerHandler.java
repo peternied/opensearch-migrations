@@ -40,7 +40,8 @@ public class NettySendByteBufsToPacketHandlerHandler<R> extends ChannelInboundHa
         this.httpTransactionContext = httpTransactionContext;
         currentFuture = TrackedFuture.Factory.completedFuture(
             null,
-            () -> "currentFuture for NettySendByteBufsToPacketHandlerHandler initialized to the base case for " + httpTransactionContext
+            () -> "currentFuture for NettySendByteBufsToPacketHandlerHandler initialized to the base case for "
+                + httpTransactionContext
         );
     }
 
@@ -65,7 +66,8 @@ public class NettySendByteBufsToPacketHandlerHandler<R> extends ChannelInboundHa
                 packetReceiverCompletionFutureRef.set(
                     TextTrackedFuture.failedFuture(
                         new NoContentException(),
-                        () -> "Setting NoContentException to the exposed CompletableFuture" + " of NettySendByteBufsToPacketHandlerHandler"
+                        () -> "Setting NoContentException to the exposed CompletableFuture"
+                            + " of NettySendByteBufsToPacketHandlerHandler"
                     )
                 );
                 return;
@@ -74,7 +76,8 @@ public class NettySendByteBufsToPacketHandlerHandler<R> extends ChannelInboundHa
         }
 
         var packetReceiverCompletionFuture = currentFuture.getDeferredFutureThroughHandle((v1, t1) -> {
-            assert v1 != null : "expected in progress Boolean to be not null since null should signal that work was never started";
+            assert v1 != null
+                : "expected in progress Boolean to be not null since null should signal that work was never started";
             var transformationStatus = v1.booleanValue()
                 ? HttpRequestTransformationStatus.COMPLETED
                 : HttpRequestTransformationStatus.ERROR;
@@ -116,20 +119,26 @@ public class NettySendByteBufsToPacketHandlerHandler<R> extends ChannelInboundHa
             );
         } else {
             return TextTrackedFuture.completedFuture(
-                Optional.ofNullable(v2).map(r -> new TransformedOutputAndResult<R>(r, transformationStatus, null)).orElse(null),
+                Optional.ofNullable(v2)
+                    .map(r -> new TransformedOutputAndResult<R>(r, transformationStatus, null))
+                    .orElse(null),
                 () -> "fixed value from packetReceiver.finalizeRequest()"
             );
         }
     }
 
     public TrackedFuture<String, TransformedOutputAndResult<R>> getPacketReceiverCompletionFuture() {
-        assert packetReceiverCompletionFutureRef.get() != null : "expected close() to have removed the handler and for this to be non-null";
+        assert packetReceiverCompletionFutureRef.get() != null
+            : "expected close() to have removed the handler and for this to be non-null";
         return packetReceiverCompletionFutureRef.get();
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        currentFuture = TrackedFuture.Factory.failedFuture(cause, () -> "NettySendByteBufsToPacketHandlerHandler got an exception");
+        currentFuture = TrackedFuture.Factory.failedFuture(
+            cause,
+            () -> "NettySendByteBufsToPacketHandlerHandler got an exception"
+        );
         super.exceptionCaught(ctx, cause);
     }
 
@@ -162,10 +171,17 @@ public class NettySendByteBufsToPacketHandlerHandler<R> extends ChannelInboundHa
                         return TextTrackedFuture.failedFuture(t, () -> "failed previous future");
                     } else {
                         log.atTrace()
-                            .setMessage(() -> "chaining consumingBytes with " + msg + " lastFuture=" + preexistingFutureForCapture)
+                            .setMessage(
+                                () -> "chaining consumingBytes with "
+                                    + msg
+                                    + " lastFuture="
+                                    + preexistingFutureForCapture
+                            )
                             .log();
                         var rval = packetReceiver.consumeBytes(bb);
-                        log.atTrace().setMessage(() -> "packetReceiver.consumeBytes()=" + rval + " bb.refCnt=" + bb.refCnt()).log();
+                        log.atTrace()
+                            .setMessage(() -> "packetReceiver.consumeBytes()=" + rval + " bb.refCnt=" + bb.refCnt())
+                            .log();
                         return rval.map(
                             cf -> cf.thenApply(ignore -> false),
                             () -> "NettySendByteBufsToPacketHandlerHandler.channelRead()'s future is "

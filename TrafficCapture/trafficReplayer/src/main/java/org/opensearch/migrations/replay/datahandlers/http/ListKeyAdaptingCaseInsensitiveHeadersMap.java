@@ -40,7 +40,9 @@ public class ListKeyAdaptingCaseInsensitiveHeadersMap extends AbstractMap<String
             if (((List) value).stream().allMatch(String.class::isInstance)) {
                 strList = (List) value;
             } else {
-                strList = (List) ((List) value).stream().map(Object::toString).collect(Collectors.toCollection(ArrayList::new));
+                strList = (List) ((List) value).stream()
+                    .map(Object::toString)
+                    .collect(Collectors.toCollection(ArrayList::new));
             }
         } else {
             strList = new ArrayList<>(1);

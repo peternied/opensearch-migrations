@@ -49,7 +49,10 @@ public class TrackedFuture<D, T> {
     public static class Factory {
         private Factory() {}
 
-        public static <T, D> TrackedFuture<D, T> failedFuture(@NonNull Throwable e, @NonNull Supplier<D> diagnosticSupplier) {
+        public static <T, D> TrackedFuture<D, T> failedFuture(
+            @NonNull Throwable e,
+            @NonNull Supplier<D> diagnosticSupplier
+        ) {
             return new TrackedFuture<>(CompletableFuture.failedFuture(e), diagnosticSupplier, null);
         }
 
@@ -58,7 +61,11 @@ public class TrackedFuture<D, T> {
         }
     }
 
-    private TrackedFuture(@NonNull CompletableFuture<T> future, @NonNull Supplier<D> diagnosticSupplier, TrackedFuture<D, ?> parentFuture) {
+    private TrackedFuture(
+        @NonNull CompletableFuture<T> future,
+        @NonNull Supplier<D> diagnosticSupplier,
+        TrackedFuture<D, ?> parentFuture
+    ) {
         this.future = future;
         this.diagnosticSupplier = diagnosticSupplier;
         this.parentDiagnosticFutureRef = new AtomicReference<>();
@@ -84,11 +91,15 @@ public class TrackedFuture<D, T> {
         }
         var wasSet = parentDiagnosticFutureRef.compareAndSet(null, parent);
         if (!wasSet) {
-            throw new IllegalStateException("dependencyDiagnosticFutureRef was already set to " + parentDiagnosticFutureRef.get());
+            throw new IllegalStateException(
+                "dependencyDiagnosticFutureRef was already set to " + parentDiagnosticFutureRef.get()
+            );
         }
         // the parent is a pretty good breadcrumb for the current stack... but the grandparent of the most recently
         // finished ancestor begins to have diminished value immediately, so cut the ancestry tree at this point
-        future.whenComplete((v, t) -> Optional.ofNullable(getParentDiagnosticFuture()).ifPresent(p -> p.setParentDiagnosticFuture(null)));
+        future.whenComplete(
+            (v, t) -> Optional.ofNullable(getParentDiagnosticFuture()).ifPresent(p -> p.setParentDiagnosticFuture(null))
+        );
     }
 
     /**
@@ -105,7 +116,9 @@ public class TrackedFuture<D, T> {
     }
 
     public TrackedFuture<D, T> getInnerComposedPendingCompletableFuture() {
-        return Optional.ofNullable(innerComposedPendingCompletableFutureReference).map(AtomicReference::get).orElse(null);
+        return Optional.ofNullable(innerComposedPendingCompletableFutureReference)
+            .map(AtomicReference::get)
+            .orElse(null);
     }
 
     public <U> TrackedFuture<D, U> map(
@@ -128,7 +141,10 @@ public class TrackedFuture<D, T> {
         return this.map(cf -> cf.exceptionally(fn), diagnosticSupplier);
     }
 
-    public TrackedFuture<D, T> whenComplete(BiConsumer<? super T, Throwable> fn, @NonNull Supplier<D> diagnosticSupplier) {
+    public TrackedFuture<D, T> whenComplete(
+        BiConsumer<? super T, Throwable> fn,
+        @NonNull Supplier<D> diagnosticSupplier
+    ) {
         return map(cf -> cf.whenComplete(fn::accept), diagnosticSupplier);
     }
 
@@ -143,7 +159,8 @@ public class TrackedFuture<D, T> {
             return innerFuture.future;
         });
         var wrappedDiagnosticFuture = new TrackedFuture<>(newCf, diagnosticSupplier, this);
-        wrappedDiagnosticFuture.innerComposedPendingCompletableFutureReference = innerComposedCompletableFutureReference;
+        wrappedDiagnosticFuture.innerComposedPendingCompletableFutureReference =
+            innerComposedCompletableFutureReference;
         wrappedDiagnosticFuture.future.whenComplete((v2, t2) -> innerComposedCompletableFutureReference.set(null));
         return wrappedDiagnosticFuture;
     }
@@ -173,7 +190,8 @@ public class TrackedFuture<D, T> {
         });
         var newCf = handledFuture.thenCompose(wcf -> wcf.future);
         var wrappedDiagnosticFuture = new TrackedFuture<>(newCf, diagnosticSupplier, this);
-        wrappedDiagnosticFuture.innerComposedPendingCompletableFutureReference = innerComposedCompletableFutureReference;
+        wrappedDiagnosticFuture.innerComposedPendingCompletableFutureReference =
+            innerComposedCompletableFutureReference;
         // TODO: Add a count to how many futures have been completed and are falling away?
         wrappedDiagnosticFuture.future.whenComplete((v2, t2) -> innerComposedCompletableFutureReference.set(null));
         return wrappedDiagnosticFuture;
@@ -192,7 +210,8 @@ public class TrackedFuture<D, T> {
     }
 
     public T get(@NonNull Duration timeout) throws ExecutionException, InterruptedException, TimeoutException {
-        var millis = timeout.toMillis() + (timeout.minusNanos(timeout.toNanosPart()).equals(timeout) ? 0 : 1); // round up
+        var millis = timeout.toMillis() + (timeout.minusNanos(timeout.toNanosPart()).equals(timeout) ? 0 : 1); // round
+                                                                                                               // up
         return future.get(millis, TimeUnit.MILLISECONDS);
     }
 

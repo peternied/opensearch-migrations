@@ -35,7 +35,9 @@ public class RestClient {
 
         SslProvider sslProvider;
         if (connectionDetails.insecure) {
-            SslContext sslContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+            SslContext sslContext = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
 
             sslProvider = SslProvider.builder().sslContext(sslContext).handlerConfigurator(sslHandler -> {
                 SSLEngine engine = sslHandler.engine();
@@ -76,7 +78,8 @@ public class RestClient {
             .uri("/" + path)
             .send(ByteBufMono.fromString(Mono.just(body)))
             .responseSingle(
-                (response, bytes) -> bytes.asString().map(b -> new Response(response.status().code(), b, response.status().reasonPhrase()))
+                (response, bytes) -> bytes.asString()
+                    .map(b -> new Response(response.status().code(), b, response.status().reasonPhrase()))
             );
     }
 
@@ -85,7 +88,8 @@ public class RestClient {
             .uri("/" + path)
             .send(ByteBufMono.fromString(Mono.just(body)))
             .responseSingle(
-                (response, bytes) -> bytes.asString().map(b -> new Response(response.status().code(), b, response.status().reasonPhrase()))
+                (response, bytes) -> bytes.asString()
+                    .map(b -> new Response(response.status().code(), b, response.status().reasonPhrase()))
             );
     }
 

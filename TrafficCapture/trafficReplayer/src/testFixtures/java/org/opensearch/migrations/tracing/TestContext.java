@@ -56,9 +56,17 @@ public class TestContext extends RootReplayerContext implements AutoCloseable {
         return getTestConnectionRequestContext(DEFAULT_TEST_CONNECTION, replayerIdx);
     }
 
-    public IReplayContexts.IReplayerHttpTransactionContext getTestConnectionRequestContext(String connectionId, int replayerIdx) {
+    public IReplayContexts.IReplayerHttpTransactionContext getTestConnectionRequestContext(
+        String connectionId,
+        int replayerIdx
+    ) {
         var rk = new UniqueReplayerRequestKey(
-            PojoTrafficStreamKeyAndContext.build(TEST_NODE_ID, connectionId, 0, this::createTrafficStreamContextForTest),
+            PojoTrafficStreamKeyAndContext.build(
+                TEST_NODE_ID,
+                connectionId,
+                0,
+                this::createTrafficStreamContextForTest
+            ),
             0,
             replayerIdx
         );

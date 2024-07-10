@@ -25,7 +25,12 @@ import org.slf4j.event.Level;
 @Slf4j
 class ActiveContextMonitorTest {
 
-    private Pattern makeSuppressDedupedPattern(int visibleRequestCount, int requestScopeCount, int visibleScopeCount, int totalScopeCount) {
+    private Pattern makeSuppressDedupedPattern(
+        int visibleRequestCount,
+        int requestScopeCount,
+        int visibleScopeCount,
+        int totalScopeCount
+    ) {
         var sb = new StringBuilder();
         sb.append("^");
         sb.append("Oldest of " + requestScopeCount + " outstanding requests that are past thresholds.*\\n");
@@ -87,7 +92,10 @@ class ActiveContextMonitorTest {
                 var rc = testContext.getTestConnectionRequestContext("connection-0", i);
                 addContexts(compositeTracker, rc);
                 final var idx = i;
-                orderedWorkerTracker.put(rc.getReplayerRequestKey(), new TrackedFuture<>(new CompletableFuture<>(), () -> "dummy #" + idx));
+                orderedWorkerTracker.put(
+                    rc.getReplayerRequestKey(),
+                    new TrackedFuture<>(new CompletableFuture<>(), () -> "dummy #" + idx)
+                );
             }
             Thread.sleep(10);
             acm.run();
@@ -133,7 +141,10 @@ class ActiveContextMonitorTest {
                 var rc = testContext.getTestConnectionRequestContext(i);
                 addContexts(compositeTracker, rc);
                 final var idx = i;
-                orderedWorkerTracker.put(rc.getReplayerRequestKey(), new TrackedFuture<>(new CompletableFuture<>(), () -> "dummy #" + idx));
+                orderedWorkerTracker.put(
+                    rc.getReplayerRequestKey(),
+                    new TrackedFuture<>(new CompletableFuture<>(), () -> "dummy #" + idx)
+                );
             }
             var startTime = System.nanoTime();
             acm.logTopOpenActivities(false);
@@ -150,7 +161,10 @@ class ActiveContextMonitorTest {
             for (int i = 0; i < TRANCHE_SIZE; ++i) {
                 var rc = testContext.getTestConnectionRequestContext(i + TRANCHE_SIZE);
                 addContexts(compositeTracker, rc);
-                orderedWorkerTracker.put(rc.getReplayerRequestKey(), new TrackedFuture<>(new CompletableFuture<>(), () -> "dummy obj"));
+                orderedWorkerTracker.put(
+                    rc.getReplayerRequestKey(),
+                    new TrackedFuture<>(new CompletableFuture<>(), () -> "dummy obj")
+                );
             }
 
             acm.logTopOpenActivities(false);
@@ -267,7 +281,12 @@ class ActiveContextMonitorTest {
         return IntStream.range(0, i).mapToObj(ignored -> ActiveContextMonitor.INDENT).collect(Collectors.joining());
     }
 
-    private Pattern makePattern(int visibleRequestCount, int totalRequestCount, int visibleScopeCount, int totalScopeCount) {
+    private Pattern makePattern(
+        int visibleRequestCount,
+        int totalRequestCount,
+        int visibleScopeCount,
+        int totalScopeCount
+    ) {
         var sb = new StringBuilder();
         sb.append("^");
         sb.append("Oldest of " + totalRequestCount + " outstanding requests that are past thresholds.*\\n");
@@ -317,18 +336,25 @@ class ActiveContextMonitorTest {
     }
 
     private void checkAndClearLines(ArrayList<Map.Entry<Level, String>> loggedLines, Pattern pattern) {
-        loggedLines.stream().forEach(kvp -> System.out.println(kvp.getValue() + " (" + kvp.getKey().toString().toLowerCase() + ")"));
-        var filteredLoggedLines = loggedLines.stream().filter(kvp -> !kvp.getValue().equals("\n")).collect(Collectors.toList());
+        loggedLines.stream()
+            .forEach(kvp -> System.out.println(kvp.getValue() + " (" + kvp.getKey().toString().toLowerCase() + ")"));
+        var filteredLoggedLines = loggedLines.stream()
+            .filter(kvp -> !kvp.getValue().equals("\n"))
+            .collect(Collectors.toList());
         System.out.println(
             "----------------------------------------------------------------"
                 + "----------------------------------------------------------------"
         );
 
-        var combinedOutput = filteredLoggedLines.stream().map(Map.Entry::getValue).collect(Collectors.joining("\n")) + "\n"; // simplifies
-                                                                                                                             // the
-                                                                                                                             // construction
-                                                                                                                             // of the regex
-        Assertions.assertTrue(pattern.matcher(combinedOutput).matches(), "Could not match: " + combinedOutput + "\n\n with \n" + pattern);
+        var combinedOutput = filteredLoggedLines.stream().map(Map.Entry::getValue).collect(Collectors.joining("\n"))
+            + "\n"; // simplifies
+                    // the
+                    // construction
+                    // of the regex
+        Assertions.assertTrue(
+            pattern.matcher(combinedOutput).matches(),
+            "Could not match: " + combinedOutput + "\n\n with \n" + pattern
+        );
         loggedLines.clear();
     }
 }

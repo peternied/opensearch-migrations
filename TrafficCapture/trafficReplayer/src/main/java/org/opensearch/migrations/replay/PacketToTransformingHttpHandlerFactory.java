@@ -12,12 +12,17 @@ import org.opensearch.migrations.transform.IJsonTransformer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class PacketToTransformingHttpHandlerFactory implements PacketConsumerFactory<TransformedOutputAndResult<TransformedPackets>> {
+public class PacketToTransformingHttpHandlerFactory
+    implements
+        PacketConsumerFactory<TransformedOutputAndResult<TransformedPackets>> {
 
     private final IJsonTransformer jsonTransformer;
     private final IAuthTransformerFactory authTransformerFactory;
 
-    public PacketToTransformingHttpHandlerFactory(IJsonTransformer jsonTransformer, IAuthTransformerFactory authTransformerFactory) {
+    public PacketToTransformingHttpHandlerFactory(
+        IJsonTransformer jsonTransformer,
+        IAuthTransformerFactory authTransformerFactory
+    ) {
         this.jsonTransformer = jsonTransformer;
         this.authTransformerFactory = authTransformerFactory;
     }

@@ -26,7 +26,10 @@ class TimeShifterTest {
             () -> shifter.transformRealTimeToSourceTime(shifter.transformSourceTimeToRealTime(sourceTime)).get()
         );
         shifter.setFirstTimestamp(sourceTime);
-        Assertions.assertEquals(sourceTime, shifter.transformRealTimeToSourceTime(shifter.transformSourceTimeToRealTime(sourceTime)).get());
+        Assertions.assertEquals(
+            sourceTime,
+            shifter.transformRealTimeToSourceTime(shifter.transformSourceTimeToRealTime(sourceTime)).get()
+        );
 
         var sourceTime2 = sourceTime.plus(Duration.ofMinutes(RATE_MULTIPLIER));
         Assertions.assertEquals(

@@ -77,7 +77,9 @@ public class OnlineRadixSorter {
         var workItem = items.get(index);
         if (workItem == null) {
             if (index < currentOffset) {
-                throw new IllegalArgumentException("index (" + index + ")" + " must be > last processed item (" + currentOffset + ")");
+                throw new IllegalArgumentException(
+                    "index (" + index + ")" + " must be > last processed item (" + currentOffset + ")"
+                );
             }
             for (int nextKey = Math.max(
                 currentOffset,
@@ -89,7 +91,10 @@ public class OnlineRadixSorter {
                         CompletableFuture.completedFuture(null),
                         "unlinked signaling future for slot #" + finalNextKey
                     )
-                    : items.get(finalNextKey - 1).signalWorkCompletedFuture.thenAccept(v -> {}, () -> "Kickoff for slot #" + finalNextKey);
+                    : items.get(finalNextKey - 1).signalWorkCompletedFuture.thenAccept(
+                        v -> {},
+                        () -> "Kickoff for slot #" + finalNextKey
+                    );
                 workItem = new IndexedWork(
                     signalFuture,
                     null,
@@ -114,7 +119,11 @@ public class OnlineRadixSorter {
             + ","
             + IntStream.range(0, upTo - currentOffset)
                 .map(i -> upTo - i - 1)
-                .filter(i -> Optional.ofNullable(items.get(i)).flatMap(wi -> Optional.ofNullable(wi.workCompletedFuture)).isEmpty())
+                .filter(
+                    i -> Optional.ofNullable(items.get(i))
+                        .flatMap(wi -> Optional.ofNullable(wi.workCompletedFuture))
+                        .isEmpty()
+                )
                 .boxed()
                 .reduce(new SequentialSpanCompressingReducer(-1), SequentialSpanCompressingReducer::addNext, (c, d) -> {
                     throw new IllegalStateException("parallel streams aren't allowed");

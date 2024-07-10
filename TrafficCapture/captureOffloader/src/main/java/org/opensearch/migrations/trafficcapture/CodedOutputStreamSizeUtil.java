@@ -42,14 +42,18 @@ public class CodedOutputStreamSizeUtil {
     ) {
         // Timestamp required bytes
         int tsContentSize = getSizeOfTimestamp(timestamp);
-        int tsTagAndContentSize = CodedOutputStream.computeInt32Size(TrafficObservation.TS_FIELD_NUMBER, tsContentSize) + tsContentSize;
+        int tsTagAndContentSize = CodedOutputStream.computeInt32Size(TrafficObservation.TS_FIELD_NUMBER, tsContentSize)
+            + tsContentSize;
 
         // Capture required bytes
         int dataSize = computeByteBufRemainingSize(dataFieldNumber, buf);
         int captureTagAndContentSize = CodedOutputStream.computeInt32Size(observationFieldNumber, dataSize) + dataSize;
 
         // Observation and closing index required bytes
-        return bytesNeededForObservationAndClosingIndex(tsTagAndContentSize + captureTagAndContentSize, Integer.MAX_VALUE);
+        return bytesNeededForObservationAndClosingIndex(
+            tsTagAndContentSize + captureTagAndContentSize,
+            Integer.MAX_VALUE
+        );
     }
 
     /**
@@ -71,11 +75,20 @@ public class CodedOutputStreamSizeUtil {
      * This function determines the number of bytes needed to store a TrafficObservation and a closing index for a
      * TrafficStream, from the provided input.
      */
-    public static int bytesNeededForObservationAndClosingIndex(int observationContentSize, int numberOfTrafficStreamsSoFar) {
-        int observationTagSize = CodedOutputStream.computeUInt32Size(TrafficStream.SUBSTREAM_FIELD_NUMBER, observationContentSize);
+    public static int bytesNeededForObservationAndClosingIndex(
+        int observationContentSize,
+        int numberOfTrafficStreamsSoFar
+    ) {
+        int observationTagSize = CodedOutputStream.computeUInt32Size(
+            TrafficStream.SUBSTREAM_FIELD_NUMBER,
+            observationContentSize
+        );
 
         // Size for TrafficStream index added when flushing, use arbitrary field to calculate
-        int indexSize = CodedOutputStream.computeInt32Size(TrafficStream.NUMBEROFTHISLASTCHUNK_FIELD_NUMBER, numberOfTrafficStreamsSoFar);
+        int indexSize = CodedOutputStream.computeInt32Size(
+            TrafficStream.NUMBEROFTHISLASTCHUNK_FIELD_NUMBER,
+            numberOfTrafficStreamsSoFar
+        );
 
         return observationTagSize + observationContentSize + indexSize;
     }

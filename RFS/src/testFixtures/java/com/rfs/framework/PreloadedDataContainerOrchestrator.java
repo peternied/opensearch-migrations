@@ -83,12 +83,15 @@ public class PreloadedDataContainerOrchestrator {
     String[] getImageAndTagArray(String imageName) {
         var imageTagArray = imageName.split(":");
         if (imageTagArray.length != 2) {
-            throw new IllegalArgumentException("Base source image [" + baseSourceVersion.imageName + "] name isn't of the form .*:.*");
+            throw new IllegalArgumentException(
+                "Base source image [" + baseSourceVersion.imageName + "] name isn't of the form .*:.*"
+            );
         }
         return imageTagArray;
     }
 
-    String getImageId(DockerClient dockerClient, String imageName, boolean pullIfUnavailable) throws InterruptedException {
+    String getImageId(DockerClient dockerClient, String imageName, boolean pullIfUnavailable)
+        throws InterruptedException {
         var imageAndTagArr = getImageAndTagArray(imageName);
         var image = getExistingImage(dockerClient, imageAndTagArr[0], imageAndTagArr[1], pullIfUnavailable);
         if (image == null) {
@@ -99,7 +102,8 @@ public class PreloadedDataContainerOrchestrator {
         return image.getId();
     }
 
-    private int getHashCodeOfImagesAndArgs(DockerClient dockerClient, boolean pullIfUnavailable) throws InterruptedException {
+    private int getHashCodeOfImagesAndArgs(DockerClient dockerClient, boolean pullIfUnavailable)
+        throws InterruptedException {
         return Objects.hash(
             getImageId(dockerClient, baseSourceVersion.imageName, pullIfUnavailable),
             getImageId(dockerClient, dataLoaderImageName, pullIfUnavailable),
@@ -123,8 +127,12 @@ public class PreloadedDataContainerOrchestrator {
         return DockerClientImpl.getInstance(config, httpClient);
     }
 
-    private static Image getExistingImage(DockerClient dockerClient, String imageName, String tag, boolean pullIfUnavailable)
-        throws InterruptedException {
+    private static Image getExistingImage(
+        DockerClient dockerClient,
+        String imageName,
+        String tag,
+        boolean pullIfUnavailable
+    ) throws InterruptedException {
         var fullName = formatFullImageName(imageName, tag);
         for (var image : dockerClient.listImagesCmd().exec()) {
             for (String s : image.getRepoTags()) {
@@ -149,7 +157,8 @@ public class PreloadedDataContainerOrchestrator {
         return imageName + ":" + tag;
     }
 
-    private void makeNewImage(DockerClient dockerClient, String imageName, String tag) throws IOException, InterruptedException {
+    private void makeNewImage(DockerClient dockerClient, String imageName, String tag) throws IOException,
+        InterruptedException {
         var imageResponse = dockerClient.inspectImageCmd(baseSourceVersion.imageName).exec();
         var originalEntrypoint = imageResponse.getConfig().getEntrypoint();
         var originalCmd = imageResponse.getConfig().getCmd();
@@ -192,14 +201,20 @@ public class PreloadedDataContainerOrchestrator {
         ).toArray(String[]::new);
 
         try (var execCmd = dockerClient.execCreateCmd(serverContainerId)) {
-            var response = execCmd.withCmd(conjoinedOriginalCommand).withAttachStdout(true).withAttachStderr(true).exec();
+            var response = execCmd.withCmd(conjoinedOriginalCommand)
+                .withAttachStdout(true)
+                .withAttachStderr(true)
+                .exec();
 
             dockerClient.execStartCmd(response.getId()).exec(new ExecStartResultCallback(System.out, System.err));
         }
     }
 
     private void runGeneratorContainerToCompletion(DockerClient dockerClient, Network network) throws IOException {
-        try (var clientContainer = new GenericContainer<>(dataLoaderImageName).withNetwork(network).withCommand(generatorContainerArgs)) {
+        try (
+            var clientContainer = new GenericContainer<>(dataLoaderImageName).withNetwork(network)
+                .withCommand(generatorContainerArgs)
+        ) {
             clientContainer.start();
 
             try (
@@ -233,7 +248,8 @@ public class PreloadedDataContainerOrchestrator {
      * Here, the word 'park' means to put the source container into a quiescent state where a snapshot could
      * be taken and the container could be restarted with the original entrypoint starting up cleanly.
      */
-    private static void parkSourceContainer(DockerClient dockerClient, String serverContainerId) throws InterruptedException {
+    private static void parkSourceContainer(DockerClient dockerClient, String serverContainerId)
+        throws InterruptedException {
         try (var execCmd = dockerClient.execCreateCmd(serverContainerId)) {
             final var script = ""
                 + "export PID=`ps -e -o pid=,comm= | sort -n | grep java | sed 's/ \\+/ /g' | sed 's/^ //' | cut -d ' ' -f 1` && "
@@ -243,7 +259,10 @@ public class PreloadedDataContainerOrchestrator {
                 + "rm -f `find . -name \\*.lock` && "
                 + "sleep 2 && "
                 + "echo done";
-            var syncResponse = execCmd.withCmd("/bin/bash", "-c", script).withAttachStderr(true).withAttachStdout(true).exec();
+            var syncResponse = execCmd.withCmd("/bin/bash", "-c", script)
+                .withAttachStderr(true)
+                .withAttachStdout(true)
+                .exec();
             var outputStream = new ByteArrayOutputStream();
 
             // Start the exec command and capture the output
@@ -254,7 +273,12 @@ public class PreloadedDataContainerOrchestrator {
         }
     }
 
-    private static void commitSourceToNewImage(DockerClient dockerClient, String serverContainerId, String imageName, String tag) {
+    private static void commitSourceToNewImage(
+        DockerClient dockerClient,
+        String serverContainerId,
+        String imageName,
+        String tag
+    ) {
         try (
             var commitCmd = dockerClient.commitCmd(serverContainerId)
                 .withLabels(Map.of("org.testcontainers.sessionId", "none"))

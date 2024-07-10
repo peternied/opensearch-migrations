@@ -99,7 +99,12 @@ public class TestUtils {
         var contentLength = stringParts.stream().mapToInt(String::length).sum();
         String headers = headersGenerator.apply(contentLength) + "\r\n";
         referenceStringAccumulator.append(headers);
-        return chainedWriteHeadersAndDualWritePayloadParts(packetConsumer, stringParts, referenceStringAccumulator, headers);
+        return chainedWriteHeadersAndDualWritePayloadParts(
+            packetConsumer,
+            stringParts,
+            referenceStringAccumulator,
+            headers
+        );
     }
 
     public static void verifyCapturedResponseMatchesExpectedPayload(

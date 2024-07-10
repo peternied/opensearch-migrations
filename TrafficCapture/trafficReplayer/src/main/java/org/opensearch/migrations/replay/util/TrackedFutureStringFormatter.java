@@ -15,7 +15,10 @@ public class TrackedFutureStringFormatter {
         return format(f, x -> null);
     }
 
-    public static <D> String format(TrackedFuture<D, ?> f, @NonNull Function<TrackedFuture<D, ?>, String> resultFormatter) {
+    public static <D> String format(
+        TrackedFuture<D, ?> f,
+        @NonNull Function<TrackedFuture<D, ?>, String> resultFormatter
+    ) {
         return f.walkParentsAsStream()
             .map(kvp -> stringFormatFutureWithDiagnostics(f, kvp, resultFormatter))
             .collect(Collectors.joining("<-"));

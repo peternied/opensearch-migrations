@@ -40,7 +40,10 @@ public class JsonEmitter implements AutoCloseable {
         public final ByteBuf partialSerializedContents;
         public final Supplier<PartialOutputAndContinuation> nextSupplier;
 
-        public PartialOutputAndContinuation(ByteBuf partialSerializedContents, Supplier<PartialOutputAndContinuation> nextSupplier) {
+        public PartialOutputAndContinuation(
+            ByteBuf partialSerializedContents,
+            Supplier<PartialOutputAndContinuation> nextSupplier
+        ) {
             this.partialSerializedContents = partialSerializedContents;
             this.nextSupplier = nextSupplier;
         }
@@ -165,12 +168,18 @@ public class JsonEmitter implements AutoCloseable {
      * @param minBytes
      * @return
      */
-    private PartialOutputAndContinuation getChunkAndContinuationsHelper(FragmentSupplier nextFragmentSupplier, int minBytes) {
+    private PartialOutputAndContinuation getChunkAndContinuationsHelper(
+        FragmentSupplier nextFragmentSupplier,
+        int minBytes
+    ) {
         var compositeByteBuf = outputStream.compositeByteBuf;
         if (compositeByteBuf.numComponents() > NUM_SEGMENT_THRESHOLD || compositeByteBuf.readableBytes() > minBytes) {
             var byteBuf = outputStream.recycleByteBufRetained();
             log.debug("getChunkAndContinuationsHelper->" + byteBuf.readableBytes() + " bytes + continuation");
-            return new PartialOutputAndContinuation(byteBuf, () -> getChunkAndContinuationsHelper(nextFragmentSupplier, minBytes));
+            return new PartialOutputAndContinuation(
+                byteBuf,
+                () -> getChunkAndContinuationsHelper(nextFragmentSupplier, minBytes)
+            );
         }
         if (nextFragmentSupplier == null) {
             try {
@@ -183,7 +192,9 @@ public class JsonEmitter implements AutoCloseable {
             return new PartialOutputAndContinuation(byteBuf, null);
         }
         log.trace(
-            "getChunkAndContinuationsHelper->recursing with " + outputStream.compositeByteBuf.readableBytes() + " written bytes buffered"
+            "getChunkAndContinuationsHelper->recursing with "
+                + outputStream.compositeByteBuf.readableBytes()
+                + " written bytes buffered"
         );
         return getChunkAndContinuationsHelper(nextFragmentSupplier.supplier.get(), minBytes);
     }

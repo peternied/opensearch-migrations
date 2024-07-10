@@ -16,7 +16,13 @@ public class CaptureProxySetupTest {
     @Test
     public void testBuildKafkaPropertiesBaseCase() throws IOException {
         CaptureProxy.Parameters parameters = CaptureProxy.parseArgs(
-            new String[] { "--destinationUri", "invalid:9200", "--listenPort", "80", "--kafkaConnection", kafkaBrokerString }
+            new String[] {
+                "--destinationUri",
+                "invalid:9200",
+                "--listenPort",
+                "80",
+                "--kafkaConnection",
+                kafkaBrokerString }
         );
         Properties props = CaptureProxy.buildKafkaProperties(parameters);
 
@@ -59,7 +65,10 @@ public class CaptureProxySetupTest {
         );
         Assertions.assertEquals("SASL_SSL", props.get(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG));
         Assertions.assertEquals("AWS_MSK_IAM", props.get(SaslConfigs.SASL_MECHANISM));
-        Assertions.assertEquals("software.amazon.msk.auth.iam.IAMLoginModule required;", props.get(SaslConfigs.SASL_JAAS_CONFIG));
+        Assertions.assertEquals(
+            "software.amazon.msk.auth.iam.IAMLoginModule required;",
+            props.get(SaslConfigs.SASL_JAAS_CONFIG)
+        );
         Assertions.assertEquals(
             "software.amazon.msk.auth.iam.IAMClientCallbackHandler",
             props.get(SaslConfigs.SASL_CLIENT_CALLBACK_HANDLER_CLASS)

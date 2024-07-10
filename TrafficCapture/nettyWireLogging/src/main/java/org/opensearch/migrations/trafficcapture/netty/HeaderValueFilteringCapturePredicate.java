@@ -11,7 +11,9 @@ public class HeaderValueFilteringCapturePredicate extends RequestCapturePredicat
     private final Map<String, Pattern> headerToPredicateRegexMap;
 
     public HeaderValueFilteringCapturePredicate(Map<String, String> suppressCaptureHeaderPairs) {
-        super(new PassThruHttpHeaders.HttpHeadersToPreserve(suppressCaptureHeaderPairs.keySet().toArray(String[]::new)));
+        super(
+            new PassThruHttpHeaders.HttpHeadersToPreserve(suppressCaptureHeaderPairs.keySet().toArray(String[]::new))
+        );
         headerToPredicateRegexMap = suppressCaptureHeaderPairs.entrySet()
             .stream()
             .collect(Collectors.toMap(Map.Entry::getKey, kvp -> Pattern.compile(kvp.getValue())));
@@ -22,7 +24,9 @@ public class HeaderValueFilteringCapturePredicate extends RequestCapturePredicat
         return headerToPredicateRegexMap.entrySet()
             .stream()
             .anyMatch(
-                kvp -> Optional.ofNullable(request.headers().get(kvp.getKey())).map(v -> kvp.getValue().matcher(v).matches()).orElse(false)
+                kvp -> Optional.ofNullable(request.headers().get(kvp.getKey()))
+                    .map(v -> kvp.getValue().matcher(v).matches())
+                    .orElse(false)
             ) ? CaptureDirective.DROP : CaptureDirective.CAPTURE;
     }
 }

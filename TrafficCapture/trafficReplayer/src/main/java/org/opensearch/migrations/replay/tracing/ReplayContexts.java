@@ -31,9 +31,10 @@ public abstract class ReplayContexts extends IReplayContexts {
     public static final String COUNT_UNIT_STR = "count";
     public static final String BYTES_UNIT_STR = "bytes";
 
-    public static class SocketContext extends DirectNestedSpanContext<RootReplayerContext, ChannelKeyContext, IChannelKeyContext>
-        implements
-            ISocketContext {
+    public static class SocketContext extends DirectNestedSpanContext<
+        RootReplayerContext,
+        ChannelKeyContext,
+        IChannelKeyContext> implements ISocketContext {
 
         protected SocketContext(ChannelKeyContext enclosingScope) {
             super(enclosingScope);
@@ -49,7 +50,8 @@ public abstract class ReplayContexts extends IReplayContexts {
 
             private MetricInstruments(Meter meter, String activityName) {
                 super(meter, activityName);
-                activeSocketConnectionsCounter = meter.upDownCounterBuilder(MetricNames.ACTIVE_TARGET_CONNECTIONS).build();
+                activeSocketConnectionsCounter = meter.upDownCounterBuilder(MetricNames.ACTIVE_TARGET_CONNECTIONS)
+                    .build();
                 channelCreatedCounter = meter.counterBuilder(MetricNames.CONNECTIONS_OPENED).build();
                 channelClosedCounter = meter.counterBuilder(MetricNames.CONNECTIONS_CLOSED).build();
             }
@@ -72,9 +74,9 @@ public abstract class ReplayContexts extends IReplayContexts {
         }
     }
 
-    public static class ChannelKeyContext extends BaseNestedSpanContext<RootReplayerContext, IScopedInstrumentationAttributes>
-        implements
-            IReplayContexts.IChannelKeyContext {
+    public static class ChannelKeyContext extends BaseNestedSpanContext<
+        RootReplayerContext,
+        IScopedInstrumentationAttributes> implements IReplayContexts.IChannelKeyContext {
         @Getter
         final ISourceTrafficChannelKey channelKey;
 
@@ -102,7 +104,8 @@ public abstract class ReplayContexts extends IReplayContexts {
 
             private MetricInstruments(Meter meter, String activityName) {
                 super(meter, activityName);
-                activeChannelCounter = meter.upDownCounterBuilder(MetricNames.ACTIVE_CHANNELS_YET_TO_BE_FULLY_DISCARDED).build();
+                activeChannelCounter = meter.upDownCounterBuilder(MetricNames.ACTIVE_CHANNELS_YET_TO_BE_FULLY_DISCARDED)
+                    .build();
                 failedConnectionAttempts = meter.counterBuilder(MetricNames.FAILED_CONNECTION_ATTEMPTS).build();
             }
         }
@@ -186,9 +189,9 @@ public abstract class ReplayContexts extends IReplayContexts {
         }
     }
 
-    public static class TrafficStreamLifecycleContext extends BaseNestedSpanContext<RootReplayerContext, IScopedInstrumentationAttributes>
-        implements
-            IReplayContexts.ITrafficStreamsLifecycleContext {
+    public static class TrafficStreamLifecycleContext extends BaseNestedSpanContext<
+        RootReplayerContext,
+        IScopedInstrumentationAttributes> implements IReplayContexts.ITrafficStreamsLifecycleContext {
         private final ITrafficStreamKey trafficStreamKey;
 
         protected TrafficStreamLifecycleContext(
@@ -225,8 +228,16 @@ public abstract class ReplayContexts extends IReplayContexts {
         }
 
         @Override
-        public HttpTransactionContext createHttpTransactionContext(UniqueReplayerRequestKey requestKey, Instant sourceTimestamp) {
-            return new ReplayContexts.HttpTransactionContext(getRootInstrumentationScope(), this, requestKey, sourceTimestamp);
+        public HttpTransactionContext createHttpTransactionContext(
+            UniqueReplayerRequestKey requestKey,
+            Instant sourceTimestamp
+        ) {
+            return new ReplayContexts.HttpTransactionContext(
+                getRootInstrumentationScope(),
+                this,
+                requestKey,
+                sourceTimestamp
+            );
         }
 
         @Override
@@ -404,21 +415,43 @@ public abstract class ReplayContexts extends IReplayContexts {
             private MetricInstruments(Meter meter, String activityName) {
                 super(meter, activityName);
                 headerParses = meter.counterBuilder(MetricNames.TRANSFORM_HEADER_PARSE).setUnit(COUNT_UNIT_STR).build();
-                payloadParses = meter.counterBuilder(MetricNames.TRANSFORM_PAYLOAD_PARSE_REQUIRED).setUnit(COUNT_UNIT_STR).build();
-                payloadSuccessParses = meter.counterBuilder(MetricNames.TRANSFORM_PAYLOAD_PARSE_SUCCESS).setUnit(COUNT_UNIT_STR).build();
-                jsonPayloadParses = meter.counterBuilder(MetricNames.TRANSFORM_JSON_REQUIRED).setUnit(COUNT_UNIT_STR).build();
-                jsonTransformSuccess = meter.counterBuilder(MetricNames.TRANSFORM_JSON_SUCCEEDED).setUnit(COUNT_UNIT_STR).build();
-                payloadBytesIn = meter.counterBuilder(MetricNames.TRANSFORM_PAYLOAD_BYTES_IN).setUnit(BYTES_UNIT_STR).build();
-                uncompressedBytesIn = meter.counterBuilder(MetricNames.TRANSFORM_UNCOMPRESSED_BYTES_IN).setUnit(BYTES_UNIT_STR).build();
-                uncompressedBytesOut = meter.counterBuilder(MetricNames.TRANSFORM_UNCOMPRESSED_BYTES_OUT).setUnit(BYTES_UNIT_STR).build();
-                finalPayloadBytesOut = meter.counterBuilder(MetricNames.TRANSFORM_FINAL_PAYLOAD_BYTES_OUT).setUnit(BYTES_UNIT_STR).build();
+                payloadParses = meter.counterBuilder(MetricNames.TRANSFORM_PAYLOAD_PARSE_REQUIRED)
+                    .setUnit(COUNT_UNIT_STR)
+                    .build();
+                payloadSuccessParses = meter.counterBuilder(MetricNames.TRANSFORM_PAYLOAD_PARSE_SUCCESS)
+                    .setUnit(COUNT_UNIT_STR)
+                    .build();
+                jsonPayloadParses = meter.counterBuilder(MetricNames.TRANSFORM_JSON_REQUIRED)
+                    .setUnit(COUNT_UNIT_STR)
+                    .build();
+                jsonTransformSuccess = meter.counterBuilder(MetricNames.TRANSFORM_JSON_SUCCEEDED)
+                    .setUnit(COUNT_UNIT_STR)
+                    .build();
+                payloadBytesIn = meter.counterBuilder(MetricNames.TRANSFORM_PAYLOAD_BYTES_IN)
+                    .setUnit(BYTES_UNIT_STR)
+                    .build();
+                uncompressedBytesIn = meter.counterBuilder(MetricNames.TRANSFORM_UNCOMPRESSED_BYTES_IN)
+                    .setUnit(BYTES_UNIT_STR)
+                    .build();
+                uncompressedBytesOut = meter.counterBuilder(MetricNames.TRANSFORM_UNCOMPRESSED_BYTES_OUT)
+                    .setUnit(BYTES_UNIT_STR)
+                    .build();
+                finalPayloadBytesOut = meter.counterBuilder(MetricNames.TRANSFORM_FINAL_PAYLOAD_BYTES_OUT)
+                    .setUnit(BYTES_UNIT_STR)
+                    .build();
                 transformSuccess = meter.counterBuilder(MetricNames.TRANSFORM_SUCCESS).setUnit(COUNT_UNIT_STR).build();
                 transformSkipped = meter.counterBuilder(MetricNames.TRANSFORM_SKIPPED).setUnit(COUNT_UNIT_STR).build();
                 transformError = meter.counterBuilder(MetricNames.TRANSFORM_ERROR).setUnit(COUNT_UNIT_STR).build();
                 transformBytesIn = meter.counterBuilder(MetricNames.TRANSFORM_BYTES_IN).setUnit(BYTES_UNIT_STR).build();
-                transformChunksIn = meter.counterBuilder(MetricNames.TRANSFORM_CHUNKS_IN).setUnit(COUNT_UNIT_STR).build();
-                transformBytesOut = meter.counterBuilder(MetricNames.TRANSFORM_BYTES_OUT).setUnit(BYTES_UNIT_STR).build();
-                transformChunksOut = meter.counterBuilder(MetricNames.TRANSFORM_CHUNKS_OUT).setUnit(COUNT_UNIT_STR).build();
+                transformChunksIn = meter.counterBuilder(MetricNames.TRANSFORM_CHUNKS_IN)
+                    .setUnit(COUNT_UNIT_STR)
+                    .build();
+                transformBytesOut = meter.counterBuilder(MetricNames.TRANSFORM_BYTES_OUT)
+                    .setUnit(BYTES_UNIT_STR)
+                    .build();
+                transformChunksOut = meter.counterBuilder(MetricNames.TRANSFORM_CHUNKS_OUT)
+                    .setUnit(COUNT_UNIT_STR)
+                    .build();
 
             }
         }
@@ -536,7 +569,10 @@ public abstract class ReplayContexts extends IReplayContexts {
         @Override
         public void sendMeterEventsForEnd() {
             super.sendMeterEventsForEnd();
-            meterHistogramMillis(getMetrics().lag, Duration.ofNanos(Math.max(0, System.nanoTime() - scheduledForNanoTime)));
+            meterHistogramMillis(
+                getMetrics().lag,
+                Duration.ofNanos(Math.max(0, System.nanoTime() - scheduledForNanoTime))
+            );
         }
     }
 
@@ -547,7 +583,10 @@ public abstract class ReplayContexts extends IReplayContexts {
         public TargetRequestContext(HttpTransactionContext enclosingScope) {
             super(enclosingScope);
             initializeSpan();
-            meterHistogramMillis(getMetrics().sourceTargetGap, Duration.between(enclosingScope.getTimeOfOriginalRequest(), Instant.now()));
+            meterHistogramMillis(
+                getMetrics().sourceTargetGap,
+                Duration.between(enclosingScope.getTimeOfOriginalRequest(), Instant.now())
+            );
         }
 
         public static class MetricInstruments extends CommonScopedMetricInstruments {
@@ -558,8 +597,12 @@ public abstract class ReplayContexts extends IReplayContexts {
 
             private MetricInstruments(Meter meter, String activityName) {
                 super(meter, activityName);
-                sourceTargetGap = meter.histogramBuilder(MetricNames.SOURCE_TO_TARGET_REQUEST_LAG).setUnit("ms").build();
-                bytesWritten = meter.counterBuilder(MetricNames.BYTES_WRITTEN_TO_TARGET).setUnit(BYTES_UNIT_STR).build();
+                sourceTargetGap = meter.histogramBuilder(MetricNames.SOURCE_TO_TARGET_REQUEST_LAG)
+                    .setUnit("ms")
+                    .build();
+                bytesWritten = meter.counterBuilder(MetricNames.BYTES_WRITTEN_TO_TARGET)
+                    .setUnit(BYTES_UNIT_STR)
+                    .build();
                 bytesRead = meter.counterBuilder(MetricNames.BYTES_READ_FROM_TARGET).setUnit(BYTES_UNIT_STR).build();
             }
         }

@@ -16,7 +16,9 @@ class UtilsTest {
     public void testFoldLeft() {
         var groundTruth = IntStream.range('A', 'F').mapToObj(c -> (char) c + "").collect(Collectors.joining());
 
-        var foldedValue = IntStream.range('A', 'F').mapToObj(c -> (char) c + "").collect(Utils.foldLeft("", (a, b) -> a + b));
+        var foldedValue = IntStream.range('A', 'F')
+            .mapToObj(c -> (char) c + "")
+            .collect(Utils.foldLeft("", (a, b) -> a + b));
 
         log.info("stream concatenated value: " + foldedValue);
         Assertions.assertEquals(groundTruth, foldedValue);

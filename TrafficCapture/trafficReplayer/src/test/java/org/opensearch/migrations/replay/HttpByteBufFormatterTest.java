@@ -127,7 +127,9 @@ public class HttpByteBufFormatterTest {
     @Test
     public void httpPostPacketToHttpParsedString() throws Exception {
         try (
-            var sampleStream = HttpByteBufFormatterTest.class.getResourceAsStream("/requests/raw/post_formUrlEncoded_withFixedLength.txt")
+            var sampleStream = HttpByteBufFormatterTest.class.getResourceAsStream(
+                "/requests/raw/post_formUrlEncoded_withFixedLength.txt"
+            )
         ) {
             var fullTrafficBytes = sampleStream.readAllBytes();
 
@@ -143,7 +145,11 @@ public class HttpByteBufFormatterTest {
         }
     }
 
-    private static String prettyPrint(List<byte[]> byteArrays, HttpByteBufFormatter.HttpMessageType messageType, BufferType bufferType) {
+    private static String prettyPrint(
+        List<byte[]> byteArrays,
+        HttpByteBufFormatter.HttpMessageType messageType,
+        BufferType bufferType
+    ) {
         switch (bufferType) {
             case BYTE_ARRAY:
                 return HttpByteBufFormatter.httpPacketBytesToString(messageType, byteArrays);

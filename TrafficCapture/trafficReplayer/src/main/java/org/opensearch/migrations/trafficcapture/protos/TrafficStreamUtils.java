@@ -25,7 +25,12 @@ public class TrafficStreamUtils {
     public static String summarizeTrafficStream(TrafficStream ts) {
         var listSummaryStr = ts.getSubStreamList()
             .stream()
-            .map(tso -> instantFromProtoTimestamp(tso.getTs()) + ": " + captureCaseToString(tso.getCaptureCase()) + getOptionalContext(tso))
+            .map(
+                tso -> instantFromProtoTimestamp(tso.getTs())
+                    + ": "
+                    + captureCaseToString(tso.getCaptureCase())
+                    + getOptionalContext(tso)
+            )
             .collect(Collectors.joining(", "));
         return ts.getConnectionId() + " (#" + getTrafficStreamIndex(ts) + ")[" + listSummaryStr + "]";
     }

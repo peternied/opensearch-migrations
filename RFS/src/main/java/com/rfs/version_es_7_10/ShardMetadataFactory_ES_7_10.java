@@ -20,7 +20,10 @@ public class ShardMetadataFactory_ES_7_10 implements ShardMetadata.Factory {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         SimpleModule module = new SimpleModule();
-        module.addDeserializer(ShardMetadataData_ES_7_10.FileInfoRaw.class, new ShardMetadataData_ES_7_10.FileInfoRawDeserializer());
+        module.addDeserializer(
+            ShardMetadataData_ES_7_10.FileInfoRaw.class,
+            new ShardMetadataData_ES_7_10.FileInfoRawDeserializer()
+        );
         objectMapper.registerModule(module);
 
         try {

@@ -33,7 +33,10 @@ public class TextTrackedFuture<T> extends TrackedFuture<String, T> {
         return new TextTrackedFuture<>(CompletableFuture.completedFuture(v), diagnosticSupplier);
     }
 
-    public static <U> TextTrackedFuture<Void> allOf(TrackedFuture<String, U>[] allRemainingWorkArray, Supplier<String> diagnosticSupplier) {
+    public static <U> TextTrackedFuture<Void> allOf(
+        TrackedFuture<String, U>[] allRemainingWorkArray,
+        Supplier<String> diagnosticSupplier
+    ) {
         return allOf(Arrays.stream(allRemainingWorkArray), diagnosticSupplier);
     }
 

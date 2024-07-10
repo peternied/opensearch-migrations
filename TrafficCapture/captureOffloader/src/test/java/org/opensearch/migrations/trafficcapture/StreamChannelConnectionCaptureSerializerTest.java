@@ -61,12 +61,19 @@ class StreamChannelConnectionCaptureSerializerTest {
         return TrafficStream.newBuilder()
             .setNodeId(TEST_NODE_ID_STRING)
             .setConnectionId(TEST_TRAFFIC_STREAM_ID_STRING)
-            .addSubStream(TrafficObservation.newBuilder().setTs(fixedTimestamp).setClose(CloseObservation.newBuilder().build()).build())
+            .addSubStream(
+                TrafficObservation.newBuilder()
+                    .setTs(fixedTimestamp)
+                    .setClose(CloseObservation.newBuilder().build())
+                    .build()
+            )
             .build()
             .getSerializedSize() +
 
-            (((TrafficObservation.newBuilder().setTs(fixedTimestamp).setWrite(WriteObservation.newBuilder().build()).build())
-                .getSerializedSize() + 2 // add 2 for subStream Overhead
+            (((TrafficObservation.newBuilder()
+                .setTs(fixedTimestamp)
+                .setWrite(WriteObservation.newBuilder().build())
+                .build()).getSerializedSize() + 2 // add 2 for subStream Overhead
             ) * readWriteEventCount) + averageDataPacketSize * readWriteEventCount;
     }
 
@@ -86,11 +93,18 @@ class StreamChannelConnectionCaptureSerializerTest {
                     )
                     .build()
             )
-            .addSubStream(TrafficObservation.newBuilder().setTs(fixedTimestamp).setRead(ReadObservation.newBuilder().build()).build())
             .addSubStream(
                 TrafficObservation.newBuilder()
                     .setTs(fixedTimestamp)
-                    .setConnectionException(ConnectionExceptionObservation.newBuilder().setMessage(FAKE_EXCEPTION_DATA).build())
+                    .setRead(ReadObservation.newBuilder().build())
+                    .build()
+            )
+            .addSubStream(
+                TrafficObservation.newBuilder()
+                    .setTs(fixedTimestamp)
+                    .setConnectionException(
+                        ConnectionExceptionObservation.newBuilder().setMessage(FAKE_EXCEPTION_DATA).build()
+                    )
                     .build()
             )
             .addSubStream(
@@ -107,7 +121,12 @@ class StreamChannelConnectionCaptureSerializerTest {
                     )
                     .build()
             )
-            .addSubStream(TrafficObservation.newBuilder().setTs(fixedTimestamp).setClose(CloseObservation.newBuilder().build()).build())
+            .addSubStream(
+                TrafficObservation.newBuilder()
+                    .setTs(fixedTimestamp)
+                    .setClose(CloseObservation.newBuilder().build())
+                    .build()
+            )
             .build();
     }
 
@@ -188,7 +207,8 @@ class StreamChannelConnectionCaptureSerializerTest {
     }
 
     @Test
-    public void testWriteObservationWithSpaceForOneByteAtATime() throws IOException, ExecutionException, InterruptedException {
+    public void testWriteObservationWithSpaceForOneByteAtATime() throws IOException, ExecutionException,
+        InterruptedException {
         var packetData = FAKE_READ_PACKET_DATA.repeat(5);
         byte[] packetBytes = packetData.getBytes(StandardCharsets.UTF_8);
         var numberOfChunks = packetBytes.length;
@@ -199,7 +219,10 @@ class StreamChannelConnectionCaptureSerializerTest {
             TrafficStream.CONNECTIONID_FIELD_NUMBER,
             TEST_TRAFFIC_STREAM_ID_STRING
         ) + CodedOutputStream.computeStringSize(TrafficStream.NODEID_FIELD_NUMBER, TEST_NODE_ID_STRING);
-        var spaceNeededForFlush = CodedOutputStream.computeInt32Size(TrafficStream.NUMBEROFTHISLASTCHUNK_FIELD_NUMBER, packetData.length());
+        var spaceNeededForFlush = CodedOutputStream.computeInt32Size(
+            TrafficStream.NUMBEROFTHISLASTCHUNK_FIELD_NUMBER,
+            packetData.length()
+        );
 
         var bufferSizeToGetDesiredChunks = CodedOutputStreamSizeUtil.maxBytesNeededForASegmentedObservation(
             REFERENCE_TIMESTAMP,
@@ -236,7 +259,8 @@ class StreamChannelConnectionCaptureSerializerTest {
     }
 
     @Test
-    public void testExceptionWhenStreamTooSmallForObservation() throws IOException, ExecutionException, InterruptedException {
+    public void testExceptionWhenStreamTooSmallForObservation() throws IOException, ExecutionException,
+        InterruptedException {
         byte[] packetBytes = new byte[1];
         var outputBuffersCreated = new ConcurrentLinkedQueue<ByteBuffer>();
 
@@ -244,7 +268,10 @@ class StreamChannelConnectionCaptureSerializerTest {
             TrafficStream.CONNECTIONID_FIELD_NUMBER,
             TEST_TRAFFIC_STREAM_ID_STRING
         ) + CodedOutputStream.computeStringSize(TrafficStream.NODEID_FIELD_NUMBER, TEST_NODE_ID_STRING);
-        var spaceNeededForFlush = CodedOutputStream.computeInt32Size(TrafficStream.NUMBEROFTHISLASTCHUNK_FIELD_NUMBER, 1);
+        var spaceNeededForFlush = CodedOutputStream.computeInt32Size(
+            TrafficStream.NUMBEROFTHISLASTCHUNK_FIELD_NUMBER,
+            1
+        );
 
         var bufferSizeWithoutSpaceForBytes = CodedOutputStreamSizeUtil.maxBytesNeededForASegmentedObservation(
             REFERENCE_TIMESTAMP,
@@ -264,13 +291,16 @@ class StreamChannelConnectionCaptureSerializerTest {
     }
 
     @Test
-    public void testCloseObservationAfterWriteWillFlushWhenSpaceNeeded() throws IOException, ExecutionException, InterruptedException {
+    public void testCloseObservationAfterWriteWillFlushWhenSpaceNeeded() throws IOException, ExecutionException,
+        InterruptedException {
         byte[] packetBytes = FAKE_READ_PACKET_DATA.getBytes(StandardCharsets.UTF_8);
         var outputBuffersCreated = new ConcurrentLinkedQueue<ByteBuffer>();
         // Picking small buffer that can only hold one write observation and no other observations
         var serializer = createSerializerWithTestHandler(
             outputBuffersCreated,
-            getEstimatedTrafficStreamByteSize(1, packetBytes.length) - CloseObservation.newBuilder().build().getSerializedSize()
+            getEstimatedTrafficStreamByteSize(1, packetBytes.length) - CloseObservation.newBuilder()
+                .build()
+                .getSerializedSize()
         );
 
         var bb = Unpooled.wrappedBuffer(packetBytes);
@@ -292,7 +322,8 @@ class StreamChannelConnectionCaptureSerializerTest {
     }
 
     @Test
-    public void testEmptyPacketIsHandledForSmallCodedOutputStream() throws IOException, ExecutionException, InterruptedException {
+    public void testEmptyPacketIsHandledForSmallCodedOutputStream() throws IOException, ExecutionException,
+        InterruptedException {
         var outputBuffersCreated = new ConcurrentLinkedQueue<ByteBuffer>();
         // Picking small buffer size that can only hold two empty message
         var serializer = createSerializerWithTestHandler(outputBuffersCreated, getEstimatedTrafficStreamByteSize(2, 0));
@@ -311,8 +342,8 @@ class StreamChannelConnectionCaptureSerializerTest {
 
     @ParameterizedTest
     @ValueSource(ints = { 1, 16 })
-    public void testWriteIsHandledForBufferWithNioBufAllocatedLargerThanWritten(int numberOfChunks) throws IOException, ExecutionException,
-        InterruptedException {
+    public void testWriteIsHandledForBufferWithNioBufAllocatedLargerThanWritten(int numberOfChunks) throws IOException,
+        ExecutionException, InterruptedException {
         // Use ByteBuf that returns nioBuffer with limit < capacity this can cause some edge cases to trigger depending
         // on specific CodedOutputStream apis used
         var outputBuffersCreated = new ConcurrentLinkedQueue<ByteBuffer>();
@@ -350,8 +381,9 @@ class StreamChannelConnectionCaptureSerializerTest {
 
         StringBuilder reconstructedData = new StringBuilder();
         for (TrafficObservation observation : observations) {
-            var stringChunk = ((numberOfChunks == 1) ? observation.getWrite().getData() : observation.getWriteSegment().getData())
-                .toStringUtf8();
+            var stringChunk = ((numberOfChunks == 1)
+                ? observation.getWrite().getData()
+                : observation.getWriteSegment().getData()).toStringUtf8();
             reconstructedData.append(stringChunk);
         }
         Assertions.assertEquals(FAKE_READ_PACKET_DATA, reconstructedData.toString());
@@ -361,7 +393,9 @@ class StreamChannelConnectionCaptureSerializerTest {
         Assertions.assertEquals(0, readOnlyBuf.readerIndex());
     }
 
-    public static io.netty.buffer.ByteBuf createReadOnlyByteBufWithNioByteBufferWithCapacityLargerThanLimit(byte[] dataBytes) {
+    public static io.netty.buffer.ByteBuf createReadOnlyByteBufWithNioByteBufferWithCapacityLargerThanLimit(
+        byte[] dataBytes
+    ) {
         // Force creation of a ByteBuf that returns nioBuffer with limit < capacity.
         // This can cause some edge cases to trigger during interaction with underlying ByteBuffers
         final int spaceBetweenLimitAndCapacity = 100;
@@ -387,7 +421,8 @@ class StreamChannelConnectionCaptureSerializerTest {
     }
 
     @Test
-    public void testWithLimitlessCodedOutputStreamHolder() throws IOException, ExecutionException, InterruptedException {
+    public void testWithLimitlessCodedOutputStreamHolder() throws IOException, ExecutionException,
+        InterruptedException {
 
         var serializer = new StreamChannelConnectionCaptureSerializer<>(
             TEST_NODE_ID_STRING,
@@ -443,7 +478,8 @@ class StreamChannelConnectionCaptureSerializerTest {
     }
 
     @Test
-    public void testEndOfSegmentsIndicationAddedWhenChunking() throws IOException, ExecutionException, InterruptedException {
+    public void testEndOfSegmentsIndicationAddedWhenChunking() throws IOException, ExecutionException,
+        InterruptedException {
         var packetData = FAKE_READ_PACKET_DATA.repeat(500);
         byte[] packetBytes = packetData.getBytes(StandardCharsets.UTF_8);
         var outputBuffersCreated = new ConcurrentLinkedQueue<ByteBuffer>();
@@ -477,7 +513,8 @@ class StreamChannelConnectionCaptureSerializerTest {
     }
 
     @Test
-    public void testEndOfSegmentsIndicationNotAddedWhenNotChunking() throws IOException, ExecutionException, InterruptedException {
+    public void testEndOfSegmentsIndicationNotAddedWhenNotChunking() throws IOException, ExecutionException,
+        InterruptedException {
         var packetData = FAKE_READ_PACKET_DATA.repeat(10);
         byte[] packetBytes = packetData.getBytes(StandardCharsets.UTF_8);
         var outputBuffersCreated = new ConcurrentLinkedQueue<ByteBuffer>();
@@ -572,12 +609,19 @@ class StreamChannelConnectionCaptureSerializerTest {
         "268435461,100000000",
         "268435462,100000000" })
     public void test_computeMaxLengthDelimitedFieldSizeForSpace(int totalAvailableSpace, int requestedWriteableSpace) {
-        var optimalMaxWriteableSpace = optimalComputeMaxLengthDelimitedFieldSizeForSpace(totalAvailableSpace, requestedWriteableSpace);
+        var optimalMaxWriteableSpace = optimalComputeMaxLengthDelimitedFieldSizeForSpace(
+            totalAvailableSpace,
+            requestedWriteableSpace
+        );
 
-        Assertions.assertTrue(optimalMaxWriteableSpace <= requestedWriteableSpace, "cannot write more bytes than requested");
+        Assertions.assertTrue(
+            optimalMaxWriteableSpace <= requestedWriteableSpace,
+            "cannot write more bytes than requested"
+        );
 
-        var spaceLeftAfterWrite = totalAvailableSpace - CodedOutputStream.computeInt32SizeNoTag(optimalMaxWriteableSpace)
-            - optimalMaxWriteableSpace;
+        var spaceLeftAfterWrite = totalAvailableSpace - CodedOutputStream.computeInt32SizeNoTag(
+            optimalMaxWriteableSpace
+        ) - optimalMaxWriteableSpace;
         Assertions.assertTrue(spaceLeftAfterWrite >= 0, "expected non-negative space left");
         if (optimalMaxWriteableSpace < requestedWriteableSpace) {
             Assertions.assertTrue(
@@ -588,10 +632,14 @@ class StreamChannelConnectionCaptureSerializerTest {
 
         if (optimalMaxWriteableSpace < requestedWriteableSpace) {
             // If we are not writing all requestedWriteableSpace verify there is not space for one more byte
-            var expectedSpaceLeftAfterWriteIfOneMoreByteWrote = totalAvailableSpace - CodedOutputStream.computeInt32SizeNoTag(
-                optimalMaxWriteableSpace
-            ) - CodedOutputStream.computeInt32SizeNoTag(optimalMaxWriteableSpace + 1) - (optimalMaxWriteableSpace + 1);
-            Assertions.assertTrue(expectedSpaceLeftAfterWriteIfOneMoreByteWrote < 0, "expected no space to write one more byte");
+            var expectedSpaceLeftAfterWriteIfOneMoreByteWrote = totalAvailableSpace - CodedOutputStream
+                .computeInt32SizeNoTag(optimalMaxWriteableSpace) - CodedOutputStream.computeInt32SizeNoTag(
+                    optimalMaxWriteableSpace + 1
+                ) - (optimalMaxWriteableSpace + 1);
+            Assertions.assertTrue(
+                expectedSpaceLeftAfterWriteIfOneMoreByteWrote < 0,
+                "expected no space to write one more byte"
+            );
         }
 
         // Test that when maxWriteableSpace != optimalMaxWriteableSpace, then
@@ -603,11 +651,13 @@ class StreamChannelConnectionCaptureSerializerTest {
         if (maxWriteableSpace != optimalMaxWriteableSpace) {
             Assertions.assertTrue(maxWriteableSpace > 0);
             Assertions.assertEquals(optimalMaxWriteableSpace - 1, maxWriteableSpace);
-            var spaceLeftIfWritten = totalAvailableSpace - CodedOutputStream.computeInt32SizeNoTag(maxWriteableSpace) - maxWriteableSpace;
+            var spaceLeftIfWritten = totalAvailableSpace - CodedOutputStream.computeInt32SizeNoTag(maxWriteableSpace)
+                - maxWriteableSpace;
             if (maxWriteableSpace < requestedWriteableSpace) {
                 Assertions.assertTrue(
                     spaceLeftIfWritten <= 1,
-                    "expected pessimistic space left to be no more than 1 if" + "not enough space for requestedWriteableSpace"
+                    "expected pessimistic space left to be no more than 1 if"
+                        + "not enough space for requestedWriteableSpace"
                 );
             }
         }
@@ -616,9 +666,14 @@ class StreamChannelConnectionCaptureSerializerTest {
     // Optimally calculates maxWriteableSpace taking into account lengthSpace. In some cases, this may
     // yield a maxWriteableSpace with one leftover byte, however, this is still the correct max as attempting to write
     // the additional byte would yield an additional length byte and overflow
-    public static int optimalComputeMaxLengthDelimitedFieldSizeForSpace(int totalAvailableSpace, int requestedWriteableSpace) {
-        // Overestimate the lengthFieldSpace first to then correct in instances where writing one more byte does not result
-        // in as large a lengthFieldSpace. In instances where we must have a leftoverByte, it will be in the lengthFieldSpace
+    public static int optimalComputeMaxLengthDelimitedFieldSizeForSpace(
+        int totalAvailableSpace,
+        int requestedWriteableSpace
+    ) {
+        // Overestimate the lengthFieldSpace first to then correct in instances where writing one more byte does not
+        // result
+        // in as large a lengthFieldSpace. In instances where we must have a leftoverByte, it will be in the
+        // lengthFieldSpace
         final int maxLengthFieldSpace = CodedOutputStream.computeUInt32SizeNoTag(totalAvailableSpace);
         final int initialEstimatedMaxWriteSpace = totalAvailableSpace - maxLengthFieldSpace;
         final int lengthFieldSpaceForInitialEstimatedAndOneMoreByte = CodedOutputStream.computeUInt32SizeNoTag(
@@ -675,7 +730,9 @@ class StreamChannelConnectionCaptureSerializerTest {
         @Override
         protected CompletableFuture<Void> kickoffCloseStream(CodedOutputStreamHolder outputStreamHolder, int index) {
             if (!(outputStreamHolder instanceof CodedOutputStreamAndByteBufferWrapper)) {
-                throw new IllegalStateException("Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder);
+                throw new IllegalStateException(
+                    "Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder
+                );
             }
             var osh = (CodedOutputStreamAndByteBufferWrapper) outputStreamHolder;
             log.atTrace().setMessage("Getting ready to flush for {}").addArgument(osh).log();
@@ -692,7 +749,10 @@ class StreamChannelConnectionCaptureSerializerTest {
                     bb.position(0);
                     var bytesWritten = osh.getOutputStream().getTotalBytesWritten();
                     bb.limit(bytesWritten);
-                    log.atTrace().setMessage("Adding {}").addArgument(() -> StandardCharsets.UTF_8.decode(bb.duplicate())).log();
+                    log.atTrace()
+                        .setMessage("Adding {}")
+                        .addArgument(() -> StandardCharsets.UTF_8.decode(bb.duplicate()))
+                        .log();
                     outputBuffers.add(bb);
                 } catch (IOException e) {
                     throw Lombok.sneakyThrow(e);
@@ -705,7 +765,9 @@ class StreamChannelConnectionCaptureSerializerTest {
             @Override
             public CodedOutputStreamHolder createStream() {
                 return new CodedOutputStreamHolder() {
-                    final CodedOutputStream nullOutputStream = CodedOutputStream.newInstance(OutputStream.nullOutputStream());
+                    final CodedOutputStream nullOutputStream = CodedOutputStream.newInstance(
+                        OutputStream.nullOutputStream()
+                    );
 
                     @Override
                     public int getOutputStreamBytesLimit() {
@@ -720,7 +782,10 @@ class StreamChannelConnectionCaptureSerializerTest {
             }
 
             @Override
-            public CompletableFuture<CodedOutputStreamHolder> closeStream(CodedOutputStreamHolder outputStreamHolder, int index) {
+            public CompletableFuture<CodedOutputStreamHolder> closeStream(
+                CodedOutputStreamHolder outputStreamHolder,
+                int index
+            ) {
                 return CompletableFuture.completedFuture(null);
             }
 

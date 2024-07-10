@@ -9,8 +9,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class MultipleJMESPathScriptsTest {
-    private static final String EXCISE_SCRIPT = "{\\\"method\\\": method,\\\"URI\\\": URI,\\\"headers\\\":headers,\\\"payload\\\":"
-        + "{\\\"inlinedJsonBody\\\":{\\\"mappings\\\": payload.inlinedJsonBody.mappings.oldType}}}";
+    private static final String EXCISE_SCRIPT =
+        "{\\\"method\\\": method,\\\"URI\\\": URI,\\\"headers\\\":headers,\\\"payload\\\":"
+            + "{\\\"inlinedJsonBody\\\":{\\\"mappings\\\": payload.inlinedJsonBody.mappings.oldType}}}";
     private static final String HOSTNAME_SCRIPT = "{\\n  \\\"method\\\": method,\\n  \\\"URI\\\": URI,\\n  "
         + "\\\"headers\\\": {\\\"host\\\": \\\"localhost\\\"},\\n  \\\"payload\\\": payload\\n}";
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -28,7 +29,11 @@ public class MultipleJMESPathScriptsTest {
         }
 
         var aggregateScriptString = aggregateScriptJoiner.toString();
-        var toNewHostTransformer = new TransformationLoader().getTransformerFactoryLoader("localhost", null, aggregateScriptString);
+        var toNewHostTransformer = new TransformationLoader().getTransformerFactoryLoader(
+            "localhost",
+            null,
+            aggregateScriptString
+        );
         var origDoc = JsonTransformerTest.parseStringAsJson(mapper, JsonTransformerTest.TEST_INPUT_REQUEST);
         var newDoc = toNewHostTransformer.transformJson(origDoc);
 
@@ -53,6 +58,9 @@ public class MultipleJMESPathScriptsTest {
             + "        }\n"
             + "    }\n"
             + "}";
-        Assertions.assertEquals(JsonTransformerTest.normalize(mapper, TEST_OUTPUT_REQUEST), JsonTransformerTest.emitJson(mapper, newDoc));
+        Assertions.assertEquals(
+            JsonTransformerTest.normalize(mapper, TEST_OUTPUT_REQUEST),
+            JsonTransformerTest.emitJson(mapper, newDoc)
+        );
     }
 }

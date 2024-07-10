@@ -71,7 +71,9 @@ public class ClusterOperations {
             + "  \"include_global_state\": true\n"
             + "}";
 
-        final var createSnapshotRequest = new HttpPut(clusterUrl + "/_snapshot/test-repo/" + snapshotName + "?wait_for_completion=true");
+        final var createSnapshotRequest = new HttpPut(
+            clusterUrl + "/_snapshot/test-repo/" + snapshotName + "?wait_for_completion=true"
+        );
         createSnapshotRequest.setEntity(new StringEntity(snapshotJson));
         createSnapshotRequest.setHeader("Content-Type", "application/json");
 

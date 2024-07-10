@@ -42,7 +42,10 @@ public class S3Repo implements SourceRepo {
     }
 
     protected S3Uri findRepoFileUri() {
-        ListObjectsV2Request listRequest = ListObjectsV2Request.builder().bucket(s3RepoUri.bucketName).prefix(s3RepoUri.key).build();
+        ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
+            .bucket(s3RepoUri.bucketName)
+            .prefix(s3RepoUri.key)
+            .build();
 
         ListObjectsV2Response listResponse = s3Client.listObjectsV2(listRequest).join();
 
@@ -51,7 +54,8 @@ public class S3Repo implements SourceRepo {
             .filter(s3Object -> s3Object.key().matches(".*index-\\d+$")) // Regex to match index files
             .max(Comparator.comparingInt(s3Object -> extractVersion(s3Object.key())));
 
-        String rawUri = highestVersionedIndexFile.map(s3Object -> "s3://" + s3RepoUri.bucketName + "/" + s3Object.key()).orElse("");
+        String rawUri = highestVersionedIndexFile.map(s3Object -> "s3://" + s3RepoUri.bucketName + "/" + s3Object.key())
+            .orElse("");
         return new S3Uri(rawUri);
     }
 
@@ -177,9 +181,21 @@ public class S3Repo implements SourceRepo {
         Path shardDirPath = getShardDirPath(shardMetadata.getIndexId(), shardMetadata.getShardId());
         ensureS3LocalDirectoryExists(shardDirPath);
 
-        String blobFilesS3Prefix = s3RepoUri.key + "indices/" + shardMetadata.getIndexId() + "/" + shardMetadata.getShardId() + "/";
+        String blobFilesS3Prefix = s3RepoUri.key
+            + "indices/"
+            + shardMetadata.getIndexId()
+            + "/"
+            + shardMetadata.getShardId()
+            + "/";
 
-        logger.info("Downloading blob files from S3: s3://" + s3RepoUri.bucketName + "/" + blobFilesS3Prefix + " to " + shardDirPath);
+        logger.info(
+            "Downloading blob files from S3: s3://"
+                + s3RepoUri.bucketName
+                + "/"
+                + blobFilesS3Prefix
+                + " to "
+                + shardDirPath
+        );
         DirectoryDownload directoryDownload = transferManager.downloadDirectory(
             DownloadDirectoryRequest.builder()
                 .destination(shardDirPath)

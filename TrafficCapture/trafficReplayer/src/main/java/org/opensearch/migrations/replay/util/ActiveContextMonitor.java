@@ -124,7 +124,11 @@ public class ActiveContextMonitor implements Runnable {
      */
     public void setAgeToLevelMap(Map<Level, Duration> levelShowsAgeOlderThanMap) {
         ageToLevelEdgeMapRef.set(
-            new TreeMap<>(levelShowsAgeOlderThanMap.entrySet().stream().collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)))
+            new TreeMap<>(
+                levelShowsAgeOlderThanMap.entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey))
+            )
         );
     }
 
@@ -166,20 +170,33 @@ public class ActiveContextMonitor implements Runnable {
             final var numItems = cad.items.size();
             IntStream.range(0, numItems)
                 .mapToObj(i -> cad.items.get(numItems - i - 1))
-                .forEach(kvp -> logger.accept(kvp.getLevel(), () -> activityToString(kvp.getScope(), kvp.ancestorDepthBeforeRedundancy)));
+                .forEach(
+                    kvp -> logger.accept(
+                        kvp.getLevel(),
+                        () -> activityToString(kvp.getScope(), kvp.ancestorDepthBeforeRedundancy)
+                    )
+                );
             return (Optional<Level>) Optional.of(cad.items.get(0).getLevel());
         }).collect(Utils.foldLeft(Optional.<Level>empty(), ActiveContextMonitor::getHigherLevel));
     }
 
-    private Stream<ActivitiesAndDepthsForLogging> getTopActivities(Set<IScopedInstrumentationAttributes> scopesSeenSoFar) {
+    private Stream<ActivitiesAndDepthsForLogging> getTopActivities(
+        Set<IScopedInstrumentationAttributes> scopesSeenSoFar
+    ) {
         var reverseOrderedList = perActivityContextTracker.getActiveScopeTypes()
             .map(
-                c -> Map.<Class<IScopedInstrumentationAttributes>, Supplier<Stream<IScopedInstrumentationAttributes>>>entry(
-                    c,
-                    () -> perActivityContextTracker.getOldestActiveScopes(c)
+                c -> Map.<
+                    Class<IScopedInstrumentationAttributes>,
+                    Supplier<Stream<IScopedInstrumentationAttributes>>>entry(
+                        c,
+                        () -> perActivityContextTracker.getOldestActiveScopes(c)
+                    )
+            )
+            .sorted(
+                Comparator.comparingInt(
+                    kvp -> -1 * kvp.getValue().get().findAny().map(ActiveContextMonitor::contextDepth).orElse(0)
                 )
             )
-            .sorted(Comparator.comparingInt(kvp -> -1 * kvp.getValue().get().findAny().map(ActiveContextMonitor::contextDepth).orElse(0)))
             .map(
                 kvp -> gatherActivities(
                     scopesSeenSoFar,

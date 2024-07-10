@@ -51,7 +51,9 @@ class JsonTransformerTest {
     public void testSimpleTransform() throws JsonProcessingException {
         final String TEST_DOCUMENT = "{\"Hello\":\"world\"}";
         var documentJson = parseStringAsJson(TEST_DOCUMENT);
-        var transformer = JsonJoltTransformer.newBuilder().addCannedOperation(JsonJoltTransformBuilder.CANNED_OPERATION.PASS_THRU).build();
+        var transformer = JsonJoltTransformer.newBuilder()
+            .addCannedOperation(JsonJoltTransformBuilder.CANNED_OPERATION.PASS_THRU)
+            .build();
         var transformedDocument = transformer.transformJson(documentJson);
         var finalOutputStr = emitJson(transformedDocument);
 

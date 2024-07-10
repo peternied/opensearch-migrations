@@ -40,7 +40,11 @@ public class ExpiringTrafficStreamMap {
     protected final BehavioralPolicy behavioralPolicy;
     private final AtomicInteger newConnectionCounter;
 
-    public ExpiringTrafficStreamMap(Duration minimumGuaranteedLifetime, Duration granularity, BehavioralPolicy behavioralPolicy) {
+    public ExpiringTrafficStreamMap(
+        Duration minimumGuaranteedLifetime,
+        Duration granularity,
+        BehavioralPolicy behavioralPolicy
+    ) {
         connectionAccumulationMap = new AccumulatorMap();
         this.granularity = granularity;
         this.minimumGuaranteedLifetime = minimumGuaranteedLifetime;
@@ -143,7 +147,12 @@ public class ExpiringTrafficStreamMap {
     ) {
         return expiringQueue.getHashSetForTimestamp(
             timestampMillis,
-            () -> expiringQueue.expireOldSlots(connectionAccumulationMap, behavioralPolicy, minimumGuaranteedLifetime, timestampMillis)
+            () -> expiringQueue.expireOldSlots(
+                connectionAccumulationMap,
+                behavioralPolicy,
+                minimumGuaranteedLifetime,
+                timestampMillis
+            )
         );
     }
 

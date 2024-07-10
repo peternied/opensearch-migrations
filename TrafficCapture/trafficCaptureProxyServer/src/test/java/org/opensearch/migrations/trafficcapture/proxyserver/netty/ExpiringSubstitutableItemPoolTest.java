@@ -56,30 +56,37 @@ class ExpiringSubstitutableItemPoolTest {
         var expiredItems = new ArrayList<Integer>();
         var eventLoop = new NioEventLoopGroup(1, new DefaultThreadFactory("testPool"));
         var lastCreation = new AtomicReference<Instant>();
-        var pool = new ExpiringSubstitutableItemPool<Future<Integer>, Integer>(INACTIVITY_TIMEOUT, eventLoop.next(), () -> {
-            var rval = new DefaultPromise<Integer>(eventLoop.next());
-            eventLoop.schedule(() -> {
-                if (firstWaveBuildCountdownLatch.getCount() <= 0) {
-                    expirationsAreDoneFuture.whenComplete(
-                        (v, t) -> rval.setSuccess(getIntegerItem(builtItemCursor, lastCreation, secondWaveBuildCountdownLatch))
-                    );
-                } else {
-                    rval.setSuccess(getIntegerItem(builtItemCursor, lastCreation, firstWaveBuildCountdownLatch));
+        var pool = new ExpiringSubstitutableItemPool<Future<Integer>, Integer>(
+            INACTIVITY_TIMEOUT,
+            eventLoop.next(),
+            () -> {
+                var rval = new DefaultPromise<Integer>(eventLoop.next());
+                eventLoop.schedule(() -> {
+                    if (firstWaveBuildCountdownLatch.getCount() <= 0) {
+                        expirationsAreDoneFuture.whenComplete(
+                            (v, t) -> rval.setSuccess(
+                                getIntegerItem(builtItemCursor, lastCreation, secondWaveBuildCountdownLatch)
+                            )
+                        );
+                    } else {
+                        rval.setSuccess(getIntegerItem(builtItemCursor, lastCreation, firstWaveBuildCountdownLatch));
+                    }
+                }, SUPPLY_WORK_TIME.toMillis(), TimeUnit.MILLISECONDS);
+                return rval;
+            },
+            item -> {
+                log.info("Expiring item: " + item);
+                try {
+                    expiredItems.add(item.get());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw Lombok.sneakyThrow(e);
+                } catch (ExecutionException e) {
+                    throw Lombok.sneakyThrow(e);
                 }
-            }, SUPPLY_WORK_TIME.toMillis(), TimeUnit.MILLISECONDS);
-            return rval;
-        }, item -> {
-            log.info("Expiring item: " + item);
-            try {
-                expiredItems.add(item.get());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw Lombok.sneakyThrow(e);
-            } catch (ExecutionException e) {
-                throw Lombok.sneakyThrow(e);
+                expireCountdownLatch.countDown();
             }
-            expireCountdownLatch.countDown();
-        });
+        );
         for (int i = 0; i < NUM_POOLED_ITEMS; ++i) {
             Thread.sleep(TIME_BETWEEN_INITIAL_ITEMS.toMillis());
             log.info("instructing builder to add item now");
@@ -94,7 +101,12 @@ class ExpiringSubstitutableItemPoolTest {
         for (int i = 1; i <= NUM_ITEMS_TO_PULL; ++i) {
             Assertions.assertEquals(i, getNextItem(pool));
         }
-        log.trace("Awaiting the last items to expire (lastCreationTime=" + lastCreation.get() + " timeout=" + INACTIVITY_TIMEOUT);
+        log.trace(
+            "Awaiting the last items to expire (lastCreationTime="
+                + lastCreation.get()
+                + " timeout="
+                + INACTIVITY_TIMEOUT
+        );
         expireCountdownLatch.await(); // wait for the 4 other original items to expire
         log.trace("Done waiting");
         {
@@ -117,7 +129,10 @@ class ExpiringSubstitutableItemPoolTest {
             .collect(Collectors.joining(","));
         Assertions.assertEquals(
             initialExpiredItemsStr,
-            expiredItems.stream().limit(NUM_POOLED_ITEMS - NUM_ITEMS_TO_PULL).map(i -> i.toString()).collect(Collectors.joining(","))
+            expiredItems.stream()
+                .limit(NUM_POOLED_ITEMS - NUM_ITEMS_TO_PULL)
+                .map(i -> i.toString())
+                .collect(Collectors.joining(","))
         );
 
         expirationsAreDoneFuture.complete(true);
@@ -139,12 +154,18 @@ class ExpiringSubstitutableItemPoolTest {
         Assertions.assertTrue(pool.getStats().getNItemsExpired() >= 4);
 
         Assertions.assertTrue(pool.getStats().averageBuildTime().toMillis() > 0);
-        Assertions.assertTrue(pool.getStats().averageWaitTime().toMillis() < pool.getStats().averageBuildTime().toMillis());
+        Assertions.assertTrue(
+            pool.getStats().averageWaitTime().toMillis() < pool.getStats().averageBuildTime().toMillis()
+        );
     }
 
-    private static Integer getNextItem(ExpiringSubstitutableItemPool<Future<Integer>, Integer> pool) throws InterruptedException,
-        ExecutionException {
-        return pool.getEventLoop().next().schedule(() -> pool.getAvailableOrNewItem(), 0, TimeUnit.MILLISECONDS).get().get();
+    private static Integer getNextItem(ExpiringSubstitutableItemPool<Future<Integer>, Integer> pool)
+        throws InterruptedException, ExecutionException {
+        return pool.getEventLoop()
+            .next()
+            .schedule(() -> pool.getAvailableOrNewItem(), 0, TimeUnit.MILLISECONDS)
+            .get()
+            .get();
     }
 
     private static Integer getIntegerItem(

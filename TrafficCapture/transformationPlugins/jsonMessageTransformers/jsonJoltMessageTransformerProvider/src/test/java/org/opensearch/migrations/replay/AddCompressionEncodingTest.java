@@ -33,7 +33,8 @@ public class AddCompressionEncodingTest extends InstrumentationTest {
     public static final byte BYTE_FILL_VALUE = (byte) '7';
 
     @Test
-    public void addingCompressionRequestHeaderCompressesPayload() throws ExecutionException, InterruptedException, IOException {
+    public void addingCompressionRequestHeaderCompressesPayload() throws ExecutionException, InterruptedException,
+        IOException {
         final var dummyAggregatedResponse = new TransformedTargetRequestAndResponse(
             null,
             17,
@@ -44,7 +45,9 @@ public class AddCompressionEncodingTest extends InstrumentationTest {
         );
         var testPacketCapture = new TestCapturePacketToHttpHandler(Duration.ofMillis(100), dummyAggregatedResponse);
         var compressingTransformer = new HttpJsonTransformingConsumer(
-            JsonJoltTransformer.newBuilder().addCannedOperation(JsonJoltTransformBuilder.CANNED_OPERATION.ADD_GZIP).build(),
+            JsonJoltTransformer.newBuilder()
+                .addCannedOperation(JsonJoltTransformBuilder.CANNED_OPERATION.ADD_GZIP)
+                .build(),
             null,
             testPacketCapture,
             rootContext.getTestConnectionRequestContext(0)
@@ -53,7 +56,11 @@ public class AddCompressionEncodingTest extends InstrumentationTest {
         final var payloadPartSize = 511;
         final var numParts = 1025;
 
-        String sourceHeaders = "GET / HTTP/1.1\n" + "host: localhost\n" + "content-length: " + (numParts * payloadPartSize) + "\n";
+        String sourceHeaders = "GET / HTTP/1.1\n"
+            + "host: localhost\n"
+            + "content-length: "
+            + (numParts * payloadPartSize)
+            + "\n";
 
         var tail = compressingTransformer.consumeBytes(sourceHeaders.getBytes(StandardCharsets.UTF_8))
             .thenCompose(

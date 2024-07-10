@@ -34,7 +34,8 @@ public class SnapshotMetadata {
             Path filePath = repo.getSnapshotMetadataFilePath(snapshotId);
 
             try (InputStream fis = new FileInputStream(filePath.toFile())) {
-                // Don't fully understand what the value of this code is, but it progresses the stream so we need to do it
+                // Don't fully understand what the value of this code is, but it progresses the stream so we need to do
+                // it
                 // See:
                 // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
                 byte[] bytes = fis.readAllBytes();
@@ -49,8 +50,11 @@ public class SnapshotMetadata {
             }
         }
 
-        default SnapshotMetadata.Data fromRepo(SourceRepo repo, SnapshotRepo.Provider repoDataProvider, String snapshotName)
-            throws Exception {
+        default SnapshotMetadata.Data fromRepo(
+            SourceRepo repo,
+            SnapshotRepo.Provider repoDataProvider,
+            String snapshotName
+        ) throws Exception {
             SmileFactory smileFactory = getSmileFactory();
             JsonNode root = getJsonNode(repo, repoDataProvider, snapshotName, smileFactory);
             return fromJsonNode(root);

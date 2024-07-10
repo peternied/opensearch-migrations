@@ -302,7 +302,8 @@ public class ShardMetadataData_ES_7_10 implements ShardMetadata.Data {
 
     public static class FileInfoRawDeserializer extends JsonDeserializer<FileInfoRaw> {
         @Override
-        public FileInfoRaw deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+        public FileInfoRaw deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException,
+            JsonProcessingException {
 
             JsonNode rootNode = jp.getCodec().readTree(jp);
 

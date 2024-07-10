@@ -40,7 +40,8 @@ public class NettyJsonBodyAccumulateHandler extends ChannelInboundHandlerAdapter
         } else if (msg instanceof HttpContent) {
             var jsonObject = jsonAccumulator.consumeByteBuffer(((HttpContent) msg).content().nioBuffer());
             if (jsonObject != null) {
-                capturedHttpJsonMessage.payload().put(JsonKeysForHttpMessage.INLINED_JSON_BODY_DOCUMENT_KEY, jsonObject);
+                capturedHttpJsonMessage.payload()
+                    .put(JsonKeysForHttpMessage.INLINED_JSON_BODY_DOCUMENT_KEY, jsonObject);
                 context.onJsonPayloadParseSucceeded();
                 ctx.fireChannelRead(capturedHttpJsonMessage);
             } else if (msg instanceof LastHttpContent) {

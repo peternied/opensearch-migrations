@@ -46,7 +46,12 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     public void testRecordToString() {
         var ts = TrafficStream.newBuilder().setConnectionId("c").setNodeId("n").setNumber(7).build();
         var tsk = new TrafficStreamKeyWithKafkaRecordId(
-            k -> new ReplayContexts.KafkaRecordContext(rootContext, new ChannelContextManager(rootContext).retainOrCreateContext(k), "", 1),
+            k -> new ReplayContexts.KafkaRecordContext(
+                rootContext,
+                new ChannelContextManager(rootContext).retainOrCreateContext(k),
+                "",
+                1
+            ),
             ts,
             1,
             2,
@@ -59,7 +64,14 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     public void testSupplyTrafficFromSource() throws Exception {
         int numTrafficStreams = 10;
         MockConsumer<String, byte[]> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
-        try (var protobufConsumer = new KafkaTrafficCaptureSource(rootContext, mockConsumer, TEST_TOPIC_NAME, Duration.ofHours(1))) {
+        try (
+            var protobufConsumer = new KafkaTrafficCaptureSource(
+                rootContext,
+                mockConsumer,
+                TEST_TOPIC_NAME,
+                Duration.ofHours(1)
+            )
+        ) {
             initializeMockConsumerTopic(mockConsumer);
 
             List<Integer> substreamCounts = new ArrayList<>();
@@ -72,8 +84,10 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
             });
 
             AtomicInteger foundStreamsCount = new AtomicInteger(0);
-            // This assertion will fail the test case if not completed within its duration, as would be the case if there
-            // were missing traffic streams. Its task currently is limited to the numTrafficStreams where it will stop the stream
+            // This assertion will fail the test case if not completed within its duration, as would be the case if
+            // there
+            // were missing traffic streams. Its task currently is limited to the numTrafficStreams where it will stop
+            // the stream
 
             var tsCount = new AtomicInteger();
             Assertions.assertTimeoutPreemptively(TEST_TIMEOUT, () -> {
@@ -100,7 +114,14 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     public void testSupplyTrafficWithUnformattedMessages() throws Exception {
         int numTrafficStreams = 10;
         MockConsumer<String, byte[]> mockConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
-        try (var protobufConsumer = new KafkaTrafficCaptureSource(rootContext, mockConsumer, TEST_TOPIC_NAME, Duration.ofHours(1))) {
+        try (
+            var protobufConsumer = new KafkaTrafficCaptureSource(
+                rootContext,
+                mockConsumer,
+                TEST_TOPIC_NAME,
+                Duration.ofHours(1)
+            )
+        ) {
             initializeMockConsumerTopic(mockConsumer);
 
             List<Integer> substreamCounts = new ArrayList<>();
@@ -129,8 +150,10 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
             });
 
             AtomicInteger foundStreamsCount = new AtomicInteger(0);
-            // This assertion will fail the test case if not completed within its duration, as would be the case if there
-            // were missing traffic streams. Its task currently is limited to the numTrafficStreams where it will stop the stream
+            // This assertion will fail the test case if not completed within its duration, as would be the case if
+            // there
+            // were missing traffic streams. Its task currently is limited to the numTrafficStreams where it will stop
+            // the stream
 
             var tsCount = new AtomicInteger();
             Assertions.assertTimeoutPreemptively(TEST_TIMEOUT, () -> {
@@ -158,8 +181,14 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     public void testBuildPropertiesBaseCase() throws IOException {
         Properties props = KafkaTrafficCaptureSource.buildKafkaProperties("brokers", "groupId", false, null);
         Assertions.assertEquals("brokers", props.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
-        Assertions.assertEquals("org.apache.kafka.common.serialization.StringDeserializer", props.get("key.deserializer"));
-        Assertions.assertEquals("org.apache.kafka.common.serialization.ByteArrayDeserializer", props.get("value.deserializer"));
+        Assertions.assertEquals(
+            "org.apache.kafka.common.serialization.StringDeserializer",
+            props.get("key.deserializer")
+        );
+        Assertions.assertEquals(
+            "org.apache.kafka.common.serialization.ByteArrayDeserializer",
+            props.get("value.deserializer")
+        );
         Assertions.assertEquals("groupId", props.get(ConsumerConfig.GROUP_ID_CONFIG));
         Assertions.assertEquals("earliest", props.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG));
     }
@@ -168,23 +197,43 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
     public void testBuildPropertiesMSKAuthEnabled() throws IOException {
         Properties props = KafkaTrafficCaptureSource.buildKafkaProperties("brokers", "groupId", true, null);
         Assertions.assertEquals("brokers", props.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
-        Assertions.assertEquals("org.apache.kafka.common.serialization.StringDeserializer", props.get("key.deserializer"));
-        Assertions.assertEquals("org.apache.kafka.common.serialization.ByteArrayDeserializer", props.get("value.deserializer"));
+        Assertions.assertEquals(
+            "org.apache.kafka.common.serialization.StringDeserializer",
+            props.get("key.deserializer")
+        );
+        Assertions.assertEquals(
+            "org.apache.kafka.common.serialization.ByteArrayDeserializer",
+            props.get("value.deserializer")
+        );
         Assertions.assertEquals("groupId", props.get(ConsumerConfig.GROUP_ID_CONFIG));
         Assertions.assertEquals("earliest", props.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG));
         Assertions.assertEquals("SASL_SSL", props.get("security.protocol"));
         Assertions.assertEquals("AWS_MSK_IAM", props.get("sasl.mechanism"));
         Assertions.assertEquals("software.amazon.msk.auth.iam.IAMLoginModule required;", props.get("sasl.jaas.config"));
-        Assertions.assertEquals("software.amazon.msk.auth.iam.IAMClientCallbackHandler", props.get("sasl.client.callback.handler.class"));
+        Assertions.assertEquals(
+            "software.amazon.msk.auth.iam.IAMClientCallbackHandler",
+            props.get("sasl.client.callback.handler.class")
+        );
     }
 
     @Test
     public void testBuildPropertiesWithProvidedPropertyFile() throws IOException {
         File simplePropertiesFile = new File("src/test/resources/kafka/simple-kafka.properties");
-        Properties props = KafkaTrafficCaptureSource.buildKafkaProperties("brokers", "groupId", true, simplePropertiesFile.getPath());
+        Properties props = KafkaTrafficCaptureSource.buildKafkaProperties(
+            "brokers",
+            "groupId",
+            true,
+            simplePropertiesFile.getPath()
+        );
         Assertions.assertEquals("brokers", props.get(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
-        Assertions.assertEquals("org.apache.kafka.common.serialization.StringDeserializer", props.get("key.deserializer"));
-        Assertions.assertEquals("org.apache.kafka.common.serialization.ByteArrayDeserializer", props.get("value.deserializer"));
+        Assertions.assertEquals(
+            "org.apache.kafka.common.serialization.StringDeserializer",
+            props.get("key.deserializer")
+        );
+        Assertions.assertEquals(
+            "org.apache.kafka.common.serialization.ByteArrayDeserializer",
+            props.get("value.deserializer")
+        );
         // Property file will not overwrite another specified command argument
         Assertions.assertEquals("groupId", props.get(ConsumerConfig.GROUP_ID_CONFIG));
         Assertions.assertEquals("earliest", props.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG));
@@ -192,18 +241,28 @@ class KafkaTrafficCaptureSourceTest extends InstrumentationTest {
         Assertions.assertEquals("SASL_SSL", props.get("security.protocol"));
         Assertions.assertEquals("AWS_MSK_IAM", props.get("sasl.mechanism"));
         Assertions.assertEquals("software.amazon.msk.auth.iam.IAMLoginModule required;", props.get("sasl.jaas.config"));
-        Assertions.assertEquals("software.amazon.msk.auth.iam.IAMClientCallbackHandler", props.get("sasl.client.callback.handler.class"));
+        Assertions.assertEquals(
+            "software.amazon.msk.auth.iam.IAMClientCallbackHandler",
+            props.get("sasl.client.callback.handler.class")
+        );
         Assertions.assertEquals("3555", props.get("max.block.ms"));
     }
 
     private static TrafficStream makeTrafficStream(Instant t, String payload, int numReads) {
         var fixedTimestamp = Timestamp.newBuilder().setSeconds(t.getEpochSecond()).setNanos(t.getNano()).build();
-        var builder = TrafficStream.newBuilder().setNodeId("testNode").setConnectionId("testStreamId").setNumberOfThisLastChunk(1);
+        var builder = TrafficStream.newBuilder()
+            .setNodeId("testNode")
+            .setConnectionId("testStreamId")
+            .setNumberOfThisLastChunk(1);
         for (int i = 0; i < numReads; ++i) {
             builder = builder.addSubStream(
                 TrafficObservation.newBuilder()
                     .setTs(fixedTimestamp)
-                    .setRead(ReadObservation.newBuilder().setData(ByteString.copyFrom(payload.getBytes(StandardCharsets.UTF_8))).build())
+                    .setRead(
+                        ReadObservation.newBuilder()
+                            .setData(ByteString.copyFrom(payload.getBytes(StandardCharsets.UTF_8)))
+                            .build()
+                    )
                     .build()
             );
         }

@@ -87,7 +87,9 @@ public class NettyJsonToByteBufHandler extends ChannelInboundHandlerAdapter {
     private void writeContentsIntoByteBufs(ChannelHandlerContext ctx, HttpContent msg) {
         var headerChunkSizes = sharedInProgressChunkSizes.size() > 1 ? sharedInProgressChunkSizes.get(1) : ZERO_LIST;
         while (true) { // java doesn't have tail recursion, so do this the manual way
-            int currentChunkProspectiveSize = payloadBufferIndex >= headerChunkSizes.size() ? 0 : headerChunkSizes.get(payloadBufferIndex);
+            int currentChunkProspectiveSize = payloadBufferIndex >= headerChunkSizes.size()
+                ? 0
+                : headerChunkSizes.get(payloadBufferIndex);
             if (inProgressByteBuf == null && currentChunkProspectiveSize > 0) {
                 inProgressByteBuf = ctx.alloc().buffer(currentChunkProspectiveSize);
             }
@@ -120,7 +122,8 @@ public class NettyJsonToByteBufHandler extends ChannelInboundHandlerAdapter {
      * @param httpJson
      * @throws IOException
      */
-    private void writeHeadersIntoByteBufs(ChannelHandlerContext ctx, HttpJsonMessageWithFaultingPayload httpJson) throws IOException {
+    private void writeHeadersIntoByteBufs(ChannelHandlerContext ctx, HttpJsonMessageWithFaultingPayload httpJson)
+        throws IOException {
         var headerChunkSizes = sharedInProgressChunkSizes.get(0);
         try {
             if (headerChunkSizes.size() > 1) {
@@ -128,7 +131,10 @@ public class NettyJsonToByteBufHandler extends ChannelInboundHandlerAdapter {
                 return;
             }
         } catch (Exception e) {
-            log.atWarn().setCause(e).setMessage(() -> "writing headers directly to chunks w/ sizes didn't work for " + httpJson).log();
+            log.atWarn()
+                .setCause(e)
+                .setMessage(() -> "writing headers directly to chunks w/ sizes didn't work for " + httpJson)
+                .log();
         }
 
         try (var baos = new ByteArrayOutputStream()) {
@@ -158,7 +164,8 @@ public class NettyJsonToByteBufHandler extends ChannelInboundHandlerAdapter {
                     throw Lombok.sneakyThrow(new IllegalStateException("Ran out of input chunks for mapping"));
                 }
                 var inputChunkSize = chunkSizeIterator.next();
-                var scaledChunkSize = (int) (((long) buf.writerIndex() * inputChunkSize) + (initialSize - 1)) / initialSize;
+                var scaledChunkSize = (int) (((long) buf.writerIndex() * inputChunkSize) + (initialSize - 1))
+                    / initialSize;
                 int actualChunkSize = Math.min(buf.writerIndex() - index, scaledChunkSize);
                 ctx.fireChannelRead(buf.retainedSlice(index, actualChunkSize));
                 index += actualChunkSize;
@@ -170,7 +177,8 @@ public class NettyJsonToByteBufHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private static void writeHeadersIntoStream(HttpJsonMessageWithFaultingPayload httpJson, OutputStream os) throws IOException {
+    private static void writeHeadersIntoStream(HttpJsonMessageWithFaultingPayload httpJson, OutputStream os)
+        throws IOException {
         try (var osw = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
             osw.append(httpJson.method());
             osw.append(" ");

@@ -45,7 +45,9 @@ public class InMemoryConnectionCaptureFactory implements IConnectionCaptureFacto
         @Override
         protected CompletableFuture<Void> kickoffCloseStream(CodedOutputStreamHolder outputStreamHolder, int index) {
             if (!(outputStreamHolder instanceof CodedOutputStreamAndByteBufferWrapper)) {
-                throw new IllegalArgumentException("Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder);
+                throw new IllegalArgumentException(
+                    "Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder
+                );
             }
             var osh = (CodedOutputStreamAndByteBufferWrapper) outputStreamHolder;
             return CompletableFuture.runAsync(() -> {

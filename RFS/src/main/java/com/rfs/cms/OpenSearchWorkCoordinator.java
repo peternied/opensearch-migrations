@@ -71,7 +71,11 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public OpenSearchWorkCoordinator(AbstractedHttpClient httpClient, long tolerableClientServerClockDifferenceSeconds, String workerId) {
+    public OpenSearchWorkCoordinator(
+        AbstractedHttpClient httpClient,
+        long tolerableClientServerClockDifferenceSeconds,
+        String workerId
+    ) {
         this(httpClient, tolerableClientServerClockDifferenceSeconds, workerId, Clock.systemUTC());
     }
 
@@ -128,13 +132,23 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
         try {
             doUntil("setup-" + INDEX_NAME, 100, MAX_SETUP_RETRIES, () -> {
                 try {
-                    var indexCheckResponse = httpClient.makeJsonRequest(AbstractedHttpClient.HEAD_METHOD, INDEX_NAME, null, null);
+                    var indexCheckResponse = httpClient.makeJsonRequest(
+                        AbstractedHttpClient.HEAD_METHOD,
+                        INDEX_NAME,
+                        null,
+                        null
+                    );
                     if (indexCheckResponse.getStatusCode() == 200) {
                         log.info("Not creating " + INDEX_NAME + " because it already exists");
                         return indexCheckResponse;
                     }
                     log.atInfo()
-                        .setMessage("Creating " + INDEX_NAME + " because it's HEAD check returned " + indexCheckResponse.getStatusCode())
+                        .setMessage(
+                            "Creating "
+                                + INDEX_NAME
+                                + " because it's HEAD check returned "
+                                + indexCheckResponse.getStatusCode()
+                        )
                         .log();
                     return httpClient.makeJsonRequest(AbstractedHttpClient.PUT_METHOD, INDEX_NAME, null, body);
                 } catch (Exception e) {
@@ -174,8 +188,10 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
         }
     }
 
-    AbstractedHttpClient.AbstractHttpResponse createOrUpdateLeaseForDocument(String workItemId, long expirationWindowSeconds)
-        throws IOException {
+    AbstractedHttpClient.AbstractHttpResponse createOrUpdateLeaseForDocument(
+        String workItemId,
+        long expirationWindowSeconds
+    ) throws IOException {
         // the notion of 'now' isn't supported with painless scripts
         // https://www.elastic.co/guide/en/elasticsearch/painless/current/painless-datetime.html#_datetime_now
         final var upsertLeaseBodyTemplate = "{\n"
@@ -260,9 +276,17 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
             .replace(WORKER_ID_TEMPLATE, workerId)
             .replace(CLIENT_TIMESTAMP_TEMPLATE, Long.toString(clock.instant().toEpochMilli() / 1000))
             .replace(EXPIRATION_WINDOW_TEMPLATE, Long.toString(expirationWindowSeconds))
-            .replace(CLOCK_DEVIATION_SECONDS_THRESHOLD_TEMPLATE, Long.toString(tolerableClientServerClockDifferenceSeconds));
+            .replace(
+                CLOCK_DEVIATION_SECONDS_THRESHOLD_TEMPLATE,
+                Long.toString(tolerableClientServerClockDifferenceSeconds)
+            );
 
-        return httpClient.makeJsonRequest(AbstractedHttpClient.POST_METHOD, INDEX_NAME + "/_update/" + workItemId, null, body);
+        return httpClient.makeJsonRequest(
+            AbstractedHttpClient.POST_METHOD,
+            INDEX_NAME + "/_update/" + workItemId,
+            null,
+            body
+        );
     }
 
     DocumentModificationResult getResult(AbstractedHttpClient.AbstractHttpResponse response) throws IOException {
@@ -287,7 +311,8 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
 
     @Override
     @NonNull
-    public WorkAcquisitionOutcome createOrUpdateLeaseForWorkItem(String workItemId, Duration leaseDuration) throws IOException {
+    public WorkAcquisitionOutcome createOrUpdateLeaseForWorkItem(String workItemId, Duration leaseDuration)
+        throws IOException {
         var startTime = Instant.now();
         var updateResponse = createOrUpdateLeaseForDocument(workItemId, leaseDuration.toSeconds());
         var resultFromUpdate = getResult(updateResponse);
@@ -354,8 +379,15 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
             .replace(WORKER_ID_TEMPLATE, workerId)
             .replace(CLIENT_TIMESTAMP_TEMPLATE, Long.toString(clock.instant().toEpochMilli() / 1000));
 
-        var response = httpClient.makeJsonRequest(AbstractedHttpClient.POST_METHOD, INDEX_NAME + "/_update/" + workItemId, null, body);
-        final var resultStr = objectMapper.readTree(response.getPayloadStream()).get(RESULT_OPENSSEARCH_FIELD_NAME).textValue();
+        var response = httpClient.makeJsonRequest(
+            AbstractedHttpClient.POST_METHOD,
+            INDEX_NAME + "/_update/" + workItemId,
+            null,
+            body
+        );
+        final var resultStr = objectMapper.readTree(response.getPayloadStream())
+            .get(RESULT_OPENSSEARCH_FIELD_NAME)
+            .textValue();
         if (DocumentModificationResult.UPDATED != DocumentModificationResult.parse(resultStr)) {
             throw new IllegalStateException(
                 "Unexpected response for workItemId: " + workItemId + ".  Response: " + response.toDiagnosticString()
@@ -396,7 +428,10 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
         var statusCode = response.getStatusCode();
         if (statusCode != 200) {
             throw new IllegalStateException(
-                "Querying for pending (expired or not) work, " + "returned an unexpected status code " + statusCode + " instead of 200"
+                "Querying for pending (expired or not) work, "
+                    + "returned an unexpected status code "
+                    + statusCode
+                    + " instead of 200"
             );
         }
         return resultHitsUpper.path("hits").size();
@@ -492,7 +527,10 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
             .replace(CLIENT_TIMESTAMP_TEMPLATE, Long.toString(timestampEpochSeconds))
             .replace(OLD_EXPIRATION_THRESHOLD_TEMPLATE, Long.toString(timestampEpochSeconds))
             .replace(EXPIRATION_WINDOW_TEMPLATE, Long.toString(expirationWindowSeconds))
-            .replace(CLOCK_DEVIATION_SECONDS_THRESHOLD_TEMPLATE, Long.toString(tolerableClientServerClockDifferenceSeconds));
+            .replace(
+                CLOCK_DEVIATION_SECONDS_THRESHOLD_TEMPLATE,
+                Long.toString(tolerableClientServerClockDifferenceSeconds)
+            );
 
         var response = httpClient.makeJsonRequest(
             AbstractedHttpClient.POST_METHOD,
@@ -547,7 +585,12 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
             + "  }"
             + "}";
         final var body = queryWorkersAssignedItemsTemplate.replace(WORKER_ID_TEMPLATE, workerId);
-        var response = httpClient.makeJsonRequest(AbstractedHttpClient.POST_METHOD, INDEX_NAME + "/_search", null, body);
+        var response = httpClient.makeJsonRequest(
+            AbstractedHttpClient.POST_METHOD,
+            INDEX_NAME + "/_search",
+            null,
+            body
+        );
 
         final var resultHitsUpper = objectMapper.readTree(response.getPayloadStream()).path("hits");
         if (resultHitsUpper.isMissingNode()) {
@@ -556,7 +599,9 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
         }
         final var numDocs = resultHitsUpper.path("total").path("value").longValue();
         if (numDocs != 1) {
-            throw new IllegalStateException("The query for the assigned work document returned " + numDocs + " instead of one item");
+            throw new IllegalStateException(
+                "The query for the assigned work document returned " + numDocs + " instead of one item"
+            );
         }
         var resultHitInner = resultHitsUpper.path("hits").path(0);
         var expiration = resultHitInner.path(SOURCE_FIELD_NAME).path(EXPIRATION_FIELD_NAME).longValue();
@@ -622,7 +667,12 @@ public class OpenSearchWorkCoordinator implements IWorkCoordinator {
         try {
             doUntil("refresh", 100, MAX_REFRESH_RETRIES, () -> {
                 try {
-                    return httpClient.makeJsonRequest(AbstractedHttpClient.GET_METHOD, INDEX_NAME + "/_refresh", null, null);
+                    return httpClient.makeJsonRequest(
+                        AbstractedHttpClient.GET_METHOD,
+                        INDEX_NAME + "/_refresh",
+                        null,
+                        null
+                    );
                 } catch (IOException e) {
                     throw Lombok.sneakyThrow(e);
                 }

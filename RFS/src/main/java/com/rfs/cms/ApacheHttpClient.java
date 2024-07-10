@@ -55,7 +55,8 @@ public class ApacheHttpClient implements AbstractedHttpClient {
     }
 
     @Override
-    public AbstractHttpResponse makeRequest(String method, String path, Map<String, String> headers, String payload) throws IOException {
+    public AbstractHttpResponse makeRequest(String method, String path, Map<String, String> headers, String payload)
+        throws IOException {
         var request = makeRequestBase(baseUri, method, path);
         headers.entrySet().forEach(kvp -> request.setHeader(kvp.getKey(), kvp.getValue()));
         if (payload != null) {
@@ -83,7 +84,8 @@ public class ApacheHttpClient implements AbstractedHttpClient {
 
             @Override
             public Stream<Map.Entry<String, String>> getHeaders() {
-                return Arrays.stream(fr.getHeaders()).map(h -> new AbstractMap.SimpleEntry<>(h.getName(), h.getValue()));
+                return Arrays.stream(fr.getHeaders())
+                    .map(h -> new AbstractMap.SimpleEntry<>(h.getName(), h.getValue()));
             }
         });
     }

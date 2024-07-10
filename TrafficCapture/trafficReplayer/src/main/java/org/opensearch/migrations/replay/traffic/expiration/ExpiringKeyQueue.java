@@ -83,8 +83,11 @@ class ExpiringKeyQueue extends ConcurrentSkipListMap<EpochMillis, ConcurrentHash
         Duration minimumGuaranteedLifetime,
         EpochMillis largestCurrentObservedTimestamp
     ) {
-        var startOfWindow = new EpochMillis(largestCurrentObservedTimestamp.toInstant().minus(minimumGuaranteedLifetime));
-        for (var kvp = firstEntry(); kvp.getKey().test(startOfWindow, (first, windowStart) -> first < windowStart); kvp = firstEntry()) {
+        var startOfWindow = new EpochMillis(
+            largestCurrentObservedTimestamp.toInstant().minus(minimumGuaranteedLifetime)
+        );
+        for (var kvp = firstEntry(); kvp.getKey()
+            .test(startOfWindow, (first, windowStart) -> first < windowStart); kvp = firstEntry()) {
             expireItemsBefore(connectionAccumulatorMap, behavioralPolicy, kvp.getValue(), startOfWindow);
             remove(kvp.getKey());
         }
@@ -100,7 +103,8 @@ class ExpiringKeyQueue extends ConcurrentSkipListMap<EpochMillis, ConcurrentHash
         for (var connectionId : keyMap.keySet()) {
             var key = new ScopedConnectionIdKey(partitionId, connectionId);
             var accumulation = connectionAccumulatorMap.get(key);
-            if (accumulation != null && accumulation.getNewestPacketTimestampInMillisReference().get() < earlierTimesToPreserve.millis) {
+            if (accumulation != null
+                && accumulation.getNewestPacketTimestampInMillisReference().get() < earlierTimesToPreserve.millis) {
                 var priorValue = connectionAccumulatorMap.remove(key);
                 if (priorValue != null) {
                     priorValue.expire();

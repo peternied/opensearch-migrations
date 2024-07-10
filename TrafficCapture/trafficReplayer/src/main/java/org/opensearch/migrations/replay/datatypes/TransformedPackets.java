@@ -58,6 +58,7 @@ public class TransformedPackets implements AutoCloseable {
         if (isClosed()) {
             return "CLOSED";
         }
-        return new StringJoiner(", ", TransformedPackets.class.getSimpleName() + "[", "]").add("data=" + data).toString();
+        return new StringJoiner(", ", TransformedPackets.class.getSimpleName() + "[", "]").add("data=" + data)
+            .toString();
     }
 }

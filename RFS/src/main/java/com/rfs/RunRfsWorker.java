@@ -64,14 +64,16 @@ public class RunRfsWorker {
             "--s3-repo-uri" }, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2", required = true)
         public String s3RepoUri;
 
-        @Parameter(names = { "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = true)
+        @Parameter(names = {
+            "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = true)
         public String s3Region;
 
         @Parameter(names = {
             "--lucene-dir" }, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
         public String luceneDirPath;
 
-        @Parameter(names = { "--source-host" }, description = "The source host and port (e.g. http://localhost:9200)", required = true)
+        @Parameter(names = {
+            "--source-host" }, description = "The source host and port (e.g. http://localhost:9200)", required = true)
         public String sourceHost;
 
         @Parameter(names = {
@@ -82,7 +84,8 @@ public class RunRfsWorker {
             "--source-password" }, description = "Optional.  The source password; if not provided, will assume no auth on source", required = false)
         public String sourcePass = null;
 
-        @Parameter(names = { "--target-host" }, description = "The target host and port (e.g. http://localhost:9200)", required = true)
+        @Parameter(names = {
+            "--target-host" }, description = "The target host and port (e.g. http://localhost:9200)", required = true)
         public String targetHost;
 
         @Parameter(names = {
@@ -97,16 +100,19 @@ public class RunRfsWorker {
             + " (e.g. 'logs_2024_01, logs_2024_02').  Default: all indices"), required = false)
         public List<String> indexAllowlist = List.of();
 
-        @Parameter(names = { "--index-template-allowlist" }, description = ("Optional.  List of index template names to migrate"
-            + " (e.g. 'posts_index_template1, posts_index_template2').  Default: empty list"), required = false)
+        @Parameter(names = {
+            "--index-template-allowlist" }, description = ("Optional.  List of index template names to migrate"
+                + " (e.g. 'posts_index_template1, posts_index_template2').  Default: empty list"), required = false)
         public List<String> indexTemplateAllowlist = List.of();
 
-        @Parameter(names = { "--component-template-allowlist" }, description = ("Optional. List of component template names to migrate"
-            + " (e.g. 'posts_template1, posts_template2').  Default: empty list"), required = false)
+        @Parameter(names = {
+            "--component-template-allowlist" }, description = ("Optional. List of component template names to migrate"
+                + " (e.g. 'posts_template1, posts_template2').  Default: empty list"), required = false)
         public List<String> componentTemplateAllowlist = List.of();
 
-        @Parameter(names = { "--max-shard-size-bytes" }, description = ("Optional. The maximum shard size, in bytes, to allow when"
-            + " performing the document migration.  Useful for preventing disk overflow.  Default: 50 * 1024 * 1024 * 1024 (50 GB)"), required = false)
+        @Parameter(names = {
+            "--max-shard-size-bytes" }, description = ("Optional. The maximum shard size, in bytes, to allow when"
+                + " performing the document migration.  Useful for preventing disk overflow.  Default: 50 * 1024 * 1024 * 1024 (50 GB)"), required = false)
         public long maxShardSizeBytes = 50 * 1024 * 1024 * 1024L;
 
         // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
@@ -177,7 +183,8 @@ public class RunRfsWorker {
 
             IndexMetadata.Factory indexMetadataFactory = new IndexMetadataFactory_ES_7_10(repoDataProvider);
             IndexCreator_OS_2_11 indexCreator = new IndexCreator_OS_2_11(targetClient);
-            new IndexRunner(snapshotName, indexMetadataFactory, indexCreator, transformer, indexAllowlist).migrateIndices();
+            new IndexRunner(snapshotName, indexMetadataFactory, indexCreator, transformer, indexAllowlist)
+                .migrateIndices();
 
             ShardMetadata.Factory shardMetadataFactory = new ShardMetadataFactory_ES_7_10(repoDataProvider);
             DefaultSourceRepoAccessor repoAccessor = new DefaultSourceRepoAccessor(sourceRepo);
@@ -187,7 +194,11 @@ public class RunRfsWorker {
                 ElasticsearchConstants_ES_7_10.BUFFER_SIZE_IN_BYTES
             );
             DocumentReindexer reindexer = new DocumentReindexer(targetClient);
-            var workCoordinator = new OpenSearchWorkCoordinator(new ApacheHttpClient(new URI(targetHost)), 5, UUID.randomUUID().toString());
+            var workCoordinator = new OpenSearchWorkCoordinator(
+                new ApacheHttpClient(new URI(targetHost)),
+                5,
+                UUID.randomUUID().toString()
+            );
             var scopedWorkCoordinator = new ScopedWorkCoordinator(workCoordinator, processManager);
             new ShardWorkPreparer().run(scopedWorkCoordinator, indexMetadataFactory, snapshotName, indexAllowlist);
             new DocumentsRunner(

@@ -70,7 +70,11 @@ public class HttpMessageAndTimestamp {
     public String format(Optional<HttpByteBufFormatter.HttpMessageType> messageTypeOp) {
         try (var bufStream = NettyUtils.createRefCntNeutralCloseableByteBufStream(packetBytes)) {
             var packetBytesAsStr = messageTypeOp.map(
-                mt -> HttpByteBufFormatter.httpPacketBytesToString(mt, packetBytes, HttpByteBufFormatter.LF_LINE_DELIMITER)
+                mt -> HttpByteBufFormatter.httpPacketBytesToString(
+                    mt,
+                    packetBytes,
+                    HttpByteBufFormatter.LF_LINE_DELIMITER
+                )
             ).orElseGet(() -> HttpByteBufFormatter.httpPacketBufsToString(bufStream, Utils.MAX_PAYLOAD_BYTES_TO_PRINT));
             final StringBuilder sb = new StringBuilder("HttpMessageAndTimestamp{");
             sb.append("firstPacketTimestamp=").append(firstPacketTimestamp);

@@ -27,7 +27,12 @@ public class BacksideConnectionPool {
     private final Duration inactivityTimeout;
     private final int poolSize;
 
-    public BacksideConnectionPool(URI backsideUri, SslContext backsideSslContext, int poolSize, Duration inactivityTimeout) {
+    public BacksideConnectionPool(
+        URI backsideUri,
+        SslContext backsideSslContext,
+        int poolSize,
+        Duration inactivityTimeout
+    ) {
         this.backsideUri = backsideUri;
         this.backsideSslContext = backsideSslContext;
         this.connectionCacheForEachThread = new FastThreadLocal<>();
@@ -79,7 +84,10 @@ public class BacksideConnectionPool {
     private ChannelFuture buildConnectionFuture(EventLoop eventLoop) {
         // Start the connection attempt.
         Bootstrap b = new Bootstrap();
-        b.group(eventLoop).channel(NioSocketChannel.class).handler(new ChannelDuplexHandler()).option(ChannelOption.AUTO_READ, false);
+        b.group(eventLoop)
+            .channel(NioSocketChannel.class)
+            .handler(new ChannelDuplexHandler())
+            .option(ChannelOption.AUTO_READ, false);
         var f = b.connect(backsideUri.getHost(), backsideUri.getPort());
         var rval = new DefaultChannelPromise(f.channel());
         f.addListener((ChannelFutureListener) connectFuture -> {

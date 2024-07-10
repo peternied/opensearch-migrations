@@ -190,7 +190,10 @@ public class KafkaTrafficCaptureSource implements ISimpleTrafficCaptureSource {
             kafkaProps.setProperty("security.protocol", "SASL_SSL");
             kafkaProps.setProperty("sasl.mechanism", "AWS_MSK_IAM");
             kafkaProps.setProperty("sasl.jaas.config", "software.amazon.msk.auth.iam.IAMLoginModule required;");
-            kafkaProps.setProperty("sasl.client.callback.handler.class", "software.amazon.msk.auth.iam.IAMClientCallbackHandler");
+            kafkaProps.setProperty(
+                "sasl.client.callback.handler.class",
+                "software.amazon.msk.auth.iam.IAMClientCallbackHandler"
+            );
         }
         kafkaProps.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokers);
         kafkaProps.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
@@ -225,7 +228,9 @@ public class KafkaTrafficCaptureSource implements ISimpleTrafficCaptureSource {
         }, kafkaExecutor);
     }
 
-    public List<ITrafficStreamWithKey> readNextTrafficStreamSynchronously(ITrafficSourceContexts.IReadChunkContext context) {
+    public List<ITrafficStreamWithKey> readNextTrafficStreamSynchronously(
+        ITrafficSourceContexts.IReadChunkContext context
+    ) {
         log.atTrace().setMessage("readNextTrafficStreamSynchronously()").log();
         try {
             return trackingKafkaConsumer.getNextBatchOfRecords(context, (offsetData, kafkaRecord) -> {
@@ -234,7 +239,9 @@ public class KafkaTrafficCaptureSource implements ISimpleTrafficCaptureSource {
                     var trafficStreamsSoFar = trafficStreamsRead.incrementAndGet();
                     log.atTrace()
                         .setMessage("{}")
-                        .addArgument(() -> "Parsed traffic stream #" + trafficStreamsSoFar + ": " + offsetData + " " + ts)
+                        .addArgument(
+                            () -> "Parsed traffic stream #" + trafficStreamsSoFar + ": " + offsetData + " " + ts
+                        )
                         .log();
                     var key = new TrafficStreamKeyWithKafkaRecordId(tsk -> {
                         var channelKeyCtx = channelContextManager.retainOrCreateContext(tsk);
@@ -275,7 +282,10 @@ public class KafkaTrafficCaptureSource implements ISimpleTrafficCaptureSource {
                     + ")"
             );
         }
-        return trackingKafkaConsumer.commitKafkaKey(trafficStreamKey, (TrafficStreamKeyWithKafkaRecordId) trafficStreamKey);
+        return trackingKafkaConsumer.commitKafkaKey(
+            trafficStreamKey,
+            (TrafficStreamKeyWithKafkaRecordId) trafficStreamKey
+        );
     }
 
     @Override

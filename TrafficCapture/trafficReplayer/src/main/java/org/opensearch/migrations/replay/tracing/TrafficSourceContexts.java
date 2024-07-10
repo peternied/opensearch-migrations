@@ -12,9 +12,9 @@ public class TrafficSourceContexts {
 
     private TrafficSourceContexts() {}
 
-    public static class ReadChunkContext extends BaseNestedSpanContext<RootReplayerContext, IScopedInstrumentationAttributes>
-        implements
-            ITrafficSourceContexts.IReadChunkContext {
+    public static class ReadChunkContext extends BaseNestedSpanContext<
+        RootReplayerContext,
+        IScopedInstrumentationAttributes> implements ITrafficSourceContexts.IReadChunkContext {
         @Override
         public ITrafficSourceContexts.IBackPressureBlockContext createBackPressureContext() {
             return new TrafficSourceContexts.BackPressureBlockContext(getRootInstrumentationScope(), this);

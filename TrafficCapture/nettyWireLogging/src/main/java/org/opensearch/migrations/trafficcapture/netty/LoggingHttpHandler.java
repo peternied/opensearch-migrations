@@ -62,7 +62,10 @@ public class LoggingHttpHandler<T> extends ChannelDuplexHandler {
         private final PassThruHttpHeaders.HttpHeadersToPreserve headersToPreserve;
         private final CaptureState captureState;
 
-        public SimpleHttpRequestDecoder(@NonNull PassThruHttpHeaders.HttpHeadersToPreserve headersToPreserve, CaptureState captureState) {
+        public SimpleHttpRequestDecoder(
+            @NonNull PassThruHttpHeaders.HttpHeadersToPreserve headersToPreserve,
+            CaptureState captureState
+        ) {
             this.headersToPreserve = headersToPreserve;
             this.captureState = captureState;
         }

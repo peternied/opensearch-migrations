@@ -139,7 +139,10 @@ public class ExhaustiveTrafficStreamGenerator {
         }
     }
 
-    private static ObservationType getTypeFromObservation(TrafficObservation trafficObservation, ObservationType lastObservationType) {
+    private static ObservationType getTypeFromObservation(
+        TrafficObservation trafficObservation,
+        ObservationType lastObservationType
+    ) {
         return getTypeFromObservation(trafficObservation).orElseGet(() -> {
             assert trafficObservation.hasSegmentEnd();
             switch (lastObservationType) {
@@ -284,7 +287,13 @@ public class ExhaustiveTrafficStreamGenerator {
             .log();
         var flushLikelihood = Math.pow(r2.nextDouble(), 2.0);
         fillCommandsAndSizes(r2, flushLikelihood / 4, flushLikelihood, bufferBound, commands, sizes);
-        return TrafficStreamGenerator.makeTrafficStream(bufferSize, (int) rSeed, uniqueIdCounter, commands, rootContext);
+        return TrafficStreamGenerator.makeTrafficStream(
+            bufferSize,
+            (int) rSeed,
+            uniqueIdCounter,
+            commands,
+            rootContext
+        );
     }
 
     /**
@@ -338,7 +347,11 @@ public class ExhaustiveTrafficStreamGenerator {
         public final int numHttpTransactions;
     }
 
-    public static StreamAndExpectedSizes generateStreamAndSumOfItsTransactions(TestContext rootContext, int count, boolean randomize) {
+    public static StreamAndExpectedSizes generateStreamAndSumOfItsTransactions(
+        TestContext rootContext,
+        int count,
+        boolean randomize
+    ) {
         var generatedCases = count > 0
             ? generateRandomTrafficStreamsAndSizes(rootContext, IntStream.range(0, count))
             : generateAllIndicativeRandomTrafficStreamsAndSizes(rootContext);
@@ -386,7 +399,12 @@ public class ExhaustiveTrafficStreamGenerator {
             var trafficStreams = fillCommandsAndSizesForSeed(rootContext, rSeed, uniqueIdCounter, commands, sizes);
 
             var splitSizes = unzipRequestResponseSizes(sizes);
-            return new RandomTrafficStreamAndTransactionSizes(rSeed, trafficStreams, splitSizes.requestSizes, splitSizes.responseSizes);
+            return new RandomTrafficStreamAndTransactionSizes(
+                rSeed,
+                trafficStreams,
+                splitSizes.requestSizes,
+                splitSizes.responseSizes
+            );
         }).filter(o -> o != null);
     }
 

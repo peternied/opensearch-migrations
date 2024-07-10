@@ -56,7 +56,10 @@ public class TrafficCaptureSourceFactory {
                 new KafkaBehavioralPolicy()
             );
         } else {
-            return new InputStreamOfTraffic(ctx, isInputFileActive ? new FileInputStream(appParams.inputFilename) : System.in);
+            return new InputStreamOfTraffic(
+                ctx,
+                isInputFileActive ? new FileInputStream(appParams.inputFilename) : System.in
+            );
         }
     }
 }

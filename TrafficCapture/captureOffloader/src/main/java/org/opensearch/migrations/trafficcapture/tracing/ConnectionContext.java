@@ -42,7 +42,9 @@ public class ConnectionContext extends BaseSpanContext<IRootOffloaderContext>
 
         protected MetricInstruments(Meter meter, String activityName) {
             super(meter, activityName);
-            activeConnectionsCounter = meter.upDownCounterBuilder(ConnectionContext.ACTIVE_CONNECTION).setUnit("count").build();
+            activeConnectionsCounter = meter.upDownCounterBuilder(ConnectionContext.ACTIVE_CONNECTION)
+                .setUnit("count")
+                .build();
         }
     }
 

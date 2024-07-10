@@ -68,7 +68,13 @@ public class DocumentsRunner {
 
     public static class ShardTooLargeException extends RfsException {
         public ShardTooLargeException(long shardSizeBytes, long maxShardSize) {
-            super("The shard size of " + shardSizeBytes + " bytes exceeds the maximum shard size of " + maxShardSize + " bytes");
+            super(
+                "The shard size of "
+                    + shardSizeBytes
+                    + " bytes exceeds the maximum shard size of "
+                    + maxShardSize
+                    + " bytes"
+            );
         }
     }
 
@@ -85,7 +91,10 @@ public class DocumentsRunner {
             .doOnSuccess(
                 done -> log.atInfo()
                     .setMessage(
-                        () -> "Reindexing completed for Index " + shardMetadata.getIndexName() + ", Shard " + shardMetadata.getShardId()
+                        () -> "Reindexing completed for Index "
+                            + shardMetadata.getIndexName()
+                            + ", Shard "
+                            + shardMetadata.getShardId()
                     )
                     .log()
             )

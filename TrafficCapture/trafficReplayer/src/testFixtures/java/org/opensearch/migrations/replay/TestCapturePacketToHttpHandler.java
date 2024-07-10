@@ -31,7 +31,10 @@ public class TestCapturePacketToHttpHandler implements IPacketFinalizingConsumer
     private final AggregatedRawResponse dummyAggregatedResponse;
     ByteArrayOutputStream byteArrayOutputStream;
 
-    public TestCapturePacketToHttpHandler(Duration consumeDuration, @NonNull AggregatedRawResponse dummyAggregatedResponse) {
+    public TestCapturePacketToHttpHandler(
+        Duration consumeDuration,
+        @NonNull AggregatedRawResponse dummyAggregatedResponse
+    ) {
         this.consumeDuration = consumeDuration;
         this.numFinalizations = new AtomicInteger();
         this.numConsumes = new AtomicInteger();

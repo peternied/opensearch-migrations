@@ -27,7 +27,8 @@ import lombok.extern.slf4j.Slf4j;
 public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMetadata> {
 
     private static final String DEFAULT_TOPIC_NAME_FOR_TRAFFIC = "logging-traffic-topic";
-    // This value encapsulates overhead we should reserve for a given Producer record to account for record key bytes and
+    // This value encapsulates overhead we should reserve for a given Producer record to account for record key bytes
+    // and
     // general Kafka message overhead
     public static final int KAFKA_MESSAGE_OVERHEAD_BYTES = 500;
 
@@ -52,13 +53,22 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
         this.bufferSize = messageSize - KAFKA_MESSAGE_OVERHEAD_BYTES;
     }
 
-    public KafkaCaptureFactory(IRootKafkaOffloaderContext rootScope, String nodeId, Producer<String, byte[]> producer, int messageSize) {
+    public KafkaCaptureFactory(
+        IRootKafkaOffloaderContext rootScope,
+        String nodeId,
+        Producer<String, byte[]> producer,
+        int messageSize
+    ) {
         this(rootScope, nodeId, producer, DEFAULT_TOPIC_NAME_FOR_TRAFFIC, messageSize);
     }
 
     @Override
     public IChannelConnectionCaptureSerializer<RecordMetadata> createOffloader(IConnectionContext ctx) {
-        return new StreamChannelConnectionCaptureSerializer<>(nodeId, ctx.getConnectionId(), new StreamManager(rootScope, ctx));
+        return new StreamChannelConnectionCaptureSerializer<>(
+            nodeId,
+            ctx.getConnectionId(),
+            new StreamManager(rootScope, ctx)
+        );
     }
 
     @AllArgsConstructor
@@ -98,9 +108,14 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
         }
 
         @Override
-        public CompletableFuture<RecordMetadata> kickoffCloseStream(CodedOutputStreamHolder outputStreamHolder, int index) {
+        public CompletableFuture<RecordMetadata> kickoffCloseStream(
+            CodedOutputStreamHolder outputStreamHolder,
+            int index
+        ) {
             if (!(outputStreamHolder instanceof CodedOutputStreamWrapper)) {
-                throw new IllegalArgumentException("Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder);
+                throw new IllegalArgumentException(
+                    "Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder
+                );
             }
             var osh = (CodedOutputStreamWrapper) outputStreamHolder;
 
@@ -149,7 +164,10 @@ public class KafkaCaptureFactory implements IConnectionCaptureFactory<RecordMeta
     }
 
     // Producer Send will block on actions such as retrieving cluster metadata, allows running fully async
-    public static <K, V> CompletableFuture<RecordMetadata> sendFullyAsync(Producer<K, V> producer, ProducerRecord<K, V> kafkaRecord) {
+    public static <K, V> CompletableFuture<RecordMetadata> sendFullyAsync(
+        Producer<K, V> producer,
+        ProducerRecord<K, V> kafkaRecord
+    ) {
         CompletableFuture<RecordMetadata> completableFuture = new CompletableFuture<>();
 
         ForkJoinPool.commonPool().execute(() -> {

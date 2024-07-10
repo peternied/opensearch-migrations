@@ -109,7 +109,10 @@ public class ResultsToLogsConsumer implements BiConsumer<SourceTargetCaptureTupl
      */
     public void accept(SourceTargetCaptureTuple tuple, ParsedHttpMessagesAsDicts parsedMessages) {
         final var index = tupleCounter.getAndIncrement();
-        progressLogger.atInfo().setMessage("{}").addArgument(() -> toTransactionSummaryString(index, tuple, parsedMessages)).log();
+        progressLogger.atInfo()
+            .setMessage("{}")
+            .addArgument(() -> toTransactionSummaryString(index, tuple, parsedMessages))
+            .log();
         if (tupleLogger.isInfoEnabled()) {
             try {
                 var tupleString = PLAIN_MAPPER.writeValueAsString(toJSONObject(tuple, parsedMessages));
@@ -133,7 +136,11 @@ public class ResultsToLogsConsumer implements BiConsumer<SourceTargetCaptureTupl
             .toString();
     }
 
-    public static String toTransactionSummaryString(int index, SourceTargetCaptureTuple tuple, ParsedHttpMessagesAsDicts parsed) {
+    public static String toTransactionSummaryString(
+        int index,
+        SourceTargetCaptureTuple tuple,
+        ParsedHttpMessagesAsDicts parsed
+    ) {
         final String MISSING_STR = "-";
         var s = parsed.sourceResponseOp;
         var t = parsed.targetResponseOp;
@@ -141,7 +148,11 @@ public class ResultsToLogsConsumer implements BiConsumer<SourceTargetCaptureTupl
             // REQUEST_ID
             .add(formatUniqueRequestKey(tuple.getRequestKey()))
             // Original request timestamp
-            .add(Optional.ofNullable(tuple.sourcePair).map(sp -> sp.requestData.getLastPacketTimestamp().toString()).orElse(MISSING_STR))
+            .add(
+                Optional.ofNullable(tuple.sourcePair)
+                    .map(sp -> sp.requestData.getLastPacketTimestamp().toString())
+                    .orElse(MISSING_STR)
+            )
             // SOURCE/TARGET STATUS_CODE
             .add(
                 s.map(r -> "" + r.get(ParsedHttpMessagesAsDicts.STATUS_CODE_KEY)).orElse(MISSING_STR)
@@ -155,7 +166,12 @@ public class ResultsToLogsConsumer implements BiConsumer<SourceTargetCaptureTupl
                     .orElse(MISSING_STR)
                     + "/"
                     + Optional.ofNullable(tuple.targetRequestData)
-                        .map(transformedPackets -> transformedPackets.streamUnretained().mapToInt(ByteBuf::readableBytes).sum() + "")
+                        .map(
+                            transformedPackets -> transformedPackets.streamUnretained()
+                                .mapToInt(ByteBuf::readableBytes)
+                                .sum()
+                                + ""
+                        )
                         .orElse(MISSING_STR)
             )
             // SOURCE/TARGET RESPONSE_SIZE_BYTES

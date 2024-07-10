@@ -82,7 +82,11 @@ public class HttpByteBufFormatter {
         }
     }
 
-    public static String httpPacketBufsToString(HttpMessageType msgType, Stream<ByteBuf> byteBufStream, String lineDelimiter) {
+    public static String httpPacketBufsToString(
+        HttpMessageType msgType,
+        Stream<ByteBuf> byteBufStream,
+        String lineDelimiter
+    ) {
         switch (printStyle.get().orElse(PacketPrintFormat.TRUNCATED)) {
             case TRUNCATED:
                 return httpPacketBufsToString(byteBufStream, Utils.MAX_BYTES_SHOWN_FOR_TO_STRING);

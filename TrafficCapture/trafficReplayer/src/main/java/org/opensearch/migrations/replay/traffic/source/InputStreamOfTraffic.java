@@ -62,10 +62,13 @@ public class InputStreamOfTraffic implements ISimpleTrafficCaptureSource {
             var ts = builder.build();
             trafficStreamsRead.incrementAndGet();
             log.trace("Parsed traffic stream #{}: {}", trafficStreamsRead.get(), ts);
-            return List.<ITrafficStreamWithKey>of(new PojoTrafficStreamAndKey(ts, PojoTrafficStreamKeyAndContext.build(ts, tsk -> {
-                var channelCtx = channelContextManager.retainOrCreateContext(tsk);
-                return channelContextManager.getGlobalContext().createTrafficStreamContextForStreamSource(channelCtx, tsk);
-            })));
+            return List.<ITrafficStreamWithKey>of(
+                new PojoTrafficStreamAndKey(ts, PojoTrafficStreamKeyAndContext.build(ts, tsk -> {
+                    var channelCtx = channelContextManager.retainOrCreateContext(tsk);
+                    return channelContextManager.getGlobalContext()
+                        .createTrafficStreamContextForStreamSource(channelCtx, tsk);
+                }))
+            );
         }).exceptionally(e -> {
             var ecf = new CompletableFuture<List<ITrafficStreamWithKey>>();
             ecf.completeExceptionally(e.getCause());

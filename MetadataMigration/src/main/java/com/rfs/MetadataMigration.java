@@ -48,10 +48,12 @@ public class MetadataMigration {
             "--s3-repo-uri" }, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2", required = false)
         public String s3RepoUri;
 
-        @Parameter(names = { "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
+        @Parameter(names = {
+            "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
         public String s3Region;
 
-        @Parameter(names = { "--target-host" }, description = "The target host and port (e.g. http://localhost:9200)", required = true)
+        @Parameter(names = {
+            "--target-host" }, description = "The target host and port (e.g. http://localhost:9200)", required = true)
         public String targetHost;
 
         @Parameter(names = {
@@ -62,19 +64,22 @@ public class MetadataMigration {
             "--target-password" }, description = "Optional.  The target password; if not provided, will assume no auth on target", required = false)
         public String targetPass = null;
 
-        @Parameter(names = { "--target-insecure" }, description = "Allow untrusted SSL certificates for target", required = false)
+        @Parameter(names = {
+            "--target-insecure" }, description = "Allow untrusted SSL certificates for target", required = false)
         public boolean targetInsecure = false;
 
         @Parameter(names = { "--index-allowlist" }, description = ("Optional.  List of index names to migrate"
             + " (e.g. 'logs_2024_01, logs_2024_02').  Default: all non-system indices (e.g. those not starting with '.')"), required = false)
         public List<String> indexAllowlist = List.of();
 
-        @Parameter(names = { "--index-template-allowlist" }, description = ("Optional.  List of index template names to migrate"
-            + " (e.g. 'posts_index_template1, posts_index_template2').  Default: empty list"), required = false)
+        @Parameter(names = {
+            "--index-template-allowlist" }, description = ("Optional.  List of index template names to migrate"
+                + " (e.g. 'posts_index_template1, posts_index_template2').  Default: empty list"), required = false)
         public List<String> indexTemplateAllowlist = List.of();
 
-        @Parameter(names = { "--component-template-allowlist" }, description = ("Optional. List of component template names to migrate"
-            + " (e.g. 'posts_template1, posts_template2').  Default: empty list"), required = false)
+        @Parameter(names = {
+            "--component-template-allowlist" }, description = ("Optional. List of component template names to migrate"
+                + " (e.g. 'posts_template1, posts_template2').  Default: empty list"), required = false)
         public List<String> componentTemplateAllowlist = List.of();
 
         // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
@@ -100,7 +105,9 @@ public class MetadataMigration {
         }
 
         final String snapshotName = arguments.snapshotName;
-        final Path fileSystemRepoPath = arguments.fileSystemRepoPath != null ? Paths.get(arguments.fileSystemRepoPath) : null;
+        final Path fileSystemRepoPath = arguments.fileSystemRepoPath != null
+            ? Paths.get(arguments.fileSystemRepoPath)
+            : null;
         final Path s3LocalDirPath = arguments.s3LocalDirPath != null ? Paths.get(arguments.s3LocalDirPath) : null;
         final String s3RepoUri = arguments.s3RepoUri;
         final String s3Region = arguments.s3Region;
@@ -113,7 +120,12 @@ public class MetadataMigration {
         final List<String> componentTemplateAllowlist = arguments.componentTemplateAllowlist;
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
-        final ConnectionDetails targetConnection = new ConnectionDetails(targetHost, targetUser, targetPass, targetInsecure);
+        final ConnectionDetails targetConnection = new ConnectionDetails(
+            targetHost,
+            targetUser,
+            targetPass,
+            targetInsecure
+        );
 
         TryHandlePhaseFailure.executeWithTryCatch(() -> {
             log.info("Running RfsWorker");
@@ -139,7 +151,8 @@ public class MetadataMigration {
 
             final IndexMetadata.Factory indexMetadataFactory = new IndexMetadataFactory_ES_7_10(repoDataProvider);
             final IndexCreator_OS_2_11 indexCreator = new IndexCreator_OS_2_11(targetClient);
-            new IndexRunner(snapshotName, indexMetadataFactory, indexCreator, transformer, indexAllowlist).migrateIndices();
+            new IndexRunner(snapshotName, indexMetadataFactory, indexCreator, transformer, indexAllowlist)
+                .migrateIndices();
         });
     }
 }

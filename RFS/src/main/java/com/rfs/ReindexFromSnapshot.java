@@ -25,7 +25,9 @@ public class ReindexFromSnapshot {
     private static final Logger logger = LogManager.getLogger(ReindexFromSnapshot.class);
 
     public static class Args {
-        @Parameter(names = { "-n", "--snapshot-name" }, description = "The name of the snapshot to migrate", required = true)
+        @Parameter(names = {
+            "-n",
+            "--snapshot-name" }, description = "The name of the snapshot to migrate", required = true)
         public String snapshotName;
 
         @Parameter(names = {
@@ -44,7 +46,8 @@ public class ReindexFromSnapshot {
             "--s3-repo-uri" }, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2", required = false)
         public String s3RepoUri = null;
 
-        @Parameter(names = { "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
+        @Parameter(names = {
+            "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2", required = false)
         public String s3Region = null;
 
         @Parameter(names = {
@@ -52,7 +55,8 @@ public class ReindexFromSnapshot {
             "--lucene-dir" }, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
         public String luceneDirPath;
 
-        @Parameter(names = { "--source-host" }, description = "The source host and port (e.g. http://localhost:9200)", required = false)
+        @Parameter(names = {
+            "--source-host" }, description = "The source host and port (e.g. http://localhost:9200)", required = false)
         public String sourceHost = null;
 
         @Parameter(names = {
@@ -63,7 +67,8 @@ public class ReindexFromSnapshot {
             "--source-password" }, description = "The source password; if not provided, will assume no auth on source", required = false)
         public String sourcePass = null;
 
-        @Parameter(names = { "--target-host" }, description = "The target host and port (e.g. http://localhost:9200)", required = true)
+        @Parameter(names = {
+            "--target-host" }, description = "The target host and port (e.g. http://localhost:9200)", required = true)
         public String targetHost;
 
         @Parameter(names = {
@@ -121,7 +126,9 @@ public class ReindexFromSnapshot {
 
         String snapshotName = arguments.snapshotName;
         Path snapshotDirPath = (arguments.snapshotDirPath != null) ? Paths.get(arguments.snapshotDirPath) : null;
-        Path snapshotLocalRepoDirPath = (arguments.snapshotLocalRepoDirPath != null) ? Paths.get(arguments.snapshotLocalRepoDirPath) : null;
+        Path snapshotLocalRepoDirPath = (arguments.snapshotLocalRepoDirPath != null)
+            ? Paths.get(arguments.snapshotLocalRepoDirPath)
+            : null;
         Path s3LocalDirPath = (arguments.s3LocalDirPath != null) ? Paths.get(arguments.s3LocalDirPath) : null;
         String s3RepoUri = arguments.s3RepoUri;
         String s3Region = arguments.s3Region;
@@ -175,7 +182,9 @@ public class ReindexFromSnapshot {
             }
             if ((s3RepoUri != null || s3Region != null || s3LocalDirPath != null)
                 && (s3RepoUri == null || s3Region == null || s3LocalDirPath == null)) {
-                throw new IllegalArgumentException("You must specify all S3 details (repo URI, region, local directory path)");
+                throw new IllegalArgumentException(
+                    "You must specify all S3 details (repo URI, region, local directory path)"
+                );
             }
         }
 
@@ -187,11 +196,17 @@ public class ReindexFromSnapshot {
         } else if (snapshotLocalRepoDirPath != null) {
             repo = new FileSystemRepo(snapshotLocalRepoDirPath);
         } else {
-            throw new IllegalArgumentException("Could not construct a source repo from the available, user-supplied arguments");
+            throw new IllegalArgumentException(
+                "Could not construct a source repo from the available, user-supplied arguments"
+            );
         }
 
         // Set the transformer
-        Transformer transformer = TransformFunctions.getTransformer(sourceVersion, targetVersion, awarenessDimensionality);
+        Transformer transformer = TransformFunctions.getTransformer(
+            sourceVersion,
+            targetVersion,
+            awarenessDimensionality
+        );
 
         try {
 
@@ -258,14 +273,19 @@ public class ReindexFromSnapshot {
             }
 
             if (!snapshotMetadata.isSuccessful()) {
-                throw new IllegalArgumentException("Snapshot must be successful; its actual state is " + snapshotMetadata.getState());
+                throw new IllegalArgumentException(
+                    "Snapshot must be successful; its actual state is " + snapshotMetadata.getState()
+                );
             }
 
             // We might not actually get this far if the snapshot is the wrong version; we'll probably have failed to
             // parse one of the previous metadata files
             if (sourceVersion != ClusterVersion.fromInt(snapshotMetadata.getVersionId())) {
                 throw new IllegalArgumentException(
-                    "Snapshot version is " + snapshotMetadata.getVersionId() + ", but source version is " + sourceVersion
+                    "Snapshot version is "
+                        + snapshotMetadata.getVersionId()
+                        + ", but source version is "
+                        + sourceVersion
                 );
             }
 
@@ -323,9 +343,15 @@ public class ReindexFromSnapshot {
                 logger.info("Reading Index Metadata for index: " + index.getName());
                 IndexMetadata.Data indexMetadata;
                 if (sourceVersion == ClusterVersion.ES_6_8) {
-                    indexMetadata = new IndexMetadataFactory_ES_6_8(repoDataProvider).fromRepo(snapshotName, index.getName());
+                    indexMetadata = new IndexMetadataFactory_ES_6_8(repoDataProvider).fromRepo(
+                        snapshotName,
+                        index.getName()
+                    );
                 } else {
-                    indexMetadata = new IndexMetadataFactory_ES_7_10(repoDataProvider).fromRepo(snapshotName, index.getName());
+                    indexMetadata = new IndexMetadataFactory_ES_7_10(repoDataProvider).fromRepo(
+                        snapshotName,
+                        index.getName()
+                    );
                 }
                 indexMetadatas.add(indexMetadata);
             }
@@ -363,7 +389,11 @@ public class ReindexFromSnapshot {
                     bufferSize = ElasticsearchConstants_ES_7_10.BUFFER_SIZE_IN_BYTES;
                 }
                 DefaultSourceRepoAccessor repoAccessor = new DefaultSourceRepoAccessor(repo);
-                SnapshotShardUnpacker.Factory unpackerFactory = new SnapshotShardUnpacker.Factory(repoAccessor, luceneDirPath, bufferSize);
+                SnapshotShardUnpacker.Factory unpackerFactory = new SnapshotShardUnpacker.Factory(
+                    repoAccessor,
+                    luceneDirPath,
+                    bufferSize
+                );
 
                 for (IndexMetadata.Data indexMetadata : indexMetadatas) {
                     logger.info("Processing index: " + indexMetadata.getName());
@@ -413,8 +443,13 @@ public class ReindexFromSnapshot {
                         final int finalShardId = shardId; // Define in local context for the lambda
                         reindexer.reindex(targetIndex, documents)
                             .doOnError(error -> logger.error("Error during reindexing: " + error))
-                            .doOnSuccess(done -> logger.info("Reindexing completed for index " + targetIndex + ", shard " + finalShardId))
-                            // Wait for the shard reindexing to complete before proceeding; fine in this demo script, but
+                            .doOnSuccess(
+                                done -> logger.info(
+                                    "Reindexing completed for index " + targetIndex + ", shard " + finalShardId
+                                )
+                            )
+                            // Wait for the shard reindexing to complete before proceeding; fine in this demo script,
+                            // but
                             // shouldn't be done quite this way in the real RFS Worker.
                             .block();
                     }
@@ -428,7 +463,8 @@ public class ReindexFromSnapshot {
             e.printStackTrace();
         }
 
-        // Optional temporary persistent runtime flag to continue Java process after steps have completed. This should get
+        // Optional temporary persistent runtime flag to continue Java process after steps have completed. This should
+        // get
         // replaced as this app develops and becomes aware of determining work to be completed
         if (arguments.enablePersistentRun) {
             while (true) {

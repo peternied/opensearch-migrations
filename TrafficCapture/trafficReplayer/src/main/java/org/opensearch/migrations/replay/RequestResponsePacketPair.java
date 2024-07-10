@@ -44,7 +44,11 @@ public class RequestResponsePacketPair {
         int indexOfCurrentRequest
     ) {
         this.firstTrafficStreamKeyForRequest = startingAtTrafficStreamKey;
-        var requestKey = new UniqueReplayerRequestKey(startingAtTrafficStreamKey, startingSourceRequestIndex, indexOfCurrentRequest);
+        var requestKey = new UniqueReplayerRequestKey(
+            startingAtTrafficStreamKey,
+            startingSourceRequestIndex,
+            indexOfCurrentRequest
+        );
         var httpTransactionContext = startingAtTrafficStreamKey.getTrafficStreamsContext()
             .createHttpTransactionContext(requestKey, sourceTimestamp);
         requestOrResponseAccumulationContext = httpTransactionContext.createRequestAccumulationContext();
@@ -63,7 +67,8 @@ public class RequestResponsePacketPair {
         assert looseCtx instanceof IWithTypedEnclosingScope;
         assert looseCtx instanceof IReplayContexts.IRequestAccumulationContext
             || looseCtx instanceof IReplayContexts.IResponseAccumulationContext;
-        return ((IWithTypedEnclosingScope<IReplayContexts.IReplayerHttpTransactionContext>) looseCtx).getLogicalEnclosingScope();
+        return ((IWithTypedEnclosingScope<IReplayContexts.IReplayerHttpTransactionContext>) looseCtx)
+            .getLogicalEnclosingScope();
 
     }
 
@@ -78,7 +83,8 @@ public class RequestResponsePacketPair {
     public void rotateRequestGatheringToResponse() {
         var looseCtx = requestOrResponseAccumulationContext;
         assert looseCtx instanceof IReplayContexts.IRequestAccumulationContext;
-        requestOrResponseAccumulationContext = getRequestContext().getLogicalEnclosingScope().createResponseAccumulationContext();
+        requestOrResponseAccumulationContext = getRequestContext().getLogicalEnclosingScope()
+            .createResponseAccumulationContext();
     }
 
     public void addRequestData(Instant packetTimeStamp, byte[] data) {
@@ -116,7 +122,9 @@ public class RequestResponsePacketPair {
     private static final List<ITrafficStreamKey> emptyUnmodifiableList = List.of();
 
     public List<ITrafficStreamKey> getTrafficStreamsHeld() {
-        return (trafficStreamKeysBeingHeld == null) ? emptyUnmodifiableList : Collections.unmodifiableList(trafficStreamKeysBeingHeld);
+        return (trafficStreamKeysBeingHeld == null)
+            ? emptyUnmodifiableList
+            : Collections.unmodifiableList(trafficStreamKeysBeingHeld);
     }
 
     @Override

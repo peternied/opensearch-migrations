@@ -156,7 +156,9 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
             kafkaRecordsReadyToCommit.set(!nextSetOfCommitsMap.values().isEmpty());
             log.atWarn()
                 .setMessage(
-                    () -> this + " partitions revoked for " + partitions.stream().map(String::valueOf).collect(Collectors.joining(","))
+                    () -> this
+                        + " partitions revoked for "
+                        + partitions.stream().map(String::valueOf).collect(Collectors.joining(","))
                 )
                 .log();
         }
@@ -180,7 +182,9 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
             );
             log.atInfo()
                 .setMessage(
-                    () -> this + " partitions added for " + newPartitions.stream().map(String::valueOf).collect(Collectors.joining(","))
+                    () -> this
+                        + " partitions added for "
+                        + newPartitions.stream().map(String::valueOf).collect(Collectors.joining(","))
                 )
                 .log();
         }
@@ -188,7 +192,11 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
 
     public void close() {
         log.atInfo()
-            .setMessage(() -> "Kafka consumer closing.  " + "Committing (implicitly by Kafka's consumer): " + nextCommitsToString())
+            .setMessage(
+                () -> "Kafka consumer closing.  "
+                    + "Committing (implicitly by Kafka's consumer): "
+                    + nextCommitsToString()
+            )
             .log();
         kafkaConsumer.close();
     }
@@ -200,7 +208,10 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
             : Optional.of(kafkaRecordsReadyToCommit.get() ? Instant.now() : lastTouchTime.plus(keepAliveInterval));
         log.atTrace()
             .setMessage(
-                () -> "returning next required touch at " + r.map(t -> "" + t).orElse("N/A") + " from a lastTouchTime of " + lastTouchTime
+                () -> "returning next required touch at "
+                    + r.map(t -> "" + t).orElse("N/A")
+                    + " from a lastTouchTime of "
+                    + lastTouchTime
             )
             .log();
         return r;
@@ -289,7 +300,10 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
     }
 
     private Collection<TopicPartition> getActivePartitions() {
-        return partitionToOffsetLifecycleTrackerMap.keySet().stream().map(p -> new TopicPartition(topic, p)).collect(Collectors.toList());
+        return partitionToOffsetLifecycleTrackerMap.keySet()
+            .stream()
+            .map(p -> new TopicPartition(topic, p))
+            .collect(Collectors.toList());
     }
 
     public <T> Stream<T> getNextBatchOfRecords(
@@ -320,7 +334,9 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
         });
     }
 
-    private ConsumerRecords<String, byte[]> safePollWithSwallowedRuntimeExceptions(ITrafficSourceContexts.IReadChunkContext context) {
+    private ConsumerRecords<String, byte[]> safePollWithSwallowedRuntimeExceptions(
+        ITrafficSourceContexts.IReadChunkContext context
+    ) {
         try {
             lastTouchTimeRef.set(clock.instant());
             ConsumerRecords<String, byte[]> records;
@@ -363,7 +379,8 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
             log.atWarn()
                 .setCause(e)
                 .setMessage(
-                    "Unable to poll the topic: {} with our Kafka consumer. " + "Swallowing and awaiting next metadata refresh to try again."
+                    "Unable to poll the topic: {} with our Kafka consumer. "
+                        + "Swallowing and awaiting next metadata refresh to try again."
                 )
                 .addArgument(topic)
                 .log();
@@ -415,7 +432,11 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
         });
     }
 
-    private void addKeyContextForEventualCommit(ITrafficStreamKey streamKey, KafkaCommitOffsetData kafkaTsk, TopicPartition k) {
+    private void addKeyContextForEventualCommit(
+        ITrafficStreamKey streamKey,
+        KafkaCommitOffsetData kafkaTsk,
+        TopicPartition k
+    ) {
         nextSetOfKeysContextsBeingCommitted.computeIfAbsent(k, k2 -> new PriorityQueue<>())
             .add(new OrderedKeyHolder(kafkaTsk.getOffset(), streamKey));
     }
@@ -451,7 +472,9 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
             kafkaRecordsLeftToCommitEventually.set(
                 partitionToOffsetLifecycleTrackerMap.values().stream().mapToInt(OffsetLifecycleTracker::size).sum()
             );
-            log.atDebug().setMessage(() -> "Done committing now records in flight=" + kafkaRecordsLeftToCommitEventually.get()).log();
+            log.atDebug()
+                .setMessage(() -> "Done committing now records in flight=" + kafkaRecordsLeftToCommitEventually.get())
+                .log();
         } catch (RuntimeException e) {
             log.atWarn()
                 .setCause(e)
@@ -493,8 +516,8 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
         PriorityQueue<OrderedKeyHolder> orderedKeyHolders,
         long upToOffset
     ) {
-        for (var nextKeyHolder = orderedKeyHolders.peek(); nextKeyHolder != null && nextKeyHolder.offset <= upToOffset; nextKeyHolder =
-            orderedKeyHolders.peek()) {
+        for (var nextKeyHolder = orderedKeyHolders.peek(); nextKeyHolder != null
+            && nextKeyHolder.offset <= upToOffset; nextKeyHolder = orderedKeyHolders.peek()) {
             onCommitKeyCallback.accept(nextKeyHolder.tsk);
             orderedKeyHolders.poll();
         }
@@ -502,7 +525,10 @@ public class TrackingKafkaConsumer implements ConsumerRebalanceListener {
 
     String nextCommitsToString() {
         return "nextCommits="
-            + nextSetOfCommitsMap.entrySet().stream().map(kvp -> kvp.getKey() + "->" + kvp.getValue()).collect(Collectors.joining(","));
+            + nextSetOfCommitsMap.entrySet()
+                .stream()
+                .map(kvp -> kvp.getKey() + "->" + kvp.getValue())
+                .collect(Collectors.joining(","));
     }
 
     @Override

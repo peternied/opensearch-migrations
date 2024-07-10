@@ -83,7 +83,10 @@ public class RequestPipelineOrchestrator<R> {
         }
     }
 
-    void addContentRepackingHandlers(ChannelHandlerContext ctx, IAuthTransformer.StreamingFullMessageTransformer authTransfomer) {
+    void addContentRepackingHandlers(
+        ChannelHandlerContext ctx,
+        IAuthTransformer.StreamingFullMessageTransformer authTransfomer
+    ) {
         addContentParsingHandlers(ctx, null, authTransfomer);
     }
 
@@ -110,7 +113,14 @@ public class RequestPipelineOrchestrator<R> {
         // Note3: ByteBufs will be sent through when there were pending bytes left to be parsed by the
         // HttpRequestDecoder when the HttpRequestDecoder is removed from the pipeline BEFORE the
         // NettyDecodedHttpRequestHandler is removed.
-        pipeline.addLast(new NettyDecodedHttpRequestPreliminaryConvertHandler<R>(transformer, chunkSizes, this, httpTransactionContext));
+        pipeline.addLast(
+            new NettyDecodedHttpRequestPreliminaryConvertHandler<R>(
+                transformer,
+                chunkSizes,
+                this,
+                httpTransactionContext
+            )
+        );
         addLoggingHandler(pipeline, "B");
     }
 
@@ -162,7 +172,8 @@ public class RequestPipelineOrchestrator<R> {
 
     void addBaselineHandlers(ChannelPipeline pipeline) {
         addLoggingHandler(pipeline, "J");
-        // IN: ByteBufs(2) + HttpJsonMessage(4) with headers only + HttpContent(1) (if the repackaging handlers were skipped)
+        // IN: ByteBufs(2) + HttpJsonMessage(4) with headers only + HttpContent(1) (if the repackaging handlers were
+        // skipped)
         // OUT: ByteBufs(3) which are sized similarly to how they were received
         pipeline.addLast(new NettyJsonToByteBufHandler(Collections.unmodifiableList(chunkSizes)));
         pipeline.addLast(new ReadMeteringHandler(httpTransactionContext::aggregateOutputChunk));
@@ -171,7 +182,10 @@ public class RequestPipelineOrchestrator<R> {
         addLoggingHandler(pipeline, "K");
         pipeline.addLast(
             OFFLOADING_HANDLER_NAME,
-            new NettySendByteBufsToPacketHandlerHandler<R>(packetReceiver, httpTransactionContext.getLogicalEnclosingScope())
+            new NettySendByteBufsToPacketHandlerHandler<R>(
+                packetReceiver,
+                httpTransactionContext.getLogicalEnclosingScope()
+            )
         );
     }
 

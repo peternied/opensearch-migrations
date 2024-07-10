@@ -61,7 +61,9 @@ class RequestSenderOrchestratorTest extends InstrumentationTest {
             return new TextTrackedFuture<>(CompletableFuture.supplyAsync(() -> {
                 try {
                     lastCheckIsReady.release();
-                    log.atDebug().setMessage(() -> "trying to acquire semaphore for packet #" + index + " and id=" + id).log();
+                    log.atDebug()
+                        .setMessage(() -> "trying to acquire semaphore for packet #" + index + " and id=" + id)
+                        .log();
                     consumeIsReady.acquire();
                     log.atDebug().setMessage(() -> "Acquired semaphore for packet #" + index + " and id=" + id).log();
                 } catch (InterruptedException e) {
@@ -194,7 +196,12 @@ class RequestSenderOrchestratorTest extends InstrumentationTest {
         final int NUM_REQUESTS_TO_SCHEDULE = 20;
         final int NUM_REPEATS = 2;
 
-        try (var httpServer = SimpleHttpServer.makeServer(false, r -> TestHttpServerContext.makeResponse(r, Duration.ofMillis(100)))) {
+        try (
+            var httpServer = SimpleHttpServer.makeServer(
+                false,
+                r -> TestHttpServerContext.makeResponse(r, Duration.ofMillis(100))
+            )
+        ) {
             var testServerUri = httpServer.localhostEndpoint();
             var clientConnectionPool = TrafficReplayerTopLevel.makeClientConnectionPool(
                 testServerUri,
@@ -240,11 +247,16 @@ class RequestSenderOrchestratorTest extends InstrumentationTest {
                 var arr = cf.get();
                 Assertions.assertNull(arr.error);
                 Assertions.assertTrue(arr.responseSizeInBytes > 0);
-                var packetBytesArr = arr.responsePackets.stream().map(SimpleEntry::getValue).collect(Collectors.toList());
+                var packetBytesArr = arr.responsePackets.stream()
+                    .map(SimpleEntry::getValue)
+                    .collect(Collectors.toList());
                 try (
                     var bufStream = NettyUtils.createRefCntNeutralCloseableByteBufStream(packetBytesArr);
                     var messageHolder = RefSafeHolder.create(
-                        HttpByteBufFormatter.parseHttpMessageFromBufs(HttpByteBufFormatter.HttpMessageType.RESPONSE, bufStream)
+                        HttpByteBufFormatter.parseHttpMessageFromBufs(
+                            HttpByteBufFormatter.HttpMessageType.RESPONSE,
+                            bufStream
+                        )
                     )
                 ) {
                     var message = messageHolder.get();
@@ -253,7 +265,9 @@ class RequestSenderOrchestratorTest extends InstrumentationTest {
                     Assertions.assertEquals(200, response.status().code());
                     var body = response.content();
                     Assertions.assertEquals(
-                        TestHttpServerContext.SERVER_RESPONSE_BODY_PREFIX + TestHttpServerContext.getUriForIthRequest(i / NUM_REPEATS),
+                        TestHttpServerContext.SERVER_RESPONSE_BODY_PREFIX + TestHttpServerContext.getUriForIthRequest(
+                            i / NUM_REPEATS
+                        ),
                         body.toString(StandardCharsets.UTF_8)
                     );
                 }

@@ -25,14 +25,17 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class TransformationLoader {
-    public static final String WRONG_JSON_STRUCTURE_MESSAGE = "Must specify the top-level configuration list with a sequence of "
-        + "maps that have only one key each, where the key is the name of the transformer to be configured.";
+    public static final String WRONG_JSON_STRUCTURE_MESSAGE =
+        "Must specify the top-level configuration list with a sequence of "
+            + "maps that have only one key each, where the key is the name of the transformer to be configured.";
     public static final Pattern CLASS_NAME_PATTERN = Pattern.compile("^[^{}]*$");
     private final List<IJsonTransformerProvider> providers;
     ObjectMapper objMapper = new ObjectMapper();
 
     public TransformationLoader() {
-        ServiceLoader<IJsonTransformerProvider> transformerProviders = ServiceLoader.load(IJsonTransformerProvider.class);
+        ServiceLoader<IJsonTransformerProvider> transformerProviders = ServiceLoader.load(
+            IJsonTransformerProvider.class
+        );
         var inProgressProviders = new ArrayList<IJsonTransformerProvider>();
         for (var provider : transformerProviders) {
             log.info("Adding IJsonTransfomerProvider: " + provider);
@@ -56,7 +59,8 @@ public class TransformationLoader {
         }
     }
 
-    protected Stream<IJsonTransformer> getTransformerFactoryFromServiceLoader(String fullConfig) throws JsonProcessingException {
+    protected Stream<IJsonTransformer> getTransformerFactoryFromServiceLoader(String fullConfig)
+        throws JsonProcessingException {
         var configList = fullConfig == null ? List.of() : parseFullConfig(fullConfig);
         if (configList.isEmpty() || providers.isEmpty()) {
             log.warn("No transformer configuration specified.  No custom transformations will be performed");
@@ -72,13 +76,17 @@ public class TransformationLoader {
         if (keys.size() != 1) {
             throw new IllegalArgumentException(WRONG_JSON_STRUCTURE_MESSAGE);
         }
-        var key = keys.stream().findFirst().orElseThrow(() -> new IllegalArgumentException(WRONG_JSON_STRUCTURE_MESSAGE));
+        var key = keys.stream()
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException(WRONG_JSON_STRUCTURE_MESSAGE));
         for (var p : providers) {
             var transformerName = p.getName();
             if (transformerName.equals(key)) {
                 var configuration = c.get(key);
                 log.atInfo()
-                    .setMessage(() -> "Creating a transformer through provider=" + p + " with configuration=" + configuration)
+                    .setMessage(
+                        () -> "Creating a transformer through provider=" + p + " with configuration=" + configuration
+                    )
                     .log();
                 return p.createTransformer(configuration);
             }

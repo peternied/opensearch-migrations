@@ -43,6 +43,9 @@ class TrafficStreamKeyWithKafkaRecordId extends PojoTrafficStreamKeyAndContext i
 
     @Override
     public String toString() {
-        return new StringJoiner("|").add(super.toString()).add("partition=" + partition).add("offset=" + offset).toString();
+        return new StringJoiner("|").add(super.toString())
+            .add("partition=" + partition)
+            .add("offset=" + offset)
+            .toString();
     }
 }

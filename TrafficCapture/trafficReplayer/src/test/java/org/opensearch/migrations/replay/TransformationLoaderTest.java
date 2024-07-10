@@ -31,7 +31,11 @@ public class TransformationLoaderTest {
 
     @Test
     public void testThatSimpleNoopTransformerLoads() throws Exception {
-        var noopTransformer = new TransformationLoader().getTransformerFactoryLoader("localhost", null, "NoopTransformerProvider");
+        var noopTransformer = new TransformationLoader().getTransformerFactoryLoader(
+            "localhost",
+            null,
+            "NoopTransformerProvider"
+        );
         var origDoc = parseAsMap(SampleContents.loadSampleJsonRequestAsString());
         var output = noopTransformer.transformJson(origDoc);
         Assertions.assertEquals(mapper.writeValueAsString(origDoc), mapper.writeValueAsString(output));
@@ -47,7 +51,9 @@ public class TransformationLoaderTest {
 
     @Test
     public void testThatNoConfigMeansNoThrow() throws Exception {
-        var transformer = Assertions.assertDoesNotThrow(() -> new TransformationLoader().getTransformerFactoryLoader("localhost"));
+        var transformer = Assertions.assertDoesNotThrow(
+            () -> new TransformationLoader().getTransformerFactoryLoader("localhost")
+        );
         Assertions.assertNotNull(transformer);
         var origDoc = parseAsMap(SampleContents.loadSampleJsonRequestAsString());
         Assertions.assertNotNull(transformer.transformJson(origDoc));

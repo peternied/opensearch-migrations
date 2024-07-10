@@ -10,7 +10,11 @@ public class UniqueReplayerRequestKey extends UniqueSourceRequestKey {
     @Getter
     public final int replayerRequestIndex;
 
-    public UniqueReplayerRequestKey(ITrafficStreamKey streamKey, int sourceOffsetAtStartOfAccumulation, int replayerIndex) {
+    public UniqueReplayerRequestKey(
+        ITrafficStreamKey streamKey,
+        int sourceOffsetAtStartOfAccumulation,
+        int replayerIndex
+    ) {
         this.trafficStreamKey = streamKey;
         this.sourceRequestIndexSessionIdentifier = sourceOffsetAtStartOfAccumulation;
         this.replayerRequestIndex = replayerIndex;

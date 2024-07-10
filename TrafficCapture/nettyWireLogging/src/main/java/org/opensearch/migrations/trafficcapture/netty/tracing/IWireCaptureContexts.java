@@ -28,7 +28,9 @@ public abstract class IWireCaptureContexts {
         public static final String BYTES_WRITTEN = "bytesWritten";
     }
 
-    public interface ICapturingConnectionContext extends org.opensearch.migrations.tracing.commoncontexts.IConnectionContext {
+    public interface ICapturingConnectionContext
+        extends
+            org.opensearch.migrations.tracing.commoncontexts.IConnectionContext {
         IHttpMessageContext createInitialRequestContext();
 
         void onUnregistered();

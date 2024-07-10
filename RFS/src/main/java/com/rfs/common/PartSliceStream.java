@@ -18,7 +18,12 @@ public class PartSliceStream extends InputStream {
     private InputStream currentStream;
     private boolean initialized = false;
 
-    public PartSliceStream(SourceRepoAccessor repoAccessor, ShardMetadata.FileInfo fileMetadata, String indexId, int shardId) {
+    public PartSliceStream(
+        SourceRepoAccessor repoAccessor,
+        ShardMetadata.FileInfo fileMetadata,
+        String indexId,
+        int shardId
+    ) {
         this.repoAccessor = repoAccessor;
         this.fileMetadata = fileMetadata;
         this.indexId = indexId;

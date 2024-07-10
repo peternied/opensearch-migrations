@@ -19,7 +19,10 @@ public class SnapshotRepoData_ES_7_10 {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
-            SnapshotRepoData_ES_7_10 data = mapper.readValue(new File(filePath.toString()), SnapshotRepoData_ES_7_10.class);
+            SnapshotRepoData_ES_7_10 data = mapper.readValue(
+                new File(filePath.toString()),
+                SnapshotRepoData_ES_7_10.class
+            );
             data.filePath = filePath;
             return data;
         } catch (IOException e) {

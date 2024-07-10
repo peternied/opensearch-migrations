@@ -52,7 +52,13 @@ public class HeaderTransformerTest extends InstrumentationTest {
             transformingHandler,
             dummyAggregatedResponse,
             testPacketCapture,
-            contentLength -> "GET / HTTP/1.1\r\n" + "HoSt: " + SOURCE_CLUSTER_NAME + "\r\n" + "content-length: " + contentLength + "\r\n"
+            contentLength -> "GET / HTTP/1.1\r\n"
+                + "HoSt: "
+                + SOURCE_CLUSTER_NAME
+                + "\r\n"
+                + "content-length: "
+                + contentLength
+                + "\r\n"
         );
     }
 
@@ -86,7 +92,10 @@ public class HeaderTransformerTest extends InstrumentationTest {
             Assertions.assertNotNull(aggregatedRawResponse);
             // do nothing but check connectivity between the layers in the bottom most handler
             innermostFinalizeCallCount.incrementAndGet();
-            Assertions.assertEquals(HttpRequestTransformationStatus.COMPLETED, aggregatedRawResponse.transformationStatus);
+            Assertions.assertEquals(
+                HttpRequestTransformationStatus.COMPLETED,
+                aggregatedRawResponse.transformationStatus
+            );
         }), () -> "HeaderTransformerTest.runRandomPayloadWithTransformer.assertionCheck").get();
         Assertions.assertEquals(
             TestUtils.resolveReferenceString(

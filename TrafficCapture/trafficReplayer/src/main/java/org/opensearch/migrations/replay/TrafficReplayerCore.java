@@ -116,7 +116,9 @@ public abstract class TrafficReplayerCore {
                 () -> "waiting for response to be accumulated for " + ctx
             );
             finishedAccumulatingResponseFuture.future.whenComplete(
-                (v, t) -> log.atDebug().setMessage(() -> "Done receiving captured stream for " + ctx + ":" + v.requestData).log()
+                (v, t) -> log.atDebug()
+                    .setMessage(() -> "Done receiving captured stream for " + ctx + ":" + v.requestData)
+                    .log()
             );
 
             var allWorkFinishedForTransactionFuture = sendRequestAfterGoingThroughWorkQueue(ctx, request, requestKey)
@@ -150,9 +152,15 @@ public abstract class TrafficReplayerCore {
             var httpSentRequestFuture = workDequeuedByLimiterFuture.thenCompose(
                 ignored -> transformAndSendRequest(replayEngine, request, ctx),
                 () -> "Waiting to get response from target"
-            ).whenComplete((v, t) -> liveTrafficStreamLimiter.doneProcessing(wi), () -> "releasing work item for the traffic limiter");
+            )
+                .whenComplete(
+                    (v, t) -> liveTrafficStreamLimiter.doneProcessing(wi),
+                    () -> "releasing work item for the traffic limiter"
+                );
             httpSentRequestFuture.future.whenComplete(
-                (v, t) -> log.atTrace().setMessage(() -> "Summary response value for " + requestKey + " returned=" + v).log()
+                (v, t) -> log.atTrace()
+                    .setMessage(() -> "Summary response value for " + requestKey + " returned=" + v)
+                    .log()
             );
             return httpSentRequestFuture;
         }
@@ -169,16 +177,28 @@ public abstract class TrafficReplayerCore {
                 // Escalate it up out handling stack and shutdown.
                 if (t == null || t instanceof Exception) {
                     try (var tupleHandlingContext = httpContext.createTupleContext()) {
-                        packageAndWriteResponse(tupleHandlingContext, resultTupleConsumer, rrPair, summary, (Exception) t);
+                        packageAndWriteResponse(
+                            tupleHandlingContext,
+                            resultTupleConsumer,
+                            rrPair,
+                            summary,
+                            (Exception) t
+                        );
                     }
                     commitTrafficStreams(rrPair.completionStatus, rrPair.trafficStreamKeysBeingHeld);
                     return null;
                 } else {
-                    log.atError().setCause(t).setMessage(() -> "Throwable passed to handle() for " + context + ".  Rethrowing.").log();
+                    log.atError()
+                        .setCause(t)
+                        .setMessage(() -> "Throwable passed to handle() for " + context + ".  Rethrowing.")
+                        .log();
                     throw Lombok.sneakyThrow(t);
                 }
             } catch (Error error) {
-                log.atError().setCause(error).setMessage(() -> "Caught error and initiating TrafficReplayer shutdown").log();
+                log.atError()
+                    .setCause(error)
+                    .setMessage(() -> "Caught error and initiating TrafficReplayer shutdown")
+                    .log();
                 shutdown(error);
                 throw error;
             } catch (Exception e) {
@@ -213,7 +233,10 @@ public abstract class TrafficReplayerCore {
             RequestResponsePacketPair.ReconstructionStatus status,
             List<ITrafficStreamKey> trafficStreamKeysBeingHeld
         ) {
-            commitTrafficStreams(status != RequestResponsePacketPair.ReconstructionStatus.CLOSED_PREMATURELY, trafficStreamKeysBeingHeld);
+            commitTrafficStreams(
+                status != RequestResponsePacketPair.ReconstructionStatus.CLOSED_PREMATURELY,
+                trafficStreamKeysBeingHeld
+            );
         }
 
         @SneakyThrows
@@ -258,7 +281,10 @@ public abstract class TrafficReplayerCore {
             log.trace("done sending and finalizing data to the packet handler");
 
             try (var requestResponseTuple = getSourceTargetCaptureTuple(tupleHandlingContext, rrPair, summary, t)) {
-                log.atDebug().setMessage("{}").addArgument(() -> "Source/Target Request/Response tuple: " + requestResponseTuple).log();
+                log.atDebug()
+                    .setMessage("{}")
+                    .addArgument(() -> "Source/Target Request/Response tuple: " + requestResponseTuple)
+                    .log();
                 tupleWriter.accept(requestResponseTuple);
             }
 
@@ -266,7 +292,11 @@ public abstract class TrafficReplayerCore {
                 throw new CompletionException(t);
             }
             if (summary.getError() != null) {
-                log.atInfo().setCause(summary.getError()).setMessage("Exception for {}: ").addArgument(tupleHandlingContext).log();
+                log.atInfo()
+                    .setCause(summary.getError())
+                    .setMessage("Exception for {}: ")
+                    .addArgument(tupleHandlingContext)
+                    .log();
                 exceptionRequestCount.incrementAndGet();
             } else if (summary.getTransformationStatus() == HttpRequestTransformationStatus.ERROR) {
                 log.atInfo()
@@ -343,7 +373,9 @@ public abstract class TrafficReplayerCore {
                 () -> transformAllData(inputRequestTransformerFactory.create(ctx), packetsSupplier)
             );
             log.atDebug()
-                .setMessage(() -> "finalizeRequest future for transformation of " + ctx + " = " + transformationCompleteFuture)
+                .setMessage(
+                    () -> "finalizeRequest future for transformation of " + ctx + " = " + transformationCompleteFuture
+                )
                 .log();
             // It might be safer to chain this work directly inside the scheduleWork call above so that the
             // read buffer horizons aren't set after the transformation work finishes, but after the packets
@@ -397,7 +429,11 @@ public abstract class TrafficReplayerCore {
             var logLabel = packetHandler.getClass().getSimpleName();
             var packets = packetSupplier.get().map(Unpooled::wrappedBuffer);
             packets.forEach(packetData -> {
-                log.atDebug().setMessage(() -> logLabel + " sending " + packetData.readableBytes() + " bytes to the packetHandler").log();
+                log.atDebug()
+                    .setMessage(
+                        () -> logLabel + " sending " + packetData.readableBytes() + " bytes to the packetHandler"
+                    )
+                    .log();
                 var consumeFuture = packetHandler.consumeBytes(packetData);
                 log.atDebug().setMessage(() -> logLabel + " consumeFuture = " + consumeFuture).log();
             });
@@ -426,13 +462,18 @@ public abstract class TrafficReplayerCore {
             if (stopReadingRef.get()) {
                 break;
             }
-            this.nextChunkFutureRef.set(trafficChunkStream.readNextTrafficStreamChunk(topLevelContext::createReadChunkContext));
+            this.nextChunkFutureRef.set(
+                trafficChunkStream.readNextTrafficStreamChunk(topLevelContext::createReadChunkContext)
+            );
             List<ITrafficStreamWithKey> trafficStreams = null;
             try {
                 trafficStreams = this.nextChunkFutureRef.get().get();
             } catch (ExecutionException ex) {
                 if (ex.getCause() instanceof EOFException) {
-                    log.atWarn().setCause(ex.getCause()).setMessage("Got an EOF on the stream.  " + "Done reading traffic streams.").log();
+                    log.atWarn()
+                        .setCause(ex.getCause())
+                        .setMessage("Got an EOF on the stream.  " + "Done reading traffic streams.")
+                        .log();
                     break;
                 } else {
                     log.atWarn().setCause(ex).setMessage("Done reading traffic streams due to exception.").log();
@@ -446,7 +487,9 @@ public abstract class TrafficReplayerCore {
                         .collect(Collectors.joining(";"))
                 )
                     .filter(s -> !s.isEmpty())
-                    .ifPresent(s -> log.atInfo().setMessage("{}").addArgument("TrafficStream Summary: {" + s + "}").log());
+                    .ifPresent(
+                        s -> log.atInfo().setMessage("{}").addArgument("TrafficStream Summary: {" + s + "}").log()
+                    );
             }
             trafficStreams.forEach(trafficToHttpTransactionAccumulator::accept);
         }

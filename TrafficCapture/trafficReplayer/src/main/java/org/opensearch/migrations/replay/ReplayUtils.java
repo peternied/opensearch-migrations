@@ -25,6 +25,8 @@ public class ReplayUtils {
     }
 
     public static SequenceInputStream byteArraysToInputStream(Stream<byte[]> data) {
-        return new SequenceInputStream(Collections.enumeration(data.map(ByteArrayInputStream::new).collect(Collectors.toList())));
+        return new SequenceInputStream(
+            Collections.enumeration(data.map(ByteArrayInputStream::new).collect(Collectors.toList()))
+        );
     }
 }

@@ -26,7 +26,8 @@ public class WireCaptureContexts extends IWireCaptureContexts {
             return (IRootWireLoggingContext) super.getRootInstrumentationScope();
         }
 
-        public static class MetricInstruments extends org.opensearch.migrations.trafficcapture.tracing.ConnectionContext.MetricInstruments {
+        public static class MetricInstruments extends
+            org.opensearch.migrations.trafficcapture.tracing.ConnectionContext.MetricInstruments {
             public final LongCounter unregisteredCounter;
             public final LongCounter removedCounter;
 
@@ -63,9 +64,9 @@ public class WireCaptureContexts extends IWireCaptureContexts {
     }
 
     @Getter
-    public abstract static class HttpMessageContext extends BaseNestedSpanContext<RootWireLoggingContext, IConnectionContext>
-        implements
-            IWireCaptureContexts.IHttpMessageContext {
+    public abstract static class HttpMessageContext extends BaseNestedSpanContext<
+        RootWireLoggingContext,
+        IConnectionContext> implements IWireCaptureContexts.IHttpMessageContext {
 
         final long sourceRequestIndex;
 
@@ -93,7 +94,11 @@ public class WireCaptureContexts extends IWireCaptureContexts {
         @Override
         public IWireCaptureContexts.IWaitingForResponseContext createWaitingForResponseContext() {
             close();
-            return new WaitingForResponseContext(getRootInstrumentationScope(), getImmediateEnclosingScope(), sourceRequestIndex);
+            return new WaitingForResponseContext(
+                getRootInstrumentationScope(),
+                getImmediateEnclosingScope(),
+                sourceRequestIndex
+            );
         }
 
         @Override
@@ -105,12 +110,20 @@ public class WireCaptureContexts extends IWireCaptureContexts {
         @Override
         public IWireCaptureContexts.IRequestContext createNextRequestContext() {
             close();
-            return new RequestContext(getRootInstrumentationScope(), getImmediateEnclosingScope(), sourceRequestIndex + 1);
+            return new RequestContext(
+                getRootInstrumentationScope(),
+                getImmediateEnclosingScope(),
+                sourceRequestIndex + 1
+            );
         }
     }
 
     public static class RequestContext extends HttpMessageContext implements IWireCaptureContexts.IRequestContext {
-        public RequestContext(RootWireLoggingContext rootWireLoggingContext, IConnectionContext enclosingScope, long sourceRequestIndex) {
+        public RequestContext(
+            RootWireLoggingContext rootWireLoggingContext,
+            IConnectionContext enclosingScope,
+            long sourceRequestIndex
+        ) {
             super(rootWireLoggingContext, enclosingScope, sourceRequestIndex);
         }
 
@@ -122,8 +135,12 @@ public class WireCaptureContexts extends IWireCaptureContexts {
 
             public MetricInstruments(Meter meter, String activityName) {
                 super(meter, activityName);
-                blockingRequestCounter = meter.counterBuilder(MetricNames.BLOCKING_REQUEST).setUnit(COUNT_UNITS).build();
-                requestsNotOffloadedCounter = meter.counterBuilder(MetricNames.CAPTURE_SUPPRESSED).setUnit(COUNT_UNITS).build();
+                blockingRequestCounter = meter.counterBuilder(MetricNames.BLOCKING_REQUEST)
+                    .setUnit(COUNT_UNITS)
+                    .build();
+                requestsNotOffloadedCounter = meter.counterBuilder(MetricNames.CAPTURE_SUPPRESSED)
+                    .setUnit(COUNT_UNITS)
+                    .build();
                 fullyParsedRequestCounter = meter.counterBuilder(MetricNames.FULL_REQUEST).setUnit(COUNT_UNITS).build();
                 bytesReadCounter = meter.counterBuilder(MetricNames.BYTES_READ).setUnit(BYTES_UNIT).build();
             }
@@ -160,7 +177,11 @@ public class WireCaptureContexts extends IWireCaptureContexts {
     }
 
     public static class BlockingContext extends HttpMessageContext implements IWireCaptureContexts.IBlockingContext {
-        public BlockingContext(RootWireLoggingContext rootWireLoggingContext, IConnectionContext enclosingScope, long sourceRequestIndex) {
+        public BlockingContext(
+            RootWireLoggingContext rootWireLoggingContext,
+            IConnectionContext enclosingScope,
+            long sourceRequestIndex
+        ) {
             super(rootWireLoggingContext, enclosingScope, sourceRequestIndex);
         }
 
@@ -185,7 +206,9 @@ public class WireCaptureContexts extends IWireCaptureContexts {
         }
     }
 
-    public static class WaitingForResponseContext extends HttpMessageContext implements IWireCaptureContexts.IWaitingForResponseContext {
+    public static class WaitingForResponseContext extends HttpMessageContext
+        implements
+            IWireCaptureContexts.IWaitingForResponseContext {
         public WaitingForResponseContext(
             RootWireLoggingContext rootWireLoggingContext,
             IConnectionContext enclosingScope,
@@ -216,7 +239,11 @@ public class WireCaptureContexts extends IWireCaptureContexts {
     }
 
     public static class ResponseContext extends HttpMessageContext implements IWireCaptureContexts.IResponseContext {
-        public ResponseContext(RootWireLoggingContext rootWireLoggingContext, IConnectionContext enclosingScope, long sourceRequestIndex) {
+        public ResponseContext(
+            RootWireLoggingContext rootWireLoggingContext,
+            IConnectionContext enclosingScope,
+            long sourceRequestIndex
+        ) {
             super(rootWireLoggingContext, enclosingScope, sourceRequestIndex);
         }
 

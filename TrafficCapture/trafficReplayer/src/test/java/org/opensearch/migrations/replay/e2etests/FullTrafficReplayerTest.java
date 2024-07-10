@@ -105,9 +105,13 @@ public class FullTrafficReplayerTest extends InstrumentationTest {
 
         @Override
         @SneakyThrows
-        protected void wrapUpWorkAndEmitSummary(ReplayEngine replayEngine, CapturedTrafficToHttpTransactionAccumulator accumulator) {
+        protected void wrapUpWorkAndEmitSummary(
+            ReplayEngine replayEngine,
+            CapturedTrafficToHttpTransactionAccumulator accumulator
+        ) {
             var startTime = System.nanoTime();
-            for (Duration waitTime = Duration.ofMillis(10); replayEngine.isWorkOutstanding(); waitTime = waitTime.multipliedBy(2)) {
+            for (Duration waitTime = Duration.ofMillis(10); replayEngine.isWorkOutstanding(); waitTime = waitTime
+                .multipliedBy(2)) {
                 var totalDurationSpent = Duration.ofNanos(System.nanoTime() - startTime);
                 if (maxWaitTime.minus(totalDurationSpent).isNegative()) {
                     throw new TimeoutException(
@@ -241,44 +245,54 @@ public class FullTrafficReplayerTest extends InstrumentationTest {
             )
         ) {
             var nonTrackingContext = TestContext.noOtelTracking();
-            var streamAndSizes = ExhaustiveTrafficStreamGenerator.generateStreamAndSumOfItsTransactions(nonTrackingContext, 16, true);
+            var streamAndSizes = ExhaustiveTrafficStreamGenerator.generateStreamAndSumOfItsTransactions(
+                nonTrackingContext,
+                16,
+                true
+            );
             var numExpectedRequests = streamAndSizes.numHttpTransactions;
             var trafficStreams = streamAndSizes.stream.collect(Collectors.toList());
             log.atInfo()
                 .setMessage(
-                    () -> trafficStreams.stream().map(ts -> TrafficStreamUtils.summarizeTrafficStream(ts)).collect(Collectors.joining("\n"))
+                    () -> trafficStreams.stream()
+                        .map(ts -> TrafficStreamUtils.summarizeTrafficStream(ts))
+                        .collect(Collectors.joining("\n"))
                 )
                 .log();
-            Function<TestContext, ISimpleTrafficCaptureSource> trafficSourceSupplier = rc -> new ISimpleTrafficCaptureSource() {
-                boolean isDone = false;
+            Function<TestContext, ISimpleTrafficCaptureSource> trafficSourceSupplier =
+                rc -> new ISimpleTrafficCaptureSource() {
+                    boolean isDone = false;
 
-                @Override
-                public CompletableFuture<List<ITrafficStreamWithKey>> readNextTrafficStreamChunk(
-                    Supplier<ITrafficSourceContexts.IReadChunkContext> contextSupplier
-                ) {
-                    if (isDone) {
-                        return CompletableFuture.failedFuture(new EOFException());
-                    } else {
-                        isDone = true;
-                        return CompletableFuture.completedFuture(
-                            trafficStreams.stream()
-                                .map(
-                                    ts -> new PojoTrafficStreamAndKey(
-                                        ts,
-                                        PojoTrafficStreamKeyAndContext.build(ts, rc::createTrafficStreamContextForTest)
+                    @Override
+                    public CompletableFuture<List<ITrafficStreamWithKey>> readNextTrafficStreamChunk(
+                        Supplier<ITrafficSourceContexts.IReadChunkContext> contextSupplier
+                    ) {
+                        if (isDone) {
+                            return CompletableFuture.failedFuture(new EOFException());
+                        } else {
+                            isDone = true;
+                            return CompletableFuture.completedFuture(
+                                trafficStreams.stream()
+                                    .map(
+                                        ts -> new PojoTrafficStreamAndKey(
+                                            ts,
+                                            PojoTrafficStreamKeyAndContext.build(
+                                                ts,
+                                                rc::createTrafficStreamContextForTest
+                                            )
+                                        )
                                     )
-                                )
-                                .map(v -> (ITrafficStreamWithKey) v)
-                                .collect(Collectors.toList())
-                        );
+                                    .map(v -> (ITrafficStreamWithKey) v)
+                                    .collect(Collectors.toList())
+                            );
+                        }
                     }
-                }
 
-                @Override
-                public CommitResult commitTrafficStream(ITrafficStreamKey trafficStreamKey) throws IOException {
-                    return null;
-                }
-            };
+                    @Override
+                    public CommitResult commitTrafficStream(ITrafficStreamKey trafficStreamKey) throws IOException {
+                        return null;
+                    }
+                };
 
             TrafficReplayerRunner.runReplayer(numExpectedRequests, (rc, threadPrefix) -> {
                 try {
@@ -331,7 +345,10 @@ public class FullTrafficReplayerTest extends InstrumentationTest {
             });
             workThread.start();
             workThread.join(1000 * 60);
-            Assertions.assertFalse(workThread.isAlive(), "Expected the work thread to die and not be confused by the imposter thread");
+            Assertions.assertFalse(
+                workThread.isAlive(),
+                "Expected the work thread to die and not be confused by the imposter thread"
+            );
         } finally {
             imposterThread.interrupt();
             imposterThread.join();
@@ -361,7 +378,9 @@ public class FullTrafficReplayerTest extends InstrumentationTest {
             var trafficStreams = streamAndSizes.stream.collect(Collectors.toList());
             log.atInfo()
                 .setMessage(
-                    () -> trafficStreams.stream().map(ts -> TrafficStreamUtils.summarizeTrafficStream(ts)).collect(Collectors.joining("\n"))
+                    () -> trafficStreams.stream()
+                        .map(ts -> TrafficStreamUtils.summarizeTrafficStream(ts))
+                        .collect(Collectors.joining("\n"))
                 )
                 .log();
             var trafficSourceSupplier = new ArrayCursorTrafficSourceContext(trafficStreams);
@@ -372,7 +391,10 @@ public class FullTrafficReplayerTest extends InstrumentationTest {
                 () -> TestContext.noOtelTracking(),
                 trafficSourceSupplier
             );
-            Assertions.assertEquals(trafficSourceSupplier.trafficStreamsList.size(), trafficSourceSupplier.nextReadCursor.get());
+            Assertions.assertEquals(
+                trafficSourceSupplier.trafficStreamsList.size(),
+                trafficSourceSupplier.nextReadCursor.get()
+            );
             log.info("done");
         }
     }

@@ -9,12 +9,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
@@ -60,6 +58,7 @@ import com.rfs.common.SnapshotShardUnpacker;
 import com.rfs.common.SourceRepo;
 import com.rfs.framework.PreloadedSearchClusterContainer;
 import com.rfs.framework.SearchClusterContainer;
+import com.rfs.http.SearchClusterRequests;
 import com.rfs.transformers.TransformFunctions;
 import com.rfs.transformers.Transformer;
 import com.rfs.version_es_7_10.ElasticsearchConstants_ES_7_10;
@@ -83,7 +82,9 @@ import reactor.core.publisher.Flux;
 public class FullTest {
     public static final String GENERATOR_BASE_IMAGE = "migrations/elasticsearch_client_test_console:latest";
     final static long TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS = 3600;
-    final static Pattern CAT_INDICES_INDEX_COUNT_PATTERN = Pattern.compile("(?:\\S+\\s+){2}(\\S+)\\s+(?:\\S+\\s+){3}(\\S+)");
+    final static Pattern CAT_INDICES_INDEX_COUNT_PATTERN = Pattern.compile(
+        "(?:\\S+\\s+){2}(\\S+)\\s+(?:\\S+\\s+){3}(\\S+)"
+    );
     final static List<SearchClusterContainer.Version> SOURCE_IMAGES = List.of(
         SearchClusterContainer.ES_V7_10_2,
         SearchClusterContainer.ES_V7_17
@@ -96,11 +97,18 @@ public class FullTest {
     public static final int MAX_SHARD_SIZE_BYTES = 64 * 1024 * 1024;
 
     public static Stream<Arguments> makeDocumentMigrationArgs() {
-        List<Object[]> sourceImageArgs = SOURCE_IMAGES.stream().map(name -> makeParamsForBase(name)).collect(Collectors.toList());
-        var targetImageNames = TARGET_IMAGES.stream().map(SearchClusterContainer.Version::getImageName).collect(Collectors.toList());
+        List<Object[]> sourceImageArgs = SOURCE_IMAGES.stream()
+            .map(name -> makeParamsForBase(name))
+            .collect(Collectors.toList());
+        var targetImageNames = TARGET_IMAGES.stream()
+            .map(SearchClusterContainer.Version::getImageName)
+            .collect(Collectors.toList());
         var numWorkers = List.of(1, 3, 40);
         return sourceImageArgs.stream()
-            .flatMap(a -> targetImageNames.stream().flatMap(b -> numWorkers.stream().map(c -> Arguments.of(a[0], a[1], a[2], b, c))));
+            .flatMap(
+                a -> targetImageNames.stream()
+                    .flatMap(b -> numWorkers.stream().map(c -> Arguments.of(a[0], a[1], a[2], b, c)))
+            );
     }
 
     private static Object[] makeParamsForBase(SearchClusterContainer.Version baseSourceImage) {
@@ -181,7 +189,9 @@ public class FullTest {
                         .setCause(thrownException.getCause())
                         .log()
                 );
-                exceptionResults.forEach(e -> Assertions.assertInstanceOf(RfsMigrateDocuments.NoWorkLeftException.class, e));
+                exceptionResults.forEach(
+                    e -> Assertions.assertInstanceOf(RfsMigrateDocuments.NoWorkLeftException.class, e)
+                );
 
                 // for now, lets make sure that we got all of the
                 Assertions.assertInstanceOf(
@@ -206,28 +216,20 @@ public class FullTest {
         }
     }
 
-    private void checkClusterMigrationOnFinished(SearchClusterContainer esSourceContainer, OpensearchContainer<?> osTargetContainer) {
+    private void checkClusterMigrationOnFinished(
+        SearchClusterContainer esSourceContainer,
+        OpensearchContainer<?> osTargetContainer
+    ) {
         var targetClient = new RestClient(new ConnectionDetails(osTargetContainer.getHttpHostAddress(), null, null));
-        var sourceMap = getIndexToCountMap(new RestClient(new ConnectionDetails(esSourceContainer.getUrl(), null, null)));
+        var sourceClient = new RestClient(new ConnectionDetails(esSourceContainer.getUrl(), null, null));
+
+        var requests = new SearchClusterRequests();
+        var sourceMap = requests.getMapOfIndexAndDocCount(sourceClient);
         var refreshResponse = targetClient.get("_refresh");
         Assertions.assertEquals(200, refreshResponse.code);
-        var targetMap = getIndexToCountMap(targetClient);
-        MatcherAssert.assertThat(targetMap, Matchers.equalTo(sourceMap));
-    }
+        var targetMap = requests.getMapOfIndexAndDocCount(targetClient);
 
-    private Map<String, Integer> getIndexToCountMap(RestClient client) {
-        ;
-        var lines = Optional.ofNullable(client.get("_cat/indices"))
-            .flatMap(r -> Optional.ofNullable(r.body))
-            .map(b -> b.split("\n"))
-            .orElse(new String[0]);
-        return Arrays.stream(lines).map(line -> {
-            var matcher = CAT_INDICES_INDEX_COUNT_PATTERN.matcher(line);
-            return !matcher.find() ? null : new AbstractMap.SimpleEntry<>(matcher.group(1), matcher.group(2));
-        })
-            .filter(Objects::nonNull)
-            .filter(kvp -> !kvp.getKey().startsWith("."))
-            .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, kvp -> Integer.parseInt(kvp.getValue())));
+        MatcherAssert.assertThat(targetMap, Matchers.equalTo(sourceMap));
     }
 
     @SneakyThrows
@@ -241,20 +243,30 @@ public class FullTest {
     ) {
         for (int runNumber = 0;; ++runNumber) {
             try {
-                var workResult = migrateDocumentsWithOneWorker(sourceRepo, snapshotName, indexAllowlist, targetAddress, clockJitter);
+                var workResult = migrateDocumentsWithOneWorker(
+                    sourceRepo,
+                    snapshotName,
+                    indexAllowlist,
+                    targetAddress,
+                    clockJitter
+                );
                 if (workResult == DocumentsRunner.CompletionStatus.NOTHING_DONE) {
                     return null;
                 } else {
                     runCounter.incrementAndGet();
                 }
             } catch (RfsMigrateDocuments.NoWorkLeftException e) {
-                log.info("No work at all was found.  " + "Presuming that work was complete and that all worker processes should terminate");
+                log.info(
+                    "No work at all was found.  "
+                        + "Presuming that work was complete and that all worker processes should terminate"
+                );
                 throw e;
             } catch (Exception e) {
                 log.atError()
                     .setCause(e)
                     .setMessage(
-                        () -> "Caught an exception, " + "but just going to run again with this worker to simulate task/container recycling"
+                        () -> "Caught an exception, "
+                            + "but just going to run again with this worker to simulate task/container recycling"
                     )
                     .log();
             }
@@ -269,7 +281,12 @@ public class FullTest {
     ) {
         SnapshotRepo.Provider repoDataProvider = new SnapshotRepoProvider_ES_7_10(sourceRepo);
         GlobalMetadata.Factory metadataFactory = new GlobalMetadataFactory_ES_7_10(repoDataProvider);
-        GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(targetClient, List.of(), List.of(), List.of());
+        GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
+            targetClient,
+            List.of(),
+            List.of(),
+            List.of()
+        );
         Transformer transformer = TransformFunctions.getTransformer(ClusterVersion.ES_7_10, ClusterVersion.OS_2_11, 1);
         new MetadataRunner(snapshotName, metadataFactory, metadataCreator, transformer).migrateMetadata();
 
@@ -407,7 +424,8 @@ public class FullTest {
                 var sourceRepo = new FileSystemRepo(tempDirSnapshot);
                 migrateMetadata(sourceRepo, targetClient, SNAPSHOT_NAME, INDEX_ALLOWLIST);
 
-                // Stop the target container if we don't want it to be available. We've already cached the address it was
+                // Stop the target container if we don't want it to be available. We've already cached the address it
+                // was
                 // using, so we can have reasonable confidence that nothing else will be using it and bork our test.
                 if (!targetAvailable) {
                     osTargetContainer.stop();
@@ -419,7 +437,12 @@ public class FullTest {
 
                 // Kick off the doc migration process
                 log.atInfo().setMessage("Running RfsMigrateDocuments with args: " + Arrays.toString(args)).log();
-                ProcessBuilder processBuilder = new ProcessBuilder(javaExecutable, "-cp", classpath, "com.rfs.RfsMigrateDocuments");
+                ProcessBuilder processBuilder = new ProcessBuilder(
+                    javaExecutable,
+                    "-cp",
+                    classpath,
+                    "com.rfs.RfsMigrateDocuments"
+                );
                 processBuilder.command().addAll(Arrays.asList(args));
                 processBuilder.redirectErrorStream(true);
 
@@ -447,14 +470,20 @@ public class FullTest {
                         log.atError().setMessage("Process still running, attempting to force kill it...").log();
                         process.destroyForcibly(); // ..then avada kedavra
                     }
-                    Assertions.fail("The process did not finish within the timeout period (" + timeoutSeconds + " seconds).");
+                    Assertions.fail(
+                        "The process did not finish within the timeout period (" + timeoutSeconds + " seconds)."
+                    );
                 }
 
                 int actualExitCode = process.exitValue();
                 log.atInfo().setMessage("Process exited with code: " + actualExitCode).log();
 
                 // Check if the exit code is as expected
-                Assertions.assertEquals(expectedExitCode, actualExitCode, "The program did not exit with the expected status code.");
+                Assertions.assertEquals(
+                    expectedExitCode,
+                    actualExitCode,
+                    "The program did not exit with the expected status code."
+                );
 
             } finally {
                 deleteTree(tempDirSnapshot);

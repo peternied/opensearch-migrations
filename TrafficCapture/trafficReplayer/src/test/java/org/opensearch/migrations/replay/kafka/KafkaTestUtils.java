@@ -33,8 +33,14 @@ public class KafkaTestUtils {
 
     static Producer<String, byte[]> buildKafkaProducer(String bootstrapServers) {
         var kafkaProps = new Properties();
-        kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
-        kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArraySerializer");
+        kafkaProps.put(
+            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+            "org.apache.kafka.common.serialization.StringSerializer"
+        );
+        kafkaProps.put(
+            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+            "org.apache.kafka.common.serialization.ByteArraySerializer"
+        );
         // Property details:
         // https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#delivery-timeout-ms
         kafkaProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 10000);
@@ -86,12 +92,17 @@ public class KafkaTestUtils {
         while (true) {
             try {
                 var record = new ProducerRecord(TEST_TOPIC_NAME, recordId, trafficStream.toByteArray());
-                var tsKeyStr = TrafficChannelKeyFormatter.format(trafficStream.getNodeId(), trafficStream.getConnectionId());
+                var tsKeyStr = TrafficChannelKeyFormatter.format(
+                    trafficStream.getNodeId(),
+                    trafficStream.getConnectionId()
+                );
                 log.info("sending record with trafficStream=" + tsKeyStr);
                 var sendFuture = kafkaProducer.send(record, (metadata, exception) -> {
                     log.atInfo()
                         .setCause(exception)
-                        .setMessage(() -> "completed send of TrafficStream with key=" + tsKeyStr + " metadata=" + metadata)
+                        .setMessage(
+                            () -> "completed send of TrafficStream with key=" + tsKeyStr + " metadata=" + metadata
+                        )
                         .log();
                 });
                 var recordMetadata = sendFuture.get();
@@ -104,7 +115,12 @@ public class KafkaTestUtils {
         }
     }
 
-    static Future produceKafkaRecord(String testTopicName, Producer<String, byte[]> kafkaProducer, int i, AtomicInteger sendCompleteCount) {
+    static Future produceKafkaRecord(
+        String testTopicName,
+        Producer<String, byte[]> kafkaProducer,
+        int i,
+        AtomicInteger sendCompleteCount
+    ) {
         final var timestamp = Instant.now().plus(Duration.ofDays(i));
         var trafficStream = KafkaTestUtils.makeTestTrafficStreamWithFixedTime(timestamp, i);
         var record = new ProducerRecord(testTopicName, makeKey(i), trafficStream.toByteArray());

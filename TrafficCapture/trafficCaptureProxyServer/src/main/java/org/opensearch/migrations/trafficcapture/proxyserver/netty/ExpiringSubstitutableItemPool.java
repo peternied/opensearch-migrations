@@ -80,7 +80,14 @@ public class ExpiringSubstitutableItemPool<F extends Future<U>, U> {
         }
 
         public Stats(Stats o) {
-            this(o.nItemsCreated, o.nItemsExpired, o.nHotGets, o.nColdGets, o.totalDurationBuildingItems, o.totalWaitTimeForCallers);
+            this(
+                o.nItemsCreated,
+                o.nItemsExpired,
+                o.nHotGets,
+                o.nColdGets,
+                o.totalDurationBuildingItems,
+                o.totalWaitTimeForCallers
+            );
         }
 
         @Override
@@ -206,7 +213,9 @@ public class ExpiringSubstitutableItemPool<F extends Future<U>, U> {
             log.atTrace().setMessage(() -> "copying stats (" + System.identityHashCode(stats) + ")=" + stats).log();
             return new Stats(stats);
         }).get();
-        log.atTrace().setMessage(() -> "Got copied value of (" + System.identityHashCode(copiedStats) + ")=" + copiedStats).log();
+        log.atTrace()
+            .setMessage(() -> "Got copied value of (" + System.identityHashCode(copiedStats) + ")=" + copiedStats)
+            .log();
         return copiedStats;
     }
 
@@ -237,10 +246,12 @@ public class ExpiringSubstitutableItemPool<F extends Future<U>, U> {
             }
         }
 
-        BiFunction<F, String, F> durationTrackingDecoratedItem = (itemsFuture, label) -> (F) itemsFuture.addListener(f -> {
-            stats.addWaitTime(Duration.between(startTime, Instant.now()));
-            log.trace(label + "returning value=" + f.get() + " from future " + itemsFuture);
-        });
+        BiFunction<F, String, F> durationTrackingDecoratedItem = (itemsFuture, label) -> (F) itemsFuture.addListener(
+            f -> {
+                stats.addWaitTime(Duration.between(startTime, Instant.now()));
+                log.trace(label + "returning value=" + f.get() + " from future " + itemsFuture);
+            }
+        );
         stats.addColdGet();
         var inProgressIt = inProgressItems.iterator();
 

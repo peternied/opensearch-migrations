@@ -40,7 +40,10 @@ public class RequestSenderOrchestrator {
     ) {
         var delayMs = getDelayFromNowMs(timestamp);
         NettyFutureBinders.bindNettyScheduleToCompletableFuture(eventLoop, delayMs, existingFuture.future);
-        return new TextTrackedFuture<>(existingFuture.future, "scheduling to run next send at " + timestamp + " in " + delayMs + "ms");
+        return new TextTrackedFuture<>(
+            existingFuture.future,
+            "scheduling to run next send at " + timestamp + " in " + delayMs + "ms"
+        );
     }
 
     public CompletableFuture<Void> bindNettyScheduleToCompletableFuture(
@@ -92,17 +95,15 @@ public class RequestSenderOrchestrator {
         //
         // Making them more independent means that the work item being enqueued is lighter-weight and
         // less likely to cause a connection timeout.
-        return bindNettyScheduleToCompletableFuture(connectionSession.eventLoop, timestamp).getDeferredFutureThroughHandle(
-            (nullValue, scheduleFailure) -> {
+        return bindNettyScheduleToCompletableFuture(connectionSession.eventLoop, timestamp)
+            .getDeferredFutureThroughHandle((nullValue, scheduleFailure) -> {
                 scheduledContext.close();
                 if (scheduleFailure == null) {
                     return task.get();
                 } else {
                     return TextTrackedFuture.failedFuture(scheduleFailure, () -> "netty scheduling failure");
                 }
-            },
-            () -> "The scheduled callback is running work for " + ctx
-        );
+            }, () -> "The scheduled callback is running work for " + ctx);
     }
 
     public TrackedFuture<String, AggregatedRawResponse> scheduleRequest(
@@ -124,7 +125,13 @@ public class RequestSenderOrchestrator {
             ctx.getLogicalEnclosingScope(),
             sessionNumber,
             channelInteractionNum,
-            connectionReplaySession -> scheduleSendRequestOnConnectionReplaySession(ctx, connectionReplaySession, start, interval, packets)
+            connectionReplaySession -> scheduleSendRequestOnConnectionReplaySession(
+                ctx,
+                connectionReplaySession,
+                start,
+                interval,
+                packets
+            )
         );
     }
 
@@ -167,23 +174,27 @@ public class RequestSenderOrchestrator {
         Function<ConnectionReplaySession, TrackedFuture<String, T>> onSessionCallback
     ) {
         final var replaySession = clientConnectionPool.getCachedSession(ctx, sessionNumber);
-        return NettyFutureBinders.bindNettySubmitToTrackableFuture(replaySession.eventLoop).getDeferredFutureThroughHandle((v, t) -> {
-            log.atTrace()
-                .setMessage("{}")
-                .addArgument(
-                    () -> "adding work item at slot "
-                        + channelInteractionNumber
-                        + " for "
-                        + replaySession.getChannelKeyContext()
-                        + " with "
-                        + replaySession.scheduleSequencer
-                )
-                .log();
-            return replaySession.scheduleSequencer.addFutureForWork(
-                channelInteractionNumber,
-                f -> f.thenCompose(voidValue -> onSessionCallback.apply(replaySession), () -> "Work callback on replay session")
-            );
-        }, () -> "Waiting for sequencer to finish for slot " + channelInteractionNumber);
+        return NettyFutureBinders.bindNettySubmitToTrackableFuture(replaySession.eventLoop)
+            .getDeferredFutureThroughHandle((v, t) -> {
+                log.atTrace()
+                    .setMessage("{}")
+                    .addArgument(
+                        () -> "adding work item at slot "
+                            + channelInteractionNumber
+                            + " for "
+                            + replaySession.getChannelKeyContext()
+                            + " with "
+                            + replaySession.scheduleSequencer
+                    )
+                    .log();
+                return replaySession.scheduleSequencer.addFutureForWork(
+                    channelInteractionNumber,
+                    f -> f.thenCompose(
+                        voidValue -> onSessionCallback.apply(replaySession),
+                        () -> "Work callback on replay session"
+                    )
+                );
+            }, () -> "Waiting for sequencer to finish for slot " + channelInteractionNumber);
     }
 
     private TrackedFuture<String, AggregatedRawResponse> scheduleSendRequestOnConnectionReplaySession(
@@ -196,7 +207,10 @@ public class RequestSenderOrchestrator {
         var eventLoop = connectionReplaySession.eventLoop;
         var scheduledContext = ctx.createScheduledContext(startTime);
         int channelInterationNum = ctx.getReplayerRequestKey().getSourceRequestIndex();
-        var diagnosticCtx = new IndexedChannelInteraction(ctx.getLogicalEnclosingScope().getChannelKey(), channelInterationNum);
+        var diagnosticCtx = new IndexedChannelInteraction(
+            ctx.getLogicalEnclosingScope().getChannelKey(),
+            channelInterationNum
+        );
         return scheduleOnConnectionReplaySession(
             diagnosticCtx,
             connectionReplaySession,
@@ -251,7 +265,9 @@ public class RequestSenderOrchestrator {
             : "Per-connection TrafficStream ordering should force a time ordering on incoming requests";
         var workPointTrigger = schedule.appendTaskTrigger(atTime, task.kind).scheduleFuture;
         var workFuture = task.getRunnable().apply(workPointTrigger);
-        log.atTrace().setMessage(() -> channelInteraction + " added a scheduled event at " + atTime + "... " + schedule).log();
+        log.atTrace()
+            .setMessage(() -> channelInteraction + " added a scheduled event at " + atTime + "... " + schedule)
+            .log();
         if (wasEmpty) {
             bindNettyScheduleToCompletableFuture(eventLoop, atTime, workPointTrigger.future);
         }
@@ -310,7 +326,10 @@ public class RequestSenderOrchestrator {
                 () -> "recursing, once ready"
             );
         } else {
-            return consumeFuture.getDeferredFutureThroughHandle((v, t) -> packetReceiver.finalizeRequest(), () -> "finalizing, once ready");
+            return consumeFuture.getDeferredFutureThroughHandle(
+                (v, t) -> packetReceiver.finalizeRequest(),
+                () -> "finalizing, once ready"
+            );
         }
     }
 }

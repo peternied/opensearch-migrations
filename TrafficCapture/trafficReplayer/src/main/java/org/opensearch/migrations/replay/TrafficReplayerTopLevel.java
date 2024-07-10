@@ -88,14 +88,25 @@ public class TrafficReplayerTopLevel extends TrafficReplayerCore implements Auto
         TrafficStreamLimiter trafficStreamLimiter,
         IStreamableWorkTracker<Void> workTracker
     ) {
-        super(context, serverUri, authTransformerFactory, jsonTransformer, clientConnectionPool, trafficStreamLimiter, workTracker);
+        super(
+            context,
+            serverUri,
+            authTransformerFactory,
+            jsonTransformer,
+            clientConnectionPool,
+            trafficStreamLimiter,
+            workTracker
+        );
         allRemainingWorkFutureOrShutdownSignalRef = new AtomicReference<>();
         shutdownReasonRef = new AtomicReference<>();
         shutdownFutureRef = new AtomicReference<>();
     }
 
-    public static ClientConnectionPool makeClientConnectionPool(URI serverUri, boolean allowInsecureConnections, int numSendingThreads)
-        throws SSLException {
+    public static ClientConnectionPool makeClientConnectionPool(
+        URI serverUri,
+        boolean allowInsecureConnections,
+        int numSendingThreads
+    ) throws SSLException {
         return makeClientConnectionPool(serverUri, allowInsecureConnections, numSendingThreads, null);
     }
 
@@ -145,11 +156,12 @@ public class TrafficReplayerTopLevel extends TrafficReplayerCore implements Auto
         );
         var replayEngine = new ReplayEngine(senderOrchestrator, trafficSource, timeShifter);
 
-        CapturedTrafficToHttpTransactionAccumulator trafficToHttpTransactionAccumulator = new CapturedTrafficToHttpTransactionAccumulator(
-            observedPacketConnectionTimeout,
-            "(see command line option " + TrafficReplayer.PACKET_TIMEOUT_SECONDS_PARAMETER_NAME + ")",
-            new TrafficReplayerAccumulationCallbacks(replayEngine, resultTupleConsumer, trafficSource)
-        );
+        CapturedTrafficToHttpTransactionAccumulator trafficToHttpTransactionAccumulator =
+            new CapturedTrafficToHttpTransactionAccumulator(
+                observedPacketConnectionTimeout,
+                "(see command line option " + TrafficReplayer.PACKET_TIMEOUT_SECONDS_PARAMETER_NAME + ")",
+                new TrafficReplayerAccumulationCallbacks(replayEngine, resultTupleConsumer, trafficSource)
+            );
         try {
             pullCaptureFromSourceToAccumulator(trafficSource, trafficToHttpTransactionAccumulator);
         } catch (InterruptedException ex) {
@@ -242,8 +254,8 @@ public class TrafficReplayerTopLevel extends TrafficReplayerCore implements Auto
         shutdown(null).get(); // if somebody already HAD run shutdown, it will return the future already created
     }
 
-    protected void waitForRemainingWork(Level logLevel, @NonNull Duration timeout) throws ExecutionException, InterruptedException,
-        TimeoutException {
+    protected void waitForRemainingWork(Level logLevel, @NonNull Duration timeout) throws ExecutionException,
+        InterruptedException, TimeoutException {
 
         if (!liveTrafficStreamLimiter.isStopped()) {
             var streamLimiterHasRunEverything = new CompletableFuture<Void>();
@@ -255,16 +267,22 @@ public class TrafficReplayerTopLevel extends TrafficReplayerCore implements Auto
         }
 
         var workTracker = (IStreamableWorkTracker<Void>) requestWorkTracker;
-        Map.Entry<UniqueReplayerRequestKey, TrackedFuture<String, TransformedTargetRequestAndResponse>>[] allRemainingWorkArray =
-            workTracker.getRemainingItems().toArray(Map.Entry[]::new);
+        Map.Entry<
+            UniqueReplayerRequestKey,
+            TrackedFuture<String, TransformedTargetRequestAndResponse>>[] allRemainingWorkArray = workTracker
+                .getRemainingItems()
+                .toArray(Map.Entry[]::new);
         writeStatusLogsForRemainingWork(logLevel, allRemainingWorkArray);
 
         // remember, this block is ONLY for the leftover items. Lots of other items have been processed
         // and were removed from the live map (hopefully)
-        TrackedFuture<String, TransformedTargetRequestAndResponse>[] allCompletableFuturesArray = Arrays.stream(allRemainingWorkArray)
-            .map(Map.Entry::getValue)
-            .toArray(TrackedFuture[]::new);
-        var allWorkFuture = TextTrackedFuture.allOf(allCompletableFuturesArray, () -> "TrafficReplayer.AllWorkFinished");
+        TrackedFuture<String, TransformedTargetRequestAndResponse>[] allCompletableFuturesArray = Arrays.stream(
+            allRemainingWorkArray
+        ).map(Map.Entry::getValue).toArray(TrackedFuture[]::new);
+        var allWorkFuture = TextTrackedFuture.allOf(
+            allCompletableFuturesArray,
+            () -> "TrafficReplayer.AllWorkFinished"
+        );
         try {
             if (allRemainingWorkFutureOrShutdownSignalRef.compareAndSet(null, allWorkFuture)) {
                 allWorkFuture.get(timeout);
@@ -310,7 +328,9 @@ public class TrafficReplayerTopLevel extends TrafficReplayerCore implements Auto
 
     protected static void writeStatusLogsForRemainingWork(
         Level logLevel,
-        Map.Entry<UniqueReplayerRequestKey, TrackedFuture<String, TransformedTargetRequestAndResponse>>[] allRemainingWorkArray
+        Map.Entry<
+            UniqueReplayerRequestKey,
+            TrackedFuture<String, TransformedTargetRequestAndResponse>>[] allRemainingWorkArray
     ) {
         log.atLevel(logLevel).log("All remaining work to wait on " + allRemainingWorkArray.length);
         if (log.isInfoEnabled()) {
@@ -319,7 +339,11 @@ public class TrafficReplayerTopLevel extends TrafficReplayerCore implements Auto
             loggingEventBuilderToUse.setMessage(
                 () -> " items: "
                     + Arrays.stream(allRemainingWorkArray)
-                        .map(kvp -> kvp.getKey() + " --> " + kvp.getValue().formatAsString(TrafficReplayerTopLevel::formatWorkItem))
+                        .map(
+                            kvp -> kvp.getKey()
+                                + " --> "
+                                + kvp.getValue().formatAsString(TrafficReplayerTopLevel::formatWorkItem)
+                        )
                         .limit(itemLimit)
                         .collect(Collectors.joining("\n"))
             ).log();
@@ -348,7 +372,9 @@ public class TrafficReplayerTopLevel extends TrafficReplayerCore implements Auto
         shutdownReasonRef.compareAndSet(null, error);
         if (!shutdownFutureRef.compareAndSet(null, new CompletableFuture<>())) {
             log.atError()
-                .setMessage(() -> "Shutdown was already signaled by {}.  " + "Ignoring this shutdown request due to {}.")
+                .setMessage(
+                    () -> "Shutdown was already signaled by {}.  " + "Ignoring this shutdown request due to {}."
+                )
                 .addArgument(shutdownReasonRef.get())
                 .addArgument(error)
                 .log();

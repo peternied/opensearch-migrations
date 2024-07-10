@@ -28,7 +28,11 @@ public class FileConnectionCaptureFactory implements IConnectionCaptureFactory<V
     private String nodeId;
     private final int bufferSize;
 
-    public FileConnectionCaptureFactory(String nodeId, int bufferSize, BiFunction<String, Integer, FileOutputStream> outputStreamCreator) {
+    public FileConnectionCaptureFactory(
+        String nodeId,
+        int bufferSize,
+        BiFunction<String, Integer, FileOutputStream> outputStreamCreator
+    ) {
         this.nodeId = nodeId;
         this.outputStreamCreator = outputStreamCreator;
         this.bufferSize = bufferSize;
@@ -61,7 +65,9 @@ public class FileConnectionCaptureFactory implements IConnectionCaptureFactory<V
         @Override
         public CompletableFuture<Void> kickoffCloseStream(CodedOutputStreamHolder outputStreamHolder, int index) {
             if (!(outputStreamHolder instanceof CodedOutputStreamAndByteBufferWrapper)) {
-                throw new IllegalArgumentException("Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder);
+                throw new IllegalArgumentException(
+                    "Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder
+                );
             }
             var osh = (CodedOutputStreamAndByteBufferWrapper) outputStreamHolder;
             return CompletableFuture.runAsync(() -> {

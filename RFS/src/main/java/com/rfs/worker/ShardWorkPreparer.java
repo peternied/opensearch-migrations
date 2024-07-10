@@ -49,7 +49,12 @@ public class ShardWorkPreparer {
 
             @Override
             public Void onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) throws IOException {
-                prepareShardWorkItems(scopedWorkCoordinator.workCoordinator, metadataFactory, snapshotName, indexAllowlist);
+                prepareShardWorkItems(
+                    scopedWorkCoordinator.workCoordinator,
+                    metadataFactory,
+                    snapshotName,
+                    indexAllowlist
+                );
                 return null;
             }
 
@@ -82,9 +87,13 @@ public class ShardWorkPreparer {
                 IndexMetadata.Data indexMetadata = metadataFactory.fromRepo(snapshotName, index.getName());
                 log.info("Index " + indexMetadata.getName() + " has " + indexMetadata.getNumberOfShards() + " shards");
                 IntStream.range(0, indexMetadata.getNumberOfShards()).forEach(shardId -> {
-                    log.info("Creating Documents Work Item for index: " + indexMetadata.getName() + ", shard: " + shardId);
+                    log.info(
+                        "Creating Documents Work Item for index: " + indexMetadata.getName() + ", shard: " + shardId
+                    );
                     try {
-                        workCoordinator.createUnassignedWorkItem(IndexAndShard.formatAsWorkItemString(indexMetadata.getName(), shardId));
+                        workCoordinator.createUnassignedWorkItem(
+                            IndexAndShard.formatAsWorkItemString(indexMetadata.getName(), shardId)
+                        );
                     } catch (IOException e) {
                         throw Lombok.sneakyThrow(e);
                     }

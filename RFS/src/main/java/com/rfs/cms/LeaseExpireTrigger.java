@@ -27,7 +27,10 @@ public class LeaseExpireTrigger implements AutoCloseable {
     }
 
     public LeaseExpireTrigger(Consumer<String> onLeaseExpired, Clock currentTimeSupplier) {
-        scheduledExecutorService = Executors.newScheduledThreadPool(1, new DefaultThreadFactory("leaseWatchingProcessKillerThread"));
+        scheduledExecutorService = Executors.newScheduledThreadPool(
+            1,
+            new DefaultThreadFactory("leaseWatchingProcessKillerThread")
+        );
         this.workItemToLeaseMap = new ConcurrentHashMap<>();
         this.onLeaseExpired = onLeaseExpired;
         this.currentTimeSupplier = currentTimeSupplier;

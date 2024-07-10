@@ -21,7 +21,9 @@ public class V0_1TrafficCaptureSource extends CompressedFileTrafficCaptureSource
     @Override
     protected ITrafficStreamWithKey modifyTrafficStream(ITrafficStreamWithKey streamWithKey) {
         var incoming = streamWithKey.getStream();
-        var outgoingBuilder = TrafficStream.newBuilder().setNodeId(incoming.getNodeId()).setConnectionId(incoming.getConnectionId());
+        var outgoingBuilder = TrafficStream.newBuilder()
+            .setNodeId(incoming.getNodeId())
+            .setConnectionId(incoming.getConnectionId());
         if (incoming.hasNumber()) {
             outgoingBuilder.setNumber(incoming.getNumber());
         } else {

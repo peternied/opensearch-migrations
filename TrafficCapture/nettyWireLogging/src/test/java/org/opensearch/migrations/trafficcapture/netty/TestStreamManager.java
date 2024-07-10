@@ -31,7 +31,9 @@ class TestStreamManager extends OrderedStreamLifecyleManager implements AutoClos
     @Override
     public CompletableFuture<Object> kickoffCloseStream(CodedOutputStreamHolder outputStreamHolder, int index) {
         if (!(outputStreamHolder instanceof CodedOutputStreamAndByteBufferWrapper)) {
-            throw new IllegalStateException("Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder);
+            throw new IllegalStateException(
+                "Unknown outputStreamHolder sent back to StreamManager: " + outputStreamHolder
+            );
         }
         var osh = (CodedOutputStreamAndByteBufferWrapper) outputStreamHolder;
         CodedOutputStream cos = osh.getOutputStream();

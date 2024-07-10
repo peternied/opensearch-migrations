@@ -91,7 +91,8 @@ public class TrafficReplayer {
     public static class Parameters {
         @Parameter(required = true, arity = 1, description = "URI of the target cluster/domain")
         String targetUriString;
-        @Parameter(required = false, names = { "--insecure" }, arity = 0, description = "Do not check the server's certificate")
+        @Parameter(required = false, names = {
+            "--insecure" }, arity = 0, description = "Do not check the server's certificate")
         boolean allowInsecureConnections;
 
         @Parameter(required = false, names = {
@@ -251,7 +252,10 @@ public class TrafficReplayer {
         }
         var globalContextTracker = new ActiveContextTracker();
         var perContextTracker = new ActiveContextTrackerByActivityType();
-        var scheduledExecutorService = Executors.newScheduledThreadPool(1, new DefaultThreadFactory("activeWorkMonitorThread"));
+        var scheduledExecutorService = Executors.newScheduledThreadPool(
+            1,
+            new DefaultThreadFactory("activeWorkMonitorThread")
+        );
         var contextTrackers = new CompositeContextTracker(globalContextTracker, perContextTracker);
         var topContext = new RootReplayerContext(
             RootOtelContext.initializeOpenTelemetryWithCollectorOrAsNoop(params.otelCollectorEndpoint, "replay"),
@@ -276,8 +280,16 @@ public class TrafficReplayer {
                 topContext,
                 uri,
                 authTransformer,
-                new TransformationLoader().getTransformerFactoryLoader(uri.getHost(), params.userAgent, transformerConfig),
-                TrafficReplayerTopLevel.makeClientConnectionPool(uri, params.allowInsecureConnections, params.numClientThreads),
+                new TransformationLoader().getTransformerFactoryLoader(
+                    uri.getHost(),
+                    params.userAgent,
+                    transformerConfig
+                ),
+                TrafficReplayerTopLevel.makeClientConnectionPool(
+                    uri,
+                    params.allowInsecureConnections,
+                    params.numClientThreads
+                ),
                 new TrafficStreamLimiter(params.maxConcurrentRequests),
                 orderedRequestTracker
             );
@@ -292,7 +304,9 @@ public class TrafficReplayer {
             ActiveContextMonitor finalActiveContextMonitor = activeContextMonitor;
             scheduledExecutorService.scheduleAtFixedRate(() -> {
                 activeContextLogger.atInfo()
-                    .setMessage(() -> "Total requests outstanding at " + Instant.now() + ": " + tr.requestWorkTracker.size())
+                    .setMessage(
+                        () -> "Total requests outstanding at " + Instant.now() + ": " + tr.requestWorkTracker.size()
+                    )
                     .log();
                 finalActiveContextMonitor.run();
             }, ACTIVE_WORK_MONITOR_CADENCE_MS, ACTIVE_WORK_MONITOR_CADENCE_MS, TimeUnit.MILLISECONDS);
@@ -311,7 +325,9 @@ public class TrafficReplayer {
         } finally {
             scheduledExecutorService.shutdown();
             if (activeContextMonitor != null) {
-                var acmLevel = globalContextTracker.getActiveScopesByAge().findAny().isPresent() ? Level.ERROR : Level.INFO;
+                var acmLevel = globalContextTracker.getActiveScopesByAge().findAny().isPresent()
+                    ? Level.ERROR
+                    : Level.INFO;
                 activeContextLogger.atLevel(acmLevel).setMessage(() -> "Outstanding work after shutdown...").log();
                 activeContextMonitor.run();
                 activeContextLogger.atLevel(acmLevel).setMessage(() -> "[end of run]]").log();
@@ -362,13 +378,17 @@ public class TrafficReplayer {
             && params.authHeaderValue != null
             && params.useSigV4ServiceAndRegion != null
             && params.awsAuthHeaderUserAndSecret != null) {
-            throw new IllegalArgumentException("Cannot specify more than one auth option: " + formatAuthArgFlagsAsString());
+            throw new IllegalArgumentException(
+                "Cannot specify more than one auth option: " + formatAuthArgFlagsAsString()
+            );
         }
 
         var authHeaderValue = params.authHeaderValue;
         if (params.awsAuthHeaderUserAndSecret != null) {
             if (params.awsAuthHeaderUserAndSecret.size() != 2) {
-                throw new ParameterException(AWS_AUTH_HEADER_USER_AND_SECRET_ARG + " must specify two arguments, <USERNAME> <SECRET_ARN>");
+                throw new ParameterException(
+                    AWS_AUTH_HEADER_USER_AND_SECRET_ARG + " must specify two arguments, <USERNAME> <SECRET_ARN>"
+                );
             }
             var secretArnStr = params.awsAuthHeaderUserAndSecret.get(1);
             var regionOp = Arn.fromString(secretArnStr).region();
@@ -382,7 +402,10 @@ public class TrafficReplayer {
                 var credentialsProvider = DefaultCredentialsProvider.create();
                 AWSAuthService awsAuthService = new AWSAuthService(credentialsProvider, Region.of(regionOp.get()))
             ) {
-                authHeaderValue = awsAuthService.getBasicAuthHeaderFromSecret(params.awsAuthHeaderUserAndSecret.get(0), secretArnStr);
+                authHeaderValue = awsAuthService.getBasicAuthHeaderFromSecret(
+                    params.awsAuthHeaderUserAndSecret.get(0),
+                    secretArnStr
+                );
             }
         }
 
@@ -392,7 +415,10 @@ public class TrafficReplayer {
             var serviceAndRegion = params.useSigV4ServiceAndRegion.split(",");
             if (serviceAndRegion.length != 2) {
                 throw new IllegalArgumentException(
-                    "Format for " + SIGV_4_AUTH_HEADER_SERVICE_REGION_ARG + " must be " + "'SERVICE_NAME,REGION', such as 'es,us-east-1'"
+                    "Format for "
+                        + SIGV_4_AUTH_HEADER_SERVICE_REGION_ARG
+                        + " must be "
+                        + "'SERVICE_NAME,REGION', such as 'es,us-east-1'"
                 );
             }
             String serviceName = serviceAndRegion[0];

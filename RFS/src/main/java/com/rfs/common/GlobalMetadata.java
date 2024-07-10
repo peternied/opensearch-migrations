@@ -16,7 +16,11 @@ public class GlobalMetadata {
     * Defines the behavior required to read a snapshot's global metadata as JSON and convert it into a Data object
     */
     public static interface Factory {
-        private JsonNode getJsonNode(SnapshotRepo.Provider repoDataProvider, String snapshotName, SmileFactory smileFactory) {
+        private JsonNode getJsonNode(
+            SnapshotRepo.Provider repoDataProvider,
+            String snapshotName,
+            SmileFactory smileFactory
+        ) {
             String snapshotId = repoDataProvider.getSnapshotId(snapshotName);
 
             if (snapshotId == null) {
@@ -26,7 +30,8 @@ public class GlobalMetadata {
             Path filePath = repoDataProvider.getRepo().getGlobalMetadataFilePath(snapshotId);
 
             try (InputStream fis = new FileInputStream(filePath.toFile())) {
-                // Don't fully understand what the value of this code is, but it progresses the stream so we need to do it
+                // Don't fully understand what the value of this code is, but it progresses the stream so we need to do
+                // it
                 // See:
                 // https://github.com/elastic/elasticsearch/blob/6.8/server/src/main/java/org/elasticsearch/repositories/blobstore/ChecksumBlobStoreFormat.java#L100
                 byte[] bytes = fis.readAllBytes();

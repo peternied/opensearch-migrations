@@ -9,7 +9,11 @@ import com.rfs.common.ClusterVersion;
 public class TransformFunctions {
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    public static Transformer getTransformer(ClusterVersion sourceVersion, ClusterVersion targetVersion, int dimensionality) {
+    public static Transformer getTransformer(
+        ClusterVersion sourceVersion,
+        ClusterVersion targetVersion,
+        int dimensionality
+    ) {
         if (sourceVersion == ClusterVersion.ES_6_8 && targetVersion == ClusterVersion.OS_2_11) {
             return new Transformer_ES_6_8_to_OS_2_11(dimensionality);
         } else if (sourceVersion == ClusterVersion.ES_7_10 && targetVersion == ClusterVersion.OS_2_11) {
@@ -108,7 +112,9 @@ public class TransformFunctions {
                 // dimensionality, then up it to the next largest multiple of the dimensionality.
                 int numberOfCopies = settingsRoot.get("number_of_replicas").asInt() + 1;
                 int remainder = numberOfCopies % dimensionality;
-                int newNumberOfCopies = (remainder > 0) ? (numberOfCopies + dimensionality - remainder) : numberOfCopies;
+                int newNumberOfCopies = (remainder > 0)
+                    ? (numberOfCopies + dimensionality - remainder)
+                    : numberOfCopies;
                 int newNumberOfReplicas = newNumberOfCopies - 1;
                 settingsRoot.put("number_of_replicas", newNumberOfReplicas);
             }

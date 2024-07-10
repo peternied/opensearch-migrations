@@ -41,14 +41,20 @@ class ListKeyAdaptingCaseInsensitiveHeadersMapTest {
         Assertions.assertEquals(OATMEAL_RAISON, strictMap.get(COOKIE).get(0));
         Assertions.assertEquals(DOUBLE_CHOCOLATE, strictMap.get(COOKIE).get(1));
 
-        var oldList = looseMap.put(COOKIE, List.of(Integer.valueOf(BEEF_NUM), Integer.valueOf(BEEF_NUM), COOKIE_CRUMBLES));
+        var oldList = looseMap.put(
+            COOKIE,
+            List.of(Integer.valueOf(BEEF_NUM), Integer.valueOf(BEEF_NUM), COOKIE_CRUMBLES)
+        );
         Assertions.assertEquals(2, oldList.size());
         Assertions.assertEquals(3, strictMap.get(COOKIE).size());
         var beefStr = Integer.valueOf(BEEF_NUM).toString();
         Assertions.assertEquals(beefStr, strictMap.get(COOKIE).get(0));
         Assertions.assertEquals(beefStr, strictMap.get(COOKIE).get(1));
         Assertions.assertEquals(COOKIE_CRUMBLES, strictMap.get(COOKIE).get(2));
-        Assertions.assertEquals(3, ((List) ((AbstractMap.SimpleEntry) looseMap.entrySet().toArray()[0]).getValue()).size());
+        Assertions.assertEquals(
+            3,
+            ((List) ((AbstractMap.SimpleEntry) looseMap.entrySet().toArray()[0]).getValue()).size()
+        );
 
         looseMap.put(COOKIE, List.of(COOKIE_CRUMBLES));
         Assertions.assertEquals(1, strictMap.get(COOKIE).size());

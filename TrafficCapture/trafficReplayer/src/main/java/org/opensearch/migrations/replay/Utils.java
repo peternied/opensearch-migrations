@@ -27,7 +27,9 @@ public class Utils {
                                                                             // https://docs.aws.amazon.com/opensearch-service/latest/developerguide/limits.html#network-limits
 
     public static Instant setIfLater(AtomicReference<Instant> referenceValue, Instant pointInTime) {
-        return referenceValue.updateAndGet(existingInstant -> existingInstant.isBefore(pointInTime) ? pointInTime : existingInstant);
+        return referenceValue.updateAndGet(
+            existingInstant -> existingInstant.isBefore(pointInTime) ? pointInTime : existingInstant
+        );
     }
 
     public static long setIfLater(AtomicLong referenceValue, long pointInTimeMillis) {
@@ -37,7 +39,9 @@ public class Utils {
     @SneakyThrows(value = { IOException.class })
     public static String packetsToCompressedTrafficStream(Stream<byte[]> byteArrStream) {
         var tsb = TrafficStream.newBuilder().setNumberOfThisLastChunk(1);
-        var trafficStreamOfReads = byteArrStream.map(bArr -> ReadObservation.newBuilder().setData(ByteString.copyFrom(bArr)).build())
+        var trafficStreamOfReads = byteArrStream.map(
+            bArr -> ReadObservation.newBuilder().setData(ByteString.copyFrom(bArr)).build()
+        )
             .map(r -> TrafficObservation.newBuilder().setRead(r))
             .collect(org.opensearch.migrations.Utils.foldLeft(tsb, (existing, newObs) -> tsb.addSubStream(newObs)))
             .build();

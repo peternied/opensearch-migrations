@@ -135,7 +135,9 @@ public class NettyPacketToHttpConsumer implements IPacketFinalizingConsumer<Aggr
                         // this may recurse forever - until the event loop is shutdown
                         // (see the ClientConnectionPool::shutdownNow())
                         ctx.addFailedChannelCreation();
-                        log.atWarn().setMessage(() -> "Channel wasn't active, trying to create another for this request").log();
+                        log.atWarn()
+                            .setMessage(() -> "Channel wasn't active, trying to create another for this request")
+                            .log();
                         return activateLiveChannel();
                     }
                 }, () -> "acting on ready channelFuture to retry if inactive or to return"),
@@ -172,7 +174,8 @@ public class NettyPacketToHttpConsumer implements IPacketFinalizingConsumer<Aggr
         b.group(eventLoopGroup).handler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(@NonNull Channel ch) throws Exception {
-                ch.pipeline().addFirst(CONNECTION_CLOSE_HANDLER_NAME, new ConnectionClosedListenerHandler(channelKeyContext));
+                ch.pipeline()
+                    .addFirst(CONNECTION_CLOSE_HANDLER_NAME, new ConnectionClosedListenerHandler(channelKeyContext));
             }
         }).channel(NioSocketChannel.class).option(ChannelOption.AUTO_READ, false);
 
@@ -183,7 +186,9 @@ public class NettyPacketToHttpConsumer implements IPacketFinalizingConsumer<Aggr
                 final var channel = outboundChannelFuture.channel();
                 log.atTrace()
                     .setMessage(
-                        () -> channelKeyContext.getChannelKey() + " Done setting up client channel & it was successful for " + channel
+                        () -> channelKeyContext.getChannelKey()
+                            + " Done setting up client channel & it was successful for "
+                            + channel
                     )
                     .log();
                 var pipeline = channel.pipeline();
@@ -223,29 +228,40 @@ public class NettyPacketToHttpConsumer implements IPacketFinalizingConsumer<Aggr
         }
         var pipeline = channel.pipeline();
         // add these size counters BEFORE TLS? Notice that when removing from the pipeline, we need to be more careful
-        pipeline.addAfter(CONNECTION_CLOSE_HANDLER_NAME, WRITE_COUNT_WATCHER_HANDLER_NAME, new WriteMeteringHandler(size -> {
-            // client side, so this is the request
-            if (size == 0) {
-                return;
-            }
-            if (!(this.currentRequestContextUnion instanceof IReplayContexts.IRequestSendingContext)) {
-                this.getCurrentRequestSpan().close();
-                this.setCurrentMessageContext(getParentContext().createHttpSendingContext());
-            }
-            getParentContext().onBytesSent(size);
-        }));
-        pipeline.addAfter(CONNECTION_CLOSE_HANDLER_NAME, READ_COUNT_WATCHER_HANDLER_NAME, new ReadMeteringHandler(size -> {
-            // client side, so this is the response
-            if (size == 0) {
-                return;
-            }
-            if (!(this.currentRequestContextUnion instanceof IReplayContexts.IReceivingHttpResponseContext)) {
-                this.getCurrentRequestSpan().close();
-                this.setCurrentMessageContext(getParentContext().createHttpReceivingContext());
-            }
-            getParentContext().onBytesReceived(size);
-        }));
-        pipeline.addLast(READ_TIMEOUT_HANDLER_NAME, new ReadTimeoutHandler(this.readTimeoutDuration.toMillis(), TimeUnit.MILLISECONDS));
+        pipeline.addAfter(
+            CONNECTION_CLOSE_HANDLER_NAME,
+            WRITE_COUNT_WATCHER_HANDLER_NAME,
+            new WriteMeteringHandler(size -> {
+                // client side, so this is the request
+                if (size == 0) {
+                    return;
+                }
+                if (!(this.currentRequestContextUnion instanceof IReplayContexts.IRequestSendingContext)) {
+                    this.getCurrentRequestSpan().close();
+                    this.setCurrentMessageContext(getParentContext().createHttpSendingContext());
+                }
+                getParentContext().onBytesSent(size);
+            })
+        );
+        pipeline.addAfter(
+            CONNECTION_CLOSE_HANDLER_NAME,
+            READ_COUNT_WATCHER_HANDLER_NAME,
+            new ReadMeteringHandler(size -> {
+                // client side, so this is the response
+                if (size == 0) {
+                    return;
+                }
+                if (!(this.currentRequestContextUnion instanceof IReplayContexts.IReceivingHttpResponseContext)) {
+                    this.getCurrentRequestSpan().close();
+                    this.setCurrentMessageContext(getParentContext().createHttpReceivingContext());
+                }
+                getParentContext().onBytesReceived(size);
+            })
+        );
+        pipeline.addLast(
+            READ_TIMEOUT_HANDLER_NAME,
+            new ReadTimeoutHandler(this.readTimeoutDuration.toMillis(), TimeUnit.MILLISECONDS)
+        );
         addLoggingHandlerLast(pipeline, "B");
         pipeline.addLast(new BacksideSnifferHandler(responseBuilder));
         addLoggingHandlerLast(pipeline, "C");
@@ -265,12 +281,16 @@ public class NettyPacketToHttpConsumer implements IPacketFinalizingConsumer<Aggr
     private void deactivateChannel() {
         try {
             var pipeline = channel.pipeline();
-            log.atDebug().setMessage(() -> "Resetting the pipeline for channel " + channel + "currently at: " + pipeline).log();
+            log.atDebug()
+                .setMessage(() -> "Resetting the pipeline for channel " + channel + "currently at: " + pipeline)
+                .log();
             for (var handlerName : new String[] { WRITE_COUNT_WATCHER_HANDLER_NAME, READ_COUNT_WATCHER_HANDLER_NAME }) {
                 try {
                     pipeline.remove(handlerName);
                 } catch (NoSuchElementException e) {
-                    log.atWarn().setMessage(() -> "Ignoring an exception that the " + handlerName + " wasn't present").log();
+                    log.atWarn()
+                        .setMessage(() -> "Ignoring an exception that the " + handlerName + " wasn't present")
+                        .log();
                 }
             }
             while (true) {
@@ -345,16 +365,22 @@ public class NettyPacketToHttpConsumer implements IPacketFinalizingConsumer<Aggr
     @Override
     public TrackedFuture<String, AggregatedRawResponse> finalizeRequest() {
         var ff = activeChannelFuture.getDeferredFutureThroughHandle((v, t) -> {
-            log.atDebug().setMessage(() -> "finalization running since all prior work has completed for " + httpContext()).log();
+            log.atDebug()
+                .setMessage(() -> "finalization running since all prior work has completed for " + httpContext())
+                .log();
             if (!(this.currentRequestContextUnion instanceof IReplayContexts.IReceivingHttpResponseContext)) {
                 this.getCurrentRequestSpan().close();
                 this.setCurrentMessageContext(getParentContext().createWaitingForResponseContext());
             }
 
             var future = new CompletableFuture<AggregatedRawResponse>();
-            var rval = new TrackedFuture<String, AggregatedRawResponse>(future, () -> "NettyPacketToHttpConsumer.finalizeRequest()");
+            var rval = new TrackedFuture<String, AggregatedRawResponse>(
+                future,
+                () -> "NettyPacketToHttpConsumer.finalizeRequest()"
+            );
             if (t == null) {
-                var responseWatchHandler = (BacksideHttpWatcherHandler) channel.pipeline().get(BACKSIDE_HTTP_WATCHER_HANDLER_NAME);
+                var responseWatchHandler = (BacksideHttpWatcherHandler) channel.pipeline()
+                    .get(BACKSIDE_HTTP_WATCHER_HANDLER_NAME);
                 responseWatchHandler.addCallback(future::complete);
             } else {
                 future.complete(responseBuilder.addErrorCause(t).build());

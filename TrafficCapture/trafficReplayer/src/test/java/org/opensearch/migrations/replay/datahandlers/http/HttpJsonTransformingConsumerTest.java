@@ -41,13 +41,17 @@ class HttpJsonTransformingConsumerTest extends InstrumentationTest {
         return Stream.of(attemptedChunks)
             .flatMap(
                 chunks -> Stream.of(transformationOptions)
-                    .flatMap(transformation -> Stream.of(requestFiles).map(file -> Arguments.of(chunks, transformation, file)))
+                    .flatMap(
+                        transformation -> Stream.of(requestFiles)
+                            .map(file -> Arguments.of(chunks, transformation, file))
+                    )
             );
     }
 
     @ParameterizedTest
     @MethodSource("provideTestParameters")
-    public void testRequestProcessing(Integer attemptedChunks, Boolean hostTransformation, String requestFile) throws Exception {
+    public void testRequestProcessing(Integer attemptedChunks, Boolean hostTransformation, String requestFile)
+        throws Exception {
         final var dummyAggregatedResponse = new AggregatedRawResponse(17, null, null, null);
         var testPacketCapture = new TestCapturePacketToHttpHandler(
             Duration.ofMillis(Math.min(100 / attemptedChunks, 1)),
@@ -70,14 +74,18 @@ class HttpJsonTransformingConsumerTest extends InstrumentationTest {
         var returnedResponse = transformingHandler.finalizeRequest().get();
 
         var expectedBytes = (hostTransformation)
-            ? new String(testBytes, StandardCharsets.UTF_8).replace("foo.example", "bar.example").getBytes(StandardCharsets.UTF_8)
+            ? new String(testBytes, StandardCharsets.UTF_8).replace("foo.example", "bar.example")
+                .getBytes(StandardCharsets.UTF_8)
             : testBytes;
 
         var expectedTransformationStatus = (hostTransformation)
             ? HttpRequestTransformationStatus.COMPLETED
             : HttpRequestTransformationStatus.SKIPPED;
 
-        Assertions.assertEquals(new String(expectedBytes, StandardCharsets.UTF_8), testPacketCapture.getCapturedAsString());
+        Assertions.assertEquals(
+            new String(expectedBytes, StandardCharsets.UTF_8),
+            testPacketCapture.getCapturedAsString()
+        );
         Assertions.assertArrayEquals(expectedBytes, testPacketCapture.getBytesCaptured());
         Assertions.assertEquals(expectedTransformationStatus, returnedResponse.transformationStatus);
 
@@ -99,7 +107,11 @@ class HttpJsonTransformingConsumerTest extends InstrumentationTest {
             rootContext.getTestConnectionRequestContext(0)
         );
         byte[] testBytes;
-        try (var sampleStream = HttpJsonTransformingConsumer.class.getResourceAsStream("/requests/raw/get_withAuthHeader.txt")) {
+        try (
+            var sampleStream = HttpJsonTransformingConsumer.class.getResourceAsStream(
+                "/requests/raw/get_withAuthHeader.txt"
+            )
+        ) {
             testBytes = sampleStream.readAllBytes();
             testBytes = new String(testBytes, StandardCharsets.UTF_8).replace("foo.example", "test.domain")
                 .replace("auTHorization: Basic YWRtaW46YWRtaW4=\r\n", "")
@@ -153,7 +165,10 @@ class HttpJsonTransformingConsumerTest extends InstrumentationTest {
         Assertions.assertEquals(new String(testBytes, StandardCharsets.UTF_8), testPacketCapture.getCapturedAsString());
         Assertions.assertArrayEquals(testBytes, testPacketCapture.getBytesCaptured());
         Assertions.assertEquals(HttpRequestTransformationStatus.ERROR, returnedResponse.transformationStatus);
-        Assertions.assertInstanceOf(NettyJsonBodyAccumulateHandler.IncompleteJsonBodyException.class, returnedResponse.error);
+        Assertions.assertInstanceOf(
+            NettyJsonBodyAccumulateHandler.IncompleteJsonBodyException.class,
+            returnedResponse.error
+        );
     }
 
     public static List<byte[]> sliceRandomChunks(byte[] bytes, int numChunks) {

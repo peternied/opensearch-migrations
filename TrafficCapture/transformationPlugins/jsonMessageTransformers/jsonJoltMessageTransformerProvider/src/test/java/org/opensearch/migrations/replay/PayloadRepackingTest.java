@@ -38,7 +38,8 @@ public class PayloadRepackingTest extends InstrumentationTest {
     public static Arguments[] makeCombinations() {
         List<Object> allBools = List.of(true, false);
         Stream<List<Object>> seedLists = allBools.stream().map(b -> List.of(b));
-        return expandList(seedLists, allBools).map(list -> Arguments.of(list.toArray(Object[]::new))).toArray(Arguments[]::new);
+        return expandList(seedLists, allBools).map(list -> Arguments.of(list.toArray(Object[]::new)))
+            .toArray(Arguments[]::new);
     }
 
     @ParameterizedTest
@@ -101,8 +102,11 @@ public class PayloadRepackingTest extends InstrumentationTest {
         var transformerBuilder = JsonJoltTransformer.newBuilder();
 
         ObjectMapper mapper = new ObjectMapper();
-        var simpleTransform = mapper.readValue(simplePayloadTransform, new TypeReference<LinkedHashMap<String, Object>>() {
-        });
+        var simpleTransform = mapper.readValue(
+            simplePayloadTransform,
+            new TypeReference<LinkedHashMap<String, Object>>() {
+            }
+        );
         transformerBuilder.addCannedOperation(JsonJoltTransformBuilder.CANNED_OPERATION.PASS_THRU);
         transformerBuilder.addOperationObject(simpleTransform);
 

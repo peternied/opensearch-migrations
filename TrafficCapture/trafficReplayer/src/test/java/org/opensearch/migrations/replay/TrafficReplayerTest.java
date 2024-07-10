@@ -70,11 +70,20 @@ class TrafficReplayerTest extends InstrumentationTest {
                 TrafficObservation.newBuilder()
                     .setTs(fixedTimestamp)
                     .setConnectionException(
-                        ConnectionExceptionObservation.newBuilder().build().newBuilder().setMessage(FAKE_EXCEPTION_DATA).build()
+                        ConnectionExceptionObservation.newBuilder()
+                            .build()
+                            .newBuilder()
+                            .setMessage(FAKE_EXCEPTION_DATA)
+                            .build()
                     )
                     .build()
             )
-            .addSubStream(TrafficObservation.newBuilder().setTs(fixedTimestamp).setRead(ReadObservation.newBuilder().build()).build())
+            .addSubStream(
+                TrafficObservation.newBuilder()
+                    .setTs(fixedTimestamp)
+                    .setRead(ReadObservation.newBuilder().build())
+                    .build()
+            )
             .addSubStream(
                 TrafficObservation.newBuilder()
                     .setTs(fixedTimestamp)
@@ -91,7 +100,12 @@ class TrafficReplayerTest extends InstrumentationTest {
                     )
                     .build()
             )
-            .addSubStream(TrafficObservation.newBuilder().setTs(fixedTimestamp).setRead(ReadObservation.newBuilder().build()).build())
+            .addSubStream(
+                TrafficObservation.newBuilder()
+                    .setTs(fixedTimestamp)
+                    .setRead(ReadObservation.newBuilder().build())
+                    .build()
+            )
             .addSubStream(
                 TrafficObservation.newBuilder()
                     .setTs(fixedTimestamp)
@@ -110,7 +124,12 @@ class TrafficReplayerTest extends InstrumentationTest {
                     )
                     .build()
             )
-            .addSubStream(TrafficObservation.newBuilder().setTs(fixedTimestamp).setWrite(WriteObservation.newBuilder().build()).build())
+            .addSubStream(
+                TrafficObservation.newBuilder()
+                    .setTs(fixedTimestamp)
+                    .setWrite(WriteObservation.newBuilder().build())
+                    .build()
+            )
             // Don't need to add more because this gets looped multiple times (with the same connectionId)
             .build();
     }
@@ -129,16 +148,19 @@ class TrafficReplayerTest extends InstrumentationTest {
             var allMatch = new AtomicBoolean(true);
             try (var trafficProducer = new InputStreamOfTraffic(rootContext, bais)) {
                 while (true) {
-                    trafficProducer.readNextTrafficStreamChunk(rootContext::createReadChunkContext).get().stream().forEach(ts -> {
-                        var i = counter.incrementAndGet();
-                        var expectedStream = makeTrafficStream(timestamp.plus(i - 1, ChronoUnit.SECONDS), i);
-                        var isEqual = ts.getStream().equals(expectedStream);
-                        if (!isEqual) {
-                            log.error("Expected trafficStream: " + expectedStream);
-                            log.error("Observed trafficStream: " + ts);
-                        }
-                        allMatch.set(allMatch.get() && isEqual);
-                    });
+                    trafficProducer.readNextTrafficStreamChunk(rootContext::createReadChunkContext)
+                        .get()
+                        .stream()
+                        .forEach(ts -> {
+                            var i = counter.incrementAndGet();
+                            var expectedStream = makeTrafficStream(timestamp.plus(i - 1, ChronoUnit.SECONDS), i);
+                            var isEqual = ts.getStream().equals(expectedStream);
+                            if (!isEqual) {
+                                log.error("Expected trafficStream: " + expectedStream);
+                                log.error("Observed trafficStream: " + ts);
+                            }
+                            allMatch.set(allMatch.get() && isEqual);
+                        });
                 }
             } catch (ExecutionException e) {
                 if (!(e.getCause() instanceof EOFException)) {
@@ -173,47 +195,50 @@ class TrafficReplayerTest extends InstrumentationTest {
             )
         ) {
             List<List<byte[]>> byteArrays = new ArrayList<>();
-            CapturedTrafficToHttpTransactionAccumulator trafficAccumulator = new CapturedTrafficToHttpTransactionAccumulator(
-                Duration.ofSeconds(30),
-                null,
-                new AccumulationCallbacks() {
-                    @Override
-                    public Consumer<RequestResponsePacketPair> onRequestReceived(
-                        @NonNull IReplayContexts.IReplayerHttpTransactionContext ctx,
-                        @NonNull HttpMessageAndTimestamp request
-                    ) {
-                        var bytesList = request.stream().collect(Collectors.toList());
-                        byteArrays.add(bytesList);
-                        Assertions.assertEquals(FAKE_READ_PACKET_DATA, collectBytesToUtf8String(bytesList));
-                        return fullPair -> {
-                            var responseBytes = new ArrayList<byte[]>(fullPair.responseData.packetBytes);
-                            Assertions.assertEquals(FAKE_READ_PACKET_DATA, collectBytesToUtf8String(responseBytes));
-                        };
+            CapturedTrafficToHttpTransactionAccumulator trafficAccumulator =
+                new CapturedTrafficToHttpTransactionAccumulator(
+                    Duration.ofSeconds(30),
+                    null,
+                    new AccumulationCallbacks() {
+                        @Override
+                        public Consumer<RequestResponsePacketPair> onRequestReceived(
+                            @NonNull IReplayContexts.IReplayerHttpTransactionContext ctx,
+                            @NonNull HttpMessageAndTimestamp request
+                        ) {
+                            var bytesList = request.stream().collect(Collectors.toList());
+                            byteArrays.add(bytesList);
+                            Assertions.assertEquals(FAKE_READ_PACKET_DATA, collectBytesToUtf8String(bytesList));
+                            return fullPair -> {
+                                var responseBytes = new ArrayList<byte[]>(fullPair.responseData.packetBytes);
+                                Assertions.assertEquals(FAKE_READ_PACKET_DATA, collectBytesToUtf8String(responseBytes));
+                            };
+                        }
+
+                        @Override
+                        public void onTrafficStreamsExpired(
+                            RequestResponsePacketPair.ReconstructionStatus status,
+                            @NonNull IReplayContexts.IChannelKeyContext ctx,
+                            @NonNull List<ITrafficStreamKey> trafficStreamKeysBeingHeld
+                        ) {}
+
+                        @Override
+                        public void onConnectionClose(
+                            int channelInteractionNumber,
+                            @NonNull IReplayContexts.IChannelKeyContext ctx,
+                            int channelSessionNumber,
+                            RequestResponsePacketPair.ReconstructionStatus status,
+                            @NonNull Instant when,
+                            @NonNull List<ITrafficStreamKey> trafficStreamKeysBeingHeld
+                        ) {}
+
+                        @Override
+                        public void onTrafficStreamIgnored(
+                            @NonNull IReplayContexts.ITrafficStreamsLifecycleContext ctx
+                        ) {
+
+                        }
                     }
-
-                    @Override
-                    public void onTrafficStreamsExpired(
-                        RequestResponsePacketPair.ReconstructionStatus status,
-                        @NonNull IReplayContexts.IChannelKeyContext ctx,
-                        @NonNull List<ITrafficStreamKey> trafficStreamKeysBeingHeld
-                    ) {}
-
-                    @Override
-                    public void onConnectionClose(
-                        int channelInteractionNumber,
-                        @NonNull IReplayContexts.IChannelKeyContext ctx,
-                        int channelSessionNumber,
-                        RequestResponsePacketPair.ReconstructionStatus status,
-                        @NonNull Instant when,
-                        @NonNull List<ITrafficStreamKey> trafficStreamKeysBeingHeld
-                    ) {}
-
-                    @Override
-                    public void onTrafficStreamIgnored(@NonNull IReplayContexts.ITrafficStreamsLifecycleContext ctx) {
-
-                    }
-                }
-            );
+                );
             var bytes = synthesizeTrafficStreamsIntoByteArray(Instant.now(), 1);
 
             try (var bais = new ByteArrayInputStream(bytes)) {
@@ -244,46 +269,49 @@ class TrafficReplayerTest extends InstrumentationTest {
         ) {
             List<List<byte[]>> byteArrays = new ArrayList<>();
             var remainingAccumulations = new AtomicInteger();
-            CapturedTrafficToHttpTransactionAccumulator trafficAccumulator = new CapturedTrafficToHttpTransactionAccumulator(
-                Duration.ofSeconds(30),
-                "change the minTimeout argument to the c'tor of "
-                    + "CapturedTrafficToHttpTransactionAccumulator that's being used in this unit test!",
-                new AccumulationCallbacks() {
-                    @Override
-                    public Consumer<RequestResponsePacketPair> onRequestReceived(
-                        @NonNull IReplayContexts.IReplayerHttpTransactionContext ctx,
-                        @NonNull HttpMessageAndTimestamp request
-                    ) {
-                        var bytesList = request.stream().collect(Collectors.toList());
-                        byteArrays.add(bytesList);
-                        Assertions.assertEquals(FAKE_READ_PACKET_DATA, collectBytesToUtf8String(bytesList));
-                        return fullPair -> {
-                            var responseBytes = new ArrayList<byte[]>(fullPair.responseData.packetBytes);
-                            Assertions.assertEquals(FAKE_READ_PACKET_DATA, collectBytesToUtf8String(responseBytes));
-                        };
+            CapturedTrafficToHttpTransactionAccumulator trafficAccumulator =
+                new CapturedTrafficToHttpTransactionAccumulator(
+                    Duration.ofSeconds(30),
+                    "change the minTimeout argument to the c'tor of "
+                        + "CapturedTrafficToHttpTransactionAccumulator that's being used in this unit test!",
+                    new AccumulationCallbacks() {
+                        @Override
+                        public Consumer<RequestResponsePacketPair> onRequestReceived(
+                            @NonNull IReplayContexts.IReplayerHttpTransactionContext ctx,
+                            @NonNull HttpMessageAndTimestamp request
+                        ) {
+                            var bytesList = request.stream().collect(Collectors.toList());
+                            byteArrays.add(bytesList);
+                            Assertions.assertEquals(FAKE_READ_PACKET_DATA, collectBytesToUtf8String(bytesList));
+                            return fullPair -> {
+                                var responseBytes = new ArrayList<byte[]>(fullPair.responseData.packetBytes);
+                                Assertions.assertEquals(FAKE_READ_PACKET_DATA, collectBytesToUtf8String(responseBytes));
+                            };
+                        }
+
+                        @Override
+                        public void onTrafficStreamsExpired(
+                            RequestResponsePacketPair.ReconstructionStatus status,
+                            @NonNull IReplayContexts.IChannelKeyContext ctx,
+                            @NonNull List<ITrafficStreamKey> trafficStreamKeysBeingHeld
+                        ) {}
+
+                        @Override
+                        public void onConnectionClose(
+                            int channelInteractionNumber,
+                            @NonNull IReplayContexts.IChannelKeyContext ctx,
+                            int channelSessionNumber,
+                            RequestResponsePacketPair.ReconstructionStatus status,
+                            @NonNull Instant when,
+                            @NonNull List<ITrafficStreamKey> trafficStreamKeysBeingHeld
+                        ) {}
+
+                        @Override
+                        public void onTrafficStreamIgnored(
+                            @NonNull IReplayContexts.ITrafficStreamsLifecycleContext ctx
+                        ) {}
                     }
-
-                    @Override
-                    public void onTrafficStreamsExpired(
-                        RequestResponsePacketPair.ReconstructionStatus status,
-                        @NonNull IReplayContexts.IChannelKeyContext ctx,
-                        @NonNull List<ITrafficStreamKey> trafficStreamKeysBeingHeld
-                    ) {}
-
-                    @Override
-                    public void onConnectionClose(
-                        int channelInteractionNumber,
-                        @NonNull IReplayContexts.IChannelKeyContext ctx,
-                        int channelSessionNumber,
-                        RequestResponsePacketPair.ReconstructionStatus status,
-                        @NonNull Instant when,
-                        @NonNull List<ITrafficStreamKey> trafficStreamKeysBeingHeld
-                    ) {}
-
-                    @Override
-                    public void onTrafficStreamIgnored(@NonNull IReplayContexts.ITrafficStreamsLifecycleContext ctx) {}
-                }
-            );
+                );
             byte[] serializedChunks;
             try (var baos = new ByteArrayOutputStream()) {
                 makeTrafficStream(Instant.now(), 1).writeDelimitedTo(baos);

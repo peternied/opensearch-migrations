@@ -125,7 +125,10 @@ public class PruferTreeGenerator<T> {
             .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
         // This collection captures items with degree == 1 with a PQueue because we only ever need to get the top item
         var nodesWithOneLinkLeft = new PriorityQueue<Integer>(
-            IntStream.range(1, numNodeIds + 1).filter(i -> nodeDegrees.get(i) == null).boxed().collect(Collectors.toList())
+            IntStream.range(1, numNodeIds + 1)
+                .filter(i -> nodeDegrees.get(i) == null)
+                .boxed()
+                .collect(Collectors.toList())
         );
 
         for (int i = 0; i < pruferLen; i++) {
@@ -145,7 +148,11 @@ public class PruferTreeGenerator<T> {
         return edges;
     }
 
-    private void removeLinkForNode(int parent, Map<Integer, Long> nodeDegrees, PriorityQueue<Integer> nodesWithOneLinkLeft) {
+    private void removeLinkForNode(
+        int parent,
+        Map<Integer, Long> nodeDegrees,
+        PriorityQueue<Integer> nodesWithOneLinkLeft
+    ) {
         var oldDegreeVal = nodeDegrees.get(parent);
         if (oldDegreeVal == 1) {
             nodeDegrees.remove(parent);

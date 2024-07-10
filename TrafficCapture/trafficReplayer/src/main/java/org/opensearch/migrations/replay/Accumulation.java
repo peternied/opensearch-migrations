@@ -70,7 +70,9 @@ public class Accumulation {
         numberOfResets = new AtomicInteger();
         this.newestPacketTimestampInMillis = new AtomicLong(0);
         this.startingSourceRequestIndex = startingSourceRequestIndex;
-        this.state = dropObservationsLeftoverFromPrevious ? State.IGNORING_LAST_REQUEST : State.WAITING_FOR_NEXT_READ_CHUNK;
+        this.state = dropObservationsLeftoverFromPrevious
+            ? State.IGNORING_LAST_REQUEST
+            : State.WAITING_FOR_NEXT_READ_CHUNK;
     }
 
     public boolean hasBeenExpired() {
@@ -81,7 +83,10 @@ public class Accumulation {
         hasBeenExpired = true;
     }
 
-    public RequestResponsePacketPair getOrCreateTransactionPair(ITrafficStreamKey forTrafficStreamKey, Instant originTimestamp) {
+    public RequestResponsePacketPair getOrCreateTransactionPair(
+        ITrafficStreamKey forTrafficStreamKey,
+        Instant originTimestamp
+    ) {
         if (rrPairWithCallback != null) {
             return rrPairWithCallback.pair;
         }

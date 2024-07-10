@@ -23,7 +23,10 @@ public class TestRootContext extends RootWireLoggingContext implements AutoClose
         this(new InMemoryInstrumentationBundle(trackMetrics, trackTraces), contextTracker);
     }
 
-    public TestRootContext(InMemoryInstrumentationBundle inMemoryInstrumentationBundle, IContextTracker contextTracker) {
+    public TestRootContext(
+        InMemoryInstrumentationBundle inMemoryInstrumentationBundle,
+        IContextTracker contextTracker
+    ) {
         super(inMemoryInstrumentationBundle.openTelemetrySdk, contextTracker);
         this.instrumentationBundle = inMemoryInstrumentationBundle;
     }

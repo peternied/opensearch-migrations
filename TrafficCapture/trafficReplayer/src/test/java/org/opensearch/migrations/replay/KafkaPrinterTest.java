@@ -37,12 +37,19 @@ class KafkaPrinterTest {
 
     private static TrafficStream makeTrafficStream(Instant t, String payload, int numReads) {
         var fixedTimestamp = Timestamp.newBuilder().setSeconds(t.getEpochSecond()).setNanos(t.getNano()).build();
-        var builder = TrafficStream.newBuilder().setConnectionId("testConnectionId").setNodeId("testNodeId").setNumberOfThisLastChunk(1);
+        var builder = TrafficStream.newBuilder()
+            .setConnectionId("testConnectionId")
+            .setNodeId("testNodeId")
+            .setNumberOfThisLastChunk(1);
         for (int i = 0; i < numReads; ++i) {
             builder = builder.addSubStream(
                 TrafficObservation.newBuilder()
                     .setTs(fixedTimestamp)
-                    .setRead(ReadObservation.newBuilder().setData(ByteString.copyFrom(payload.getBytes(StandardCharsets.UTF_8))).build())
+                    .setRead(
+                        ReadObservation.newBuilder()
+                            .setData(ByteString.copyFrom(payload.getBytes(StandardCharsets.UTF_8)))
+                            .build()
+                    )
                     .build()
             );
         }
@@ -106,7 +113,8 @@ class KafkaPrinterTest {
         var numTrafficStreamsPartition0 = 30;
         var numTrafficStreamsPartition1 = 20;
         var numTrafficStreamsPartition2 = 0;
-        var totalTrafficStreams = numTrafficStreamsPartition0 + numTrafficStreamsPartition1 + numTrafficStreamsPartition2;
+        var totalTrafficStreams = numTrafficStreamsPartition0 + numTrafficStreamsPartition1
+            + numTrafficStreamsPartition2;
         var recordLimitPartition0 = 17;
         var recordLimitPartition1 = 8;
         var recordLimitPartition2 = 0;
@@ -137,7 +145,11 @@ class KafkaPrinterTest {
     ) throws Exception {
         try (var baos = new ByteArrayOutputStream()) {
             var wrappedConsumer = new CountingConsumer(
-                KafkaPrinter.getDelimitedProtoBufOutputter(capturedRecords, Map.of(0, CodedOutputStream.newInstance(baos)), false)
+                KafkaPrinter.getDelimitedProtoBufOutputter(
+                    capturedRecords,
+                    Map.of(0, CodedOutputStream.newInstance(baos)),
+                    false
+                )
             );
             while (wrappedConsumer.count < expectedMessageCount) {
                 KafkaPrinter.processNextChunkOfKafkaEvents(kafkaConsumer, wrappedConsumer);
@@ -146,7 +158,8 @@ class KafkaPrinterTest {
         }
     }
 
-    private void validateNumberOfTrafficStreamsEmitted(int expectedNumProtobufObjects, byte[] delimitedOutputBytes) throws Exception {
+    private void validateNumberOfTrafficStreamsEmitted(int expectedNumProtobufObjects, byte[] delimitedOutputBytes)
+        throws Exception {
         int count = 0;
         try (var bais = new ByteArrayInputStream(delimitedOutputBytes)) {
             while (true) {

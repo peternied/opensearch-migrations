@@ -32,16 +32,34 @@ public class ExhaustiveCapturedTrafficToHttpTransactionAccumulatorTest extends I
         StringJoiner seedsThatOfferUniqueTestCases = new StringJoiner(",");
         var argsArray = ExhaustiveTrafficStreamGenerator.generateRandomTrafficStreamsAndSizes(rootContext, seedStream)
             .takeWhile(c -> !possibilitiesLeftToTest.isEmpty())
-            .filter(c -> ExhaustiveTrafficStreamGenerator.classifyTrafficStream(possibilitiesLeftToTest, c.trafficStreams) > 0)
+            .filter(
+                c -> ExhaustiveTrafficStreamGenerator.classifyTrafficStream(
+                    possibilitiesLeftToTest,
+                    c.trafficStreams
+                ) > 0
+            )
             .flatMap(c -> {
                 seedsThatOfferUniqueTestCases.add(c.randomSeedUsed + "");
                 var n = numTries.getAndIncrement();
                 log.info(
-                    "Found new cases to test with seed=" + c.randomSeedUsed + " tries=" + n + " left=" + possibilitiesLeftToTest.size()
+                    "Found new cases to test with seed="
+                        + c.randomSeedUsed
+                        + " tries="
+                        + n
+                        + " left="
+                        + possibilitiesLeftToTest.size()
                 );
 
                 return IntStream.range(0, c.trafficStreams.length)
-                    .mapToObj(i -> Arguments.of("seed=" + c.randomSeedUsed, i, c.trafficStreams, c.requestByteSizes, c.responseByteSizes));
+                    .mapToObj(
+                        i -> Arguments.of(
+                            "seed=" + c.randomSeedUsed,
+                            i,
+                            c.trafficStreams,
+                            c.requestByteSizes,
+                            c.responseByteSizes
+                        )
+                    );
             })
             .toArray(Arguments[]::new);
 
@@ -90,19 +108,21 @@ public class ExhaustiveCapturedTrafficToHttpTransactionAccumulatorTest extends I
         // in the first pass.
         //
         // Notice that this may cause duplicates. That's by design. The system has an at-least-once guarantee.
-        var indicesProcessedPass1 = SimpleCapturedTrafficToHttpTransactionAccumulatorTest.accumulateTrafficStreamsWithNewAccumulator(
-            rootContext,
-            Arrays.stream(trafficStreams).limit(cutPoint),
-            reconstructedTransactions,
-            requestsReceived
-        );
+        var indicesProcessedPass1 = SimpleCapturedTrafficToHttpTransactionAccumulatorTest
+            .accumulateTrafficStreamsWithNewAccumulator(
+                rootContext,
+                Arrays.stream(trafficStreams).limit(cutPoint),
+                reconstructedTransactions,
+                requestsReceived
+            );
         cutPoint = indicesProcessedPass1.isEmpty() ? 0 : indicesProcessedPass1.last();
-        var indicesProcessedPass2 = SimpleCapturedTrafficToHttpTransactionAccumulatorTest.accumulateTrafficStreamsWithNewAccumulator(
-            rootContext,
-            Arrays.stream(trafficStreams).skip(cutPoint),
-            reconstructedTransactions,
-            requestsReceived
-        );
+        var indicesProcessedPass2 = SimpleCapturedTrafficToHttpTransactionAccumulatorTest
+            .accumulateTrafficStreamsWithNewAccumulator(
+                rootContext,
+                Arrays.stream(trafficStreams).skip(cutPoint),
+                reconstructedTransactions,
+                requestsReceived
+            );
 
         // three checks to do w/ the indicesProcessed sets.
         // Count their sum, confirm that there were not duplicates, confirm all match the input indices
@@ -111,7 +131,10 @@ public class ExhaustiveCapturedTrafficToHttpTransactionAccumulatorTest extends I
         unionSet.addAll(indicesProcessedPass2);
         Assertions.assertEquals(trafficStreams.length, unionSet.size());
         Assertions.assertEquals(1, unionSet.first());
-        Assertions.assertEquals(TrafficStreamUtils.getTrafficStreamIndex(trafficStreams[trafficStreams.length - 1]), unionSet.last());
+        Assertions.assertEquals(
+            TrafficStreamUtils.getTrafficStreamIndex(trafficStreams[trafficStreams.length - 1]),
+            unionSet.last()
+        );
 
         SimpleCapturedTrafficToHttpTransactionAccumulatorTest.assertReconstructedTransactionsMatchExpectations(
             reconstructedTransactions,

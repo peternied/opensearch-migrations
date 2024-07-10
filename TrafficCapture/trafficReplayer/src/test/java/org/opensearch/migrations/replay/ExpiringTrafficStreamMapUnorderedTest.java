@@ -30,12 +30,16 @@ class ExpiringTrafficStreamMapUnorderedTest extends InstrumentationTest {
         int expectedExpirationCounts[]
     ) {
         var expiredAccumulations = new ArrayList<Accumulation>();
-        var expiringMap = new ExpiringTrafficStreamMap(Duration.ofSeconds(window), Duration.ofSeconds(granularity), new BehavioralPolicy() {
-            @Override
-            public void onExpireAccumulation(String partitionId, Accumulation accumulation) {
-                expiredAccumulations.add(accumulation);
+        var expiringMap = new ExpiringTrafficStreamMap(
+            Duration.ofSeconds(window),
+            Duration.ofSeconds(granularity),
+            new BehavioralPolicy() {
+                @Override
+                public void onExpireAccumulation(String partitionId, Accumulation accumulation) {
+                    expiredAccumulations.add(accumulation);
+                }
             }
-        });
+        );
         var createdAccumulations = new ArrayList<Accumulation>();
         var expiredCountsPerLoop = new ArrayList<Integer>();
         for (int i = 0; i < expectedExpirationCounts.length; ++i) {
@@ -75,7 +79,13 @@ class ExpiringTrafficStreamMapUnorderedTest extends InstrumentationTest {
 
     @Test
     public void testConnectionsAreExpired1() {
-        testExpirations(i -> "connectionId_" + i, 5, 1, new int[] { 1, 6, 3, 8, 4, 4, 3, 9, 12 }, new int[] { 0, 0, 0, 1, 1, 1, 1, 1, 3 });
+        testExpirations(
+            i -> "connectionId_" + i,
+            5,
+            1,
+            new int[] { 1, 6, 3, 8, 4, 4, 3, 9, 12 },
+            new int[] { 0, 0, 0, 1, 1, 1, 1, 1, 3 }
+        );
     }
 
     @Test

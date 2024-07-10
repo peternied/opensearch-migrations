@@ -102,7 +102,10 @@ class ResultsToLogsConsumerTest extends InstrumentationTest {
     @Test
     public void testTupleNewWithNullKeyThrows() {
         try (var closeableLogSetup = new CloseableLogSetup()) {
-            Assertions.assertThrows(Exception.class, () -> new SourceTargetCaptureTuple(null, null, null, null, null, null, null));
+            Assertions.assertThrows(
+                Exception.class,
+                () -> new SourceTargetCaptureTuple(null, null, null, null, null, null, null)
+            );
             Assertions.assertEquals(0, closeableLogSetup.logEvents.size());
         }
     }
@@ -110,7 +113,15 @@ class ResultsToLogsConsumerTest extends InstrumentationTest {
     @Test
     @ResourceLock("TestContext")
     public void testOutputterWithNulls() throws IOException {
-        var emptyTuple = new SourceTargetCaptureTuple(rootContext.getTestTupleContext(), null, null, null, null, null, null);
+        var emptyTuple = new SourceTargetCaptureTuple(
+            rootContext.getTestTupleContext(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        );
         try (var closeableLogSetup = new CloseableLogSetup()) {
             var resultsToLogsConsumer = new ResultsToLogsConsumer(closeableLogSetup.testLogger, null);
             var consumer = new TupleParserChainConsumer(resultsToLogsConsumer);
@@ -126,7 +137,15 @@ class ResultsToLogsConsumerTest extends InstrumentationTest {
     @ResourceLock("TestContext")
     public void testOutputterWithException() {
         var exception = new Exception(TEST_EXCEPTION_MESSAGE);
-        var emptyTuple = new SourceTargetCaptureTuple(rootContext.getTestTupleContext(), null, null, null, null, exception, null);
+        var emptyTuple = new SourceTargetCaptureTuple(
+            rootContext.getTestTupleContext(),
+            null,
+            null,
+            null,
+            null,
+            exception,
+            null
+        );
         try (var closeableLogSetup = new CloseableLogSetup()) {
             var resultsToLogsConsumer = new ResultsToLogsConsumer(closeableLogSetup.testLogger, null);
             var consumer = new TupleParserChainConsumer(resultsToLogsConsumer);
@@ -260,7 +279,12 @@ class ResultsToLogsConsumerTest extends InstrumentationTest {
     }
 
     private void testOutputterForRequest(String requestResourceName, String expected) throws IOException {
-        var trafficStreamKey = PojoTrafficStreamKeyAndContext.build(NODE_ID, "c", 0, rootContext::createTrafficStreamContextForTest);
+        var trafficStreamKey = PojoTrafficStreamKeyAndContext.build(
+            NODE_ID,
+            "c",
+            0,
+            rootContext::createTrafficStreamContextForTest
+        );
         var sourcePair = new RequestResponsePacketPair(trafficStreamKey, Instant.EPOCH, 0, 0);
         var rawRequestData = loadResourceAsBytes("/requests/raw/" + requestResourceName);
         sourcePair.addRequestData(Instant.EPOCH, rawRequestData);
@@ -296,7 +320,9 @@ class ResultsToLogsConsumerTest extends InstrumentationTest {
             throw new RuntimeException(e);
         }
         var allMetricData = rootContext.inMemoryInstrumentationBundle.getFinishedMetrics();
-        var filteredMetrics = allMetricData.stream().filter(md -> md.getName().startsWith("tupleResult")).collect(Collectors.toList());
+        var filteredMetrics = allMetricData.stream()
+            .filter(md -> md.getName().startsWith("tupleResult"))
+            .collect(Collectors.toList());
         // TODO - find out how to verify these metrics
         log.error("TODO - find out how to verify these metrics");
         // Assertions.assertEquals("REQUEST_ID:testConnection.1|SOURCE_HTTP_STATUS:200|TARGET_HTTP_STATUS:200|HTTP_STATUS_MATCH:1",

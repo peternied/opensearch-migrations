@@ -45,7 +45,12 @@ public class ClientConnectionPool {
         return new Key(connectionId, sessionNumber);
     }
 
-    public ClientConnectionPool(@NonNull URI serverUri, SslContext sslContext, @NonNull String targetConnectionPoolName, int numThreads) {
+    public ClientConnectionPool(
+        @NonNull URI serverUri,
+        SslContext sslContext,
+        @NonNull String targetConnectionPoolName,
+        int numThreads
+    ) {
         this.serverUri = serverUri;
         this.sslContext = sslContext;
         this.eventLoopGroup = new NioEventLoopGroup(numThreads, new DefaultThreadFactory(targetConnectionPoolName));
@@ -65,7 +70,11 @@ public class ClientConnectionPool {
         // the same event loop. That means that we don't have to worry about concurrent
         // accesses/changes to the OTHER value that we're storing within the cache.
         var eventLoop = eventLoopGroup.next();
-        return new ConnectionReplaySession(eventLoop, channelKeyCtx, () -> getResilientClientChannelProducer(eventLoop, channelKeyCtx));
+        return new ConnectionReplaySession(
+            eventLoop,
+            channelKeyCtx,
+            () -> getResilientClientChannelProducer(eventLoop, channelKeyCtx)
+        );
     }
 
     private TrackedFuture<String, ChannelFuture> getResilientClientChannelProducer(
@@ -76,7 +85,9 @@ public class ClientConnectionPool {
             () -> NettyPacketToHttpConsumer.createClientConnection(eventLoop, sslContext, serverUri, connectionContext)
                 .whenComplete((v, t) -> {
                     if (t == null) {
-                        log.atDebug().setMessage(() -> "New network connection result for " + connectionContext + " =" + v).log();
+                        log.atDebug()
+                            .setMessage(() -> "New network connection result for " + connectionContext + " =" + v)
+                            .log();
                     } else {
                         log.atInfo().setMessage(() -> "got exception for " + connectionContext).setCause(t).log();
                     }
@@ -99,19 +110,33 @@ public class ClientConnectionPool {
             connectionId2ChannelCache.invalidate(connId);
         } else {
             log.atInfo()
-                .setMessage(() -> "No ChannelFuture for " + ctx + " in closeConnection.  The connection may have already been closed")
+                .setMessage(
+                    () -> "No ChannelFuture for "
+                        + ctx
+                        + " in closeConnection.  The connection may have already been closed"
+                )
                 .log();
         }
     }
 
     @SneakyThrows
-    public @NonNull ConnectionReplaySession getCachedSession(IReplayContexts.IChannelKeyContext channelKeyCtx, int sessionNumber) {
+    public @NonNull ConnectionReplaySession getCachedSession(
+        IReplayContexts.IChannelKeyContext channelKeyCtx,
+        int sessionNumber
+    ) {
         var crs = connectionId2ChannelCache.get(
             getKey(channelKeyCtx.getConnectionId(), sessionNumber),
             () -> buildConnectionReplaySession(channelKeyCtx)
         );
         log.atTrace()
-            .setMessage(() -> "returning ReplaySession=" + crs + " for " + channelKeyCtx.getConnectionId() + " from " + channelKeyCtx)
+            .setMessage(
+                () -> "returning ReplaySession="
+                    + crs
+                    + " for "
+                    + channelKeyCtx.getConnectionId()
+                    + " from "
+                    + channelKeyCtx
+            )
             .log();
         return crs;
     }
@@ -130,30 +155,41 @@ public class ClientConnectionPool {
                 return TextTrackedFuture.completedFuture(null, () -> "");
             }
             log.atTrace()
-                .setMessage(() -> "closing channel " + channelFuture.channel() + "(" + channelAndFutureWork.getChannelKeyContext() + ")...")
+                .setMessage(
+                    () -> "closing channel "
+                        + channelFuture.channel()
+                        + "("
+                        + channelAndFutureWork.getChannelKeyContext()
+                        + ")..."
+                )
                 .log();
-            return NettyFutureBinders.bindNettyFutureToTrackableFuture(channelFuture.channel().close(), "calling channel.close()")
-                .thenApply(v -> {
-                    log.atTrace()
+            return NettyFutureBinders.bindNettyFutureToTrackableFuture(
+                channelFuture.channel().close(),
+                "calling channel.close()"
+            ).thenApply(v -> {
+                log.atTrace()
+                    .setMessage(
+                        () -> "channel.close() has finished for "
+                            + channelAndFutureWork.getChannelKeyContext()
+                            + " with value="
+                            + v
+                    )
+                    .log();
+                if (channelAndFutureWork.hasWorkRemaining()) {
+                    log.atWarn()
                         .setMessage(
-                            () -> "channel.close() has finished for " + channelAndFutureWork.getChannelKeyContext() + " with value=" + v
+                            () -> "Work items are still remaining for this connection session"
+                                + "(last associated with connection="
+                                + channelAndFutureWork.getChannelKeyContext()
+                                + ").  "
+                                + channelAndFutureWork.calculateSizeSlowly()
+                                + " requests that were enqueued won't be run"
                         )
                         .log();
-                    if (channelAndFutureWork.hasWorkRemaining()) {
-                        log.atWarn()
-                            .setMessage(
-                                () -> "Work items are still remaining for this connection session"
-                                    + "(last associated with connection="
-                                    + channelAndFutureWork.getChannelKeyContext()
-                                    + ").  "
-                                    + channelAndFutureWork.calculateSizeSlowly()
-                                    + " requests that were enqueued won't be run"
-                            )
-                            .log();
-                    }
-                    channelAndFutureWork.schedule.clear();
-                    return channelFuture.channel();
-                }, () -> "clearing work");
+                }
+                channelAndFutureWork.schedule.clear();
+                return channelFuture.channel();
+            }, () -> "clearing work");
         }, () -> "");
     }
 }

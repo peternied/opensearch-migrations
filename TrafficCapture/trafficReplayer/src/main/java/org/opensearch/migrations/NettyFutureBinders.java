@@ -16,7 +16,10 @@ public class NettyFutureBinders {
 
     private NettyFutureBinders() {}
 
-    public static CompletableFuture<Void> bindNettyFutureToCompletableFuture(Future<?> nettyFuture, CompletableFuture<Void> cf) {
+    public static CompletableFuture<Void> bindNettyFutureToCompletableFuture(
+        Future<?> nettyFuture,
+        CompletableFuture<Void> cf
+    ) {
         nettyFuture.addListener(f -> {
             if (!f.isSuccess()) {
                 cf.completeExceptionally(f.cause());
@@ -35,7 +38,10 @@ public class NettyFutureBinders {
         return new TextTrackedFuture<>(bindNettyFutureToCompletableFuture(nettyFuture), label);
     }
 
-    public static TrackedFuture<String, Void> bindNettyFutureToTrackableFuture(Future<?> nettyFuture, Supplier<String> labelProvider) {
+    public static TrackedFuture<String, Void> bindNettyFutureToTrackableFuture(
+        Future<?> nettyFuture,
+        Supplier<String> labelProvider
+    ) {
         return new TextTrackedFuture<>(bindNettyFutureToCompletableFuture(nettyFuture), labelProvider);
     }
 
@@ -50,7 +56,10 @@ public class NettyFutureBinders {
         return bindNettyFutureToTrackableFuture(eventLoop::submit, "waiting for event loop submission");
     }
 
-    public static TrackedFuture<String, Void> bindNettyScheduleToCompletableFuture(EventLoop eventLoop, Duration delay) {
+    public static TrackedFuture<String, Void> bindNettyScheduleToCompletableFuture(
+        EventLoop eventLoop,
+        Duration delay
+    ) {
         var delayMs = Math.max(0, delay.toMillis());
         return bindNettyFutureToTrackableFuture(
             eventLoop.schedule(() -> {}, delayMs, TimeUnit.MILLISECONDS),

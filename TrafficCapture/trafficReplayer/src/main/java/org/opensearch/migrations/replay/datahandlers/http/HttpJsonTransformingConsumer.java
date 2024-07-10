@@ -83,7 +83,10 @@ public class HttpJsonTransformingConsumer<R> implements IPacketFinalizingConsume
 
     private NettySendByteBufsToPacketHandlerHandler<R> getOffloadingHandler() {
         return Optional.ofNullable(channel)
-            .map(c -> (NettySendByteBufsToPacketHandlerHandler) c.pipeline().get(RequestPipelineOrchestrator.OFFLOADING_HANDLER_NAME))
+            .map(
+                c -> (NettySendByteBufsToPacketHandlerHandler) c.pipeline()
+                    .get(RequestPipelineOrchestrator.OFFLOADING_HANDLER_NAME)
+            )
             .orElse(null);
     }
 
@@ -122,10 +125,9 @@ public class HttpJsonTransformingConsumer<R> implements IPacketFinalizingConsume
             }
         } catch (Exception e) {
             this.transformationContext.addCaughtException(e);
-            log.atLevel(e instanceof NettyJsonBodyAccumulateHandler.IncompleteJsonBodyException ? Level.DEBUG : Level.WARN)
-                .setMessage("Caught IncompleteJsonBodyException when sending the end of content")
-                .setCause(e)
-                .log();
+            log.atLevel(
+                e instanceof NettyJsonBodyAccumulateHandler.IncompleteJsonBodyException ? Level.DEBUG : Level.WARN
+            ).setMessage("Caught IncompleteJsonBodyException when sending the end of content").setCause(e).log();
             return redriveWithoutTransformation(pipelineOrchestrator.packetReceiver, e);
         } finally {
             channel.finishAndReleaseAll();

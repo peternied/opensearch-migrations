@@ -18,7 +18,10 @@ public class ShardMetadataFactory_ES_6_8 implements ShardMetadata.Factory {
     public ShardMetadata.Data fromJsonNode(JsonNode root, String indexId, String indexName, int shardId) {
         ObjectMapper objectMapper = new ObjectMapper();
         SimpleModule module = new SimpleModule();
-        module.addDeserializer(ShardMetadataData_ES_6_8.FileInfoRaw.class, new ShardMetadataData_ES_6_8.FileInfoRawDeserializer());
+        module.addDeserializer(
+            ShardMetadataData_ES_6_8.FileInfoRaw.class,
+            new ShardMetadataData_ES_6_8.FileInfoRawDeserializer()
+        );
         objectMapper.registerModule(module);
 
         try {

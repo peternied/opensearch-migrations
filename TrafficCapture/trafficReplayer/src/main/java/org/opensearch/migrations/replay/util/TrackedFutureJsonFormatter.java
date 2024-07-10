@@ -23,7 +23,10 @@ public class TrackedFutureJsonFormatter {
         return format(tf, x -> null);
     }
 
-    public static <D> String format(TrackedFuture<D, ?> tf, @NonNull Function<TrackedFuture<D, ?>, String> resultFormatter) {
+    public static <D> String format(
+        TrackedFuture<D, ?> tf,
+        @NonNull Function<TrackedFuture<D, ?>, String> resultFormatter
+    ) {
         try {
             return objectMapper.writeValueAsString(makeJson(tf, resultFormatter));
         } catch (Exception e) {
@@ -31,8 +34,13 @@ public class TrackedFutureJsonFormatter {
         }
     }
 
-    public static <D> List<Object> makeJson(TrackedFuture<D, ?> tf, @NonNull Function<TrackedFuture<D, ?>, String> resultFormatter) {
-        return tf.walkParentsAsStream().map(kvp -> jsonFormatFutureWithDiagnostics(kvp, resultFormatter)).collect(Collectors.toList());
+    public static <D> List<Object> makeJson(
+        TrackedFuture<D, ?> tf,
+        @NonNull Function<TrackedFuture<D, ?>, String> resultFormatter
+    ) {
+        return tf.walkParentsAsStream()
+            .map(kvp -> jsonFormatFutureWithDiagnostics(kvp, resultFormatter))
+            .collect(Collectors.toList());
     }
 
     @SneakyThrows

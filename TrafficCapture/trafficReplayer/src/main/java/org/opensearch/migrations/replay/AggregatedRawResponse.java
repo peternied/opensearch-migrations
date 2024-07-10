@@ -28,7 +28,10 @@ public class AggregatedRawResponse {
     }
 
     public byte[][] getCopyOfPackets() {
-        return responsePackets.stream().map(Map.Entry::getValue).map(x -> Arrays.copyOf(x, x.length)).toArray(byte[][]::new);
+        return responsePackets.stream()
+            .map(Map.Entry::getValue)
+            .map(x -> Arrays.copyOf(x, x.length))
+            .toArray(byte[][]::new);
     }
 
     public static class Builder {
@@ -87,7 +90,8 @@ public class AggregatedRawResponse {
         final StringBuilder sb = new StringBuilder("IResponseSummary{");
         sb.append("responseSizeInBytes=").append(responseSizeInBytes);
         sb.append(", responseDuration=").append(responseDuration);
-        sb.append(", # of responsePackets=").append("" + (this.responsePackets == null ? "-1" : "" + this.responsePackets.size()));
+        sb.append(", # of responsePackets=")
+            .append("" + (this.responsePackets == null ? "-1" : "" + this.responsePackets.size()));
         addSubclassInfoForToString(sb);
         sb.append('}');
         return sb.toString();

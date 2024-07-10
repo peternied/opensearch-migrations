@@ -56,7 +56,10 @@ public class NettyJsonContentAuthSigner extends ChannelInboundHandlerAdapter {
         boolean messageFlushed = flushDownstream(ctx);
         if (messageFlushed) {
             log.atWarn()
-                .setMessage(() -> "Failed to sign message due to handler removed" + " before the end of the http contents were received")
+                .setMessage(
+                    () -> "Failed to sign message due to handler removed"
+                        + " before the end of the http contents were received"
+                )
                 .log();
         }
         super.handlerRemoved(ctx);
@@ -68,7 +71,8 @@ public class NettyJsonContentAuthSigner extends ChannelInboundHandlerAdapter {
         if (messageFlushed) {
             log.atWarn()
                 .setMessage(
-                    () -> "Failed to sign message due to channel unregistered" + " before the end of the http contents were received"
+                    () -> "Failed to sign message due to channel unregistered"
+                        + " before the end of the http contents were received"
                 )
                 .log();
         }

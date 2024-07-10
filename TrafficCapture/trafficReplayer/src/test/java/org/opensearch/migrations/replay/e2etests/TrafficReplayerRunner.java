@@ -106,7 +106,9 @@ public class TrafficReplayerRunner {
             int runNumber = runNumberRef.get();
             var counter = new AtomicInteger();
             var tupleReceiver = tupleListenerSupplier.get();
-            String targetConnectionPoolPrefix = TrafficReplayerTopLevel.TARGET_CONNECTION_POOL_NAME + " run: " + runNumber;
+            String targetConnectionPoolPrefix = TrafficReplayerTopLevel.TARGET_CONNECTION_POOL_NAME
+                + " run: "
+                + runNumber;
             try (
                 var rootContext = rootContextSupplier.get();
                 var trafficReplayer = trafficReplayerFactory.apply(rootContext, targetConnectionPoolPrefix)
@@ -145,14 +147,17 @@ public class TrafficReplayerRunner {
                 log.atLevel(e.immediateCause == null ? Level.INFO : Level.ERROR)
                     .setCause(e.immediateCause)
                     .setMessage(
-                        () -> "broke out of the replayer, with the shutdown cause=" + e.originalCause + " and this immediate reason"
+                        () -> "broke out of the replayer, with the shutdown cause="
+                            + e.originalCause
+                            + " and this immediate reason"
                     )
                     .log();
-                FabricatedErrorToKillTheReplayer killSignalError = e.originalCause instanceof FabricatedErrorToKillTheReplayer
-                    ? (FabricatedErrorToKillTheReplayer) e.originalCause
-                    : (e.immediateCause instanceof FabricatedErrorToKillTheReplayer
-                        ? (FabricatedErrorToKillTheReplayer) e.immediateCause
-                        : null);
+                FabricatedErrorToKillTheReplayer killSignalError =
+                    e.originalCause instanceof FabricatedErrorToKillTheReplayer
+                        ? (FabricatedErrorToKillTheReplayer) e.originalCause
+                        : (e.immediateCause instanceof FabricatedErrorToKillTheReplayer
+                            ? (FabricatedErrorToKillTheReplayer) e.immediateCause
+                            : null);
                 if (killSignalError == null) {
                     skipFinally = true;
                     throw e.immediateCause;

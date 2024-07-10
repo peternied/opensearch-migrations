@@ -53,7 +53,10 @@ public class FrontsideHandler extends ChannelInboundHandlerAdapter {
                 if (future.isSuccess()) {
                     ctx.channel().read(); // kickoff another read for the frontside
                 } else {
-                    log.debug("closing outbound channel because WRITE future was not successful due to: ", future.cause());
+                    log.debug(
+                        "closing outbound channel because WRITE future was not successful due to: ",
+                        future.cause()
+                    );
                     future.channel().close(); // close the backside
                 }
             });

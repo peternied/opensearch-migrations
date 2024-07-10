@@ -17,7 +17,10 @@ public class SnapshotRepoData_ES_6_8 {
     public static SnapshotRepoData_ES_6_8 fromRepoFile(Path filePath) {
         ObjectMapper mapper = new ObjectMapper();
         try {
-            SnapshotRepoData_ES_6_8 data = mapper.readValue(new File(filePath.toString()), SnapshotRepoData_ES_6_8.class);
+            SnapshotRepoData_ES_6_8 data = mapper.readValue(
+                new File(filePath.toString()),
+                SnapshotRepoData_ES_6_8.class
+            );
             data.filePath = filePath;
             return data;
         } catch (IOException e) {

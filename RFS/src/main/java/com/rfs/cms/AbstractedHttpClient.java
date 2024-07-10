@@ -40,15 +40,21 @@ public interface AbstractedHttpClient extends AutoCloseable {
             return getStatusText()
                 + "/"
                 + getStatusCode()
-                + getHeaders().map(kvp -> kvp.getKey() + ": " + kvp.getValue()).collect(Collectors.joining(";", "[", "]"))
+                + getHeaders().map(kvp -> kvp.getKey() + ": " + kvp.getValue())
+                    .collect(Collectors.joining(";", "[", "]"))
                 + payloadStr;
         }
     }
 
-    AbstractHttpResponse makeRequest(String method, String path, Map<String, String> headers, String payload) throws IOException;
+    AbstractHttpResponse makeRequest(String method, String path, Map<String, String> headers, String payload)
+        throws IOException;
 
-    default AbstractHttpResponse makeJsonRequest(String method, String path, Map<String, String> extraHeaders, String body)
-        throws IOException {
+    default AbstractHttpResponse makeJsonRequest(
+        String method,
+        String path,
+        Map<String, String> extraHeaders,
+        String body
+    ) throws IOException {
         var combinedHeaders = new LinkedHashMap<String, String>();
         combinedHeaders.put("Content-Type", "application/json");
         combinedHeaders.put("Accept-Encoding", "identity");

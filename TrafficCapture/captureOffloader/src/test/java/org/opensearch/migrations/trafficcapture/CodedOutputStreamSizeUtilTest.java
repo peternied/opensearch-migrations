@@ -104,7 +104,10 @@ class CodedOutputStreamSizeUtilTest {
         int[] expectedResults = new int[] { 24, 25, 26 };
 
         for (int i = 0; i < indices.length; i++) {
-            int result = CodedOutputStreamSizeUtil.bytesNeededForObservationAndClosingIndex(observationContentSize, indices[i]);
+            int result = CodedOutputStreamSizeUtil.bytesNeededForObservationAndClosingIndex(
+                observationContentSize,
+                indices[i]
+            );
             Assertions.assertEquals(expectedResults[i], result);
         }
     }

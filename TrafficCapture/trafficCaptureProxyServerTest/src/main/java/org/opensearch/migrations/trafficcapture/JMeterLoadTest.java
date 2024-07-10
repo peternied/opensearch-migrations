@@ -33,7 +33,9 @@ public class JMeterLoadTest {
         int backsidePort;
         @Parameter(required = true, names = { "-s", "--server-name" }, description = "Server name")
         String domainName;
-        @Parameter(required = false, names = { "-r", "--protocol" }, description = "Protocol used. HTTP or HTTPS. Default = HTTPS")
+        @Parameter(required = false, names = {
+            "-r",
+            "--protocol" }, description = "Protocol used. HTTP or HTTPS. Default = HTTPS")
         String protocol = "HTTPS";
     }
 
@@ -112,14 +114,24 @@ public class JMeterLoadTest {
         hashTree.add(testPlan);
         hashTree.add(testPlan, createTimer());
         {
-            var threadGroupHashTree = hashTree.add(testPlan, createThreadGroup("FireAndForgetGroup", loopCount, workerThreadCount, 1));
+            var threadGroupHashTree = hashTree.add(
+                testPlan,
+                createThreadGroup("FireAndForgetGroup", loopCount, workerThreadCount, 1)
+            );
             Arrays.stream(files)
-                .forEach(fr -> threadGroupHashTree.add(createHttpSampler(protocol, domain, port, fr, "GET", verifyResponse)));
+                .forEach(
+                    fr -> threadGroupHashTree.add(createHttpSampler(protocol, domain, port, fr, "GET", verifyResponse))
+                );
         }
         {
-            var threadGroupHashTree = hashTree.add(testPlan, createThreadGroup("TransactionGroup", loopCount, workerThreadCount, 1));
+            var threadGroupHashTree = hashTree.add(
+                testPlan,
+                createThreadGroup("TransactionGroup", loopCount, workerThreadCount, 1)
+            );
             Arrays.stream(files)
-                .forEach(fr -> threadGroupHashTree.add(createHttpSampler(protocol, domain, port, fr, "POST", verifyResponse)));
+                .forEach(
+                    fr -> threadGroupHashTree.add(createHttpSampler(protocol, domain, port, fr, "POST", verifyResponse))
+                );
         }
         hashTree.add(testPlan, createResultCollector(logOutputFileName, summaryUpdateFrequencySeconds));
         return hashTree;

@@ -29,7 +29,10 @@ public class CaptureProxyContainer extends GenericContainer implements AutoClose
     private Integer listeningPort;
     private Thread serverThread;
 
-    public CaptureProxyContainer(final Supplier<String> destinationUriSupplier, final Supplier<String> kafkaUriSupplier) {
+    public CaptureProxyContainer(
+        final Supplier<String> destinationUriSupplier,
+        final Supplier<String> kafkaUriSupplier
+    ) {
         this.destinationUriSupplier = destinationUriSupplier;
         this.kafkaUriSupplier = kafkaUriSupplier;
     }

@@ -61,7 +61,10 @@ public class KafkaConfigurationCaptureProxyTest {
     }
 
     private static void assertLessThan(long ceiling, long actual) {
-        Assertions.assertTrue(actual < ceiling, () -> "Expected actual value to be less than " + ceiling + " but was " + actual + ".");
+        Assertions.assertTrue(
+            actual < ceiling,
+            () -> "Expected actual value to be less than " + ceiling + " but was " + actual + "."
+        );
     }
 
     @BeforeEach
@@ -169,11 +172,17 @@ public class KafkaConfigurationCaptureProxyTest {
 
             var averageRequestDurationWithProxy = assertBasicCalls(captureProxy, numberOfTests);
 
-            var averageNoProxyDuration = assertBasicCalls(toxiproxyTestBase.getProxyUrlHttp(destinationProxy), numberOfTests);
+            var averageNoProxyDuration = assertBasicCalls(
+                toxiproxyTestBase.getProxyUrlHttp(destinationProxy),
+                numberOfTests
+            );
 
             var acceptableProxyLatencyAdd = Duration.ofMillis(25);
 
-            assertLessThan(averageNoProxyDuration.plus(acceptableProxyLatencyAdd).toMillis(), averageRequestDurationWithProxy.toMillis());
+            assertLessThan(
+                averageNoProxyDuration.plus(acceptableProxyLatencyAdd).toMillis(),
+                averageRequestDurationWithProxy.toMillis()
+            );
         }
     }
 

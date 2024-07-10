@@ -8,7 +8,9 @@ import lombok.NonNull;
 public class TupleParserChainConsumer implements Consumer<SourceTargetCaptureTuple> {
     private final BiConsumer<SourceTargetCaptureTuple, ParsedHttpMessagesAsDicts> innerConsumer;
 
-    public TupleParserChainConsumer(@NonNull BiConsumer<SourceTargetCaptureTuple, ParsedHttpMessagesAsDicts> innerConsumer) {
+    public TupleParserChainConsumer(
+        @NonNull BiConsumer<SourceTargetCaptureTuple, ParsedHttpMessagesAsDicts> innerConsumer
+    ) {
         this.innerConsumer = innerConsumer;
     }
 

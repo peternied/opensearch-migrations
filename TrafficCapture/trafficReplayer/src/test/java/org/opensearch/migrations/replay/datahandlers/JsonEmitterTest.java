@@ -37,7 +37,9 @@ public class JsonEmitterTest {
                 pac = pac.nextSupplier.get();
             }
             writer.flush();
-            var streamedToStringRoundTripped = mapper.writeValueAsString(mapper.readTree(new StringReader(writer.toString())));
+            var streamedToStringRoundTripped = mapper.writeValueAsString(
+                mapper.readTree(new StringReader(writer.toString()))
+            );
             var originalRoundTripped = mapper.writeValueAsString(originalTree);
             Assertions.assertEquals(originalRoundTripped, streamedToStringRoundTripped);
         }

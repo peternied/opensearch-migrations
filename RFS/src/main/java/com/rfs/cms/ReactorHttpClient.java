@@ -50,7 +50,8 @@ public class ReactorHttpClient implements AbstractedHttpClient {
     }
 
     @Override
-    public AbstractHttpResponse makeRequest(String method, String path, Map<String, String> headers, String payload) throws IOException {
+    public AbstractHttpResponse makeRequest(String method, String path, Map<String, String> headers, String payload)
+        throws IOException {
         var requestSender = client.request(HttpMethod.valueOf(method)).uri("/" + path);
         BiFunction<HttpClientResponse, ByteBufMono, Mono<Response>> responseWrapperFunction = (response, bytes) -> {
             try {

@@ -29,10 +29,12 @@ public class CreateSnapshot {
             "--s3-repo-uri" }, required = false, description = "The S3 URI of the snapshot repo, like: s3://my-bucket/dir1/dir2")
         public String s3RepoUri;
 
-        @Parameter(names = { "--s3-region" }, required = false, description = "The AWS Region the S3 bucket is in, like: us-east-2")
+        @Parameter(names = {
+            "--s3-region" }, required = false, description = "The AWS Region the S3 bucket is in, like: us-east-2")
         public String s3Region;
 
-        @Parameter(names = { "--source-host" }, required = true, description = "The source host and port (e.g. http://localhost:9200)")
+        @Parameter(names = {
+            "--source-host" }, required = true, description = "The source host and port (e.g. http://localhost:9200)")
         public String sourceHost;
 
         @Parameter(names = {
@@ -46,7 +48,8 @@ public class CreateSnapshot {
         @Parameter(names = { "--source-insecure" }, description = "Allow untrusted SSL certificates for source")
         public boolean sourceInsecure = false;
 
-        @Parameter(names = { "--no-wait" }, description = "Optional.  If provided, the snapshot runner will not wait for completion")
+        @Parameter(names = {
+            "--no-wait" }, description = "Optional.  If provided, the snapshot runner will not wait for completion")
         public boolean noWait = false;
 
         @Parameter(names = {
@@ -87,7 +90,12 @@ public class CreateSnapshot {
                     arguments.s3Region,
                     arguments.maxSnapshotRateMBPerNode
                 )),
-            new OpenSearchClient(arguments.sourceHost, arguments.sourceUser, arguments.sourcePass, arguments.sourceInsecure),
+            new OpenSearchClient(
+                arguments.sourceHost,
+                arguments.sourceUser,
+                arguments.sourcePass,
+                arguments.sourceInsecure
+            ),
             arguments.noWait
         );
     }

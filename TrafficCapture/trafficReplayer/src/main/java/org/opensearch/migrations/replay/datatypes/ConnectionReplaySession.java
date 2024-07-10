@@ -55,7 +55,9 @@ public class ConnectionReplaySession {
         this.channelFutureFutureFactory = channelFutureFutureFactory;
     }
 
-    public TrackedFuture<String, ChannelFuture> getFutureThatReturnsChannelFutureInAnyState(boolean requireActiveChannel) {
+    public TrackedFuture<String, ChannelFuture> getFutureThatReturnsChannelFutureInAnyState(
+        boolean requireActiveChannel
+    ) {
         TextTrackedFuture<ChannelFuture> eventLoopFuture = new TextTrackedFuture<>("procuring a connection");
         eventLoop.submit(() -> {
             if (!requireActiveChannel || (cachedChannel != null && cachedChannel.channel().isActive())) {
@@ -67,17 +69,27 @@ public class ConnectionReplaySession {
         return eventLoopFuture;
     }
 
-    private void createNewChannelFuture(boolean requireActiveChannel, TextTrackedFuture<ChannelFuture> eventLoopFuture) {
+    private void createNewChannelFuture(
+        boolean requireActiveChannel,
+        TextTrackedFuture<ChannelFuture> eventLoopFuture
+    ) {
         createNewChannelFuture(requireActiveChannel, MAX_CHANNEL_CREATE_RETRIES, eventLoopFuture);
     }
 
-    private void createNewChannelFuture(boolean requireActiveChannel, int retries, TextTrackedFuture<ChannelFuture> eventLoopFuture) {
+    private void createNewChannelFuture(
+        boolean requireActiveChannel,
+        int retries,
+        TextTrackedFuture<ChannelFuture> eventLoopFuture
+    ) {
         channelFutureFutureFactory.get().future.whenComplete((v, t) -> {
             if (requireActiveChannel && retries > 0 && (t == null || exceptionIsRetryable(t))) {
                 if (t != null || !v.channel().isActive()) {
                     if (t != null) {
                         channelKeyContext.addCaughtException(t);
-                        log.atWarn().setMessage(() -> "Caught exception while trying to get an active channel").setCause(t).log();
+                        log.atWarn()
+                            .setMessage(() -> "Caught exception while trying to get an active channel")
+                            .setCause(t)
+                            .log();
                     }
                     createNewChannelFuture(requireActiveChannel, retries - 1, eventLoopFuture);
                 } else {

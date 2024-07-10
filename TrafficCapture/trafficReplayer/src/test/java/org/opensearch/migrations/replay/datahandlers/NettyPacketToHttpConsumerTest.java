@@ -121,25 +121,37 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
     private static SimpleNettyHttpServer createTestServer(boolean useTls, boolean largeResponse) {
         return SimpleNettyHttpServer.makeServer(
             useTls,
-            largeResponse ? NettyPacketToHttpConsumerTest::makeResponseContextLarge : NettyPacketToHttpConsumerTest::makeResponseContext
+            largeResponse
+                ? NettyPacketToHttpConsumerTest::makeResponseContextLarge
+                : NettyPacketToHttpConsumerTest::makeResponseContext
         );
     }
 
     @Test
     public void testThatTestSetupIsCorrect() throws Exception {
         for (var useTls : new boolean[] { false, true }) {
-            try (var client = new SimpleHttpClientForTesting(useTls); var testServer = createTestServer(useTls, false)) {
+            try (
+                var client = new SimpleHttpClientForTesting(useTls);
+                var testServer = createTestServer(useTls, false)
+            ) {
                 var endpoint = testServer.localhostEndpoint();
                 var response = makeTestRequestViaClient(client, endpoint);
-                Assertions.assertEquals(SERVER_RESPONSE_BODY, new String(response.payloadBytes, StandardCharsets.UTF_8));
+                Assertions.assertEquals(
+                    SERVER_RESPONSE_BODY,
+                    new String(response.payloadBytes, StandardCharsets.UTF_8)
+                );
             } catch (Throwable t) {
                 log.atError().setMessage(() -> "Error=").setCause(t).log();
             }
         }
     }
 
-    private SimpleHttpResponse makeTestRequestViaClient(SimpleHttpClientForTesting client, URI endpoint) throws IOException {
-        return client.makeGetRequest(endpoint, Map.of("Host", "localhost", "User-Agent", "UnitTest").entrySet().stream());
+    private SimpleHttpResponse makeTestRequestViaClient(SimpleHttpClientForTesting client, URI endpoint)
+        throws IOException {
+        return client.makeGetRequest(
+            endpoint,
+            Map.of("Host", "localhost", "User-Agent", "UnitTest").entrySet().stream()
+        );
     }
 
     @ParameterizedTest
@@ -172,7 +184,10 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
                 if (!largeResponse) {
                     Assertions.assertEquals(EXPECTED_RESPONSE_STRING, responseAsString);
                 } else {
-                    Assertions.assertEquals(LARGE_RESPONSE_LENGTH, responseAsString.getBytes(StandardCharsets.UTF_8).length);
+                    Assertions.assertEquals(
+                        LARGE_RESPONSE_LENGTH,
+                        responseAsString.getBytes(StandardCharsets.UTF_8).length
+                    );
 
                 }
             }
@@ -184,7 +199,8 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
     @Tag("longTest")
     @WrapWithNettyLeakDetection(repetitions = 1)
     @Tag("longTest")
-    public void testThatPeerResetTriggersFinalizeFuture(boolean useTls, boolean withServerReadTimeout) throws Exception {
+    public void testThatPeerResetTriggersFinalizeFuture(boolean useTls, boolean withServerReadTimeout)
+        throws Exception {
         final var RESPONSE_TIMEOUT_FOR_HUNG_TEST = Duration.ofMillis(500);
         testPeerResets(
             useTls,
@@ -202,8 +218,12 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
         testPeerResets(useTls, false, Duration.ofSeconds(30), Duration.ofMillis(1250));
     }
 
-    private void testPeerResets(boolean useTls, boolean withServerReadTimeout, Duration readTimeout, Duration resultWaitTimeout)
-        throws Exception {
+    private void testPeerResets(
+        boolean useTls,
+        boolean withServerReadTimeout,
+        Duration readTimeout,
+        Duration resultWaitTimeout
+    ) throws Exception {
         ClientConnectionPool clientConnectionPool = null;
         try (
             var testServer = SimpleNettyHttpServer.makeServer(
@@ -213,7 +233,9 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
             )
         ) {
             log.atError().setMessage("Got port " + testServer.port).log();
-            var sslContext = !useTls ? null : SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+            var sslContext = !useTls
+                ? null
+                : SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();
             var timeShifter = new TimeShifter();
             timeShifter.setFirstTimestamp(Instant.now());
             clientConnectionPool = new ClientConnectionPool(
@@ -272,7 +294,9 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
         try (
             var testServer = SimpleNettyHttpServer.makeServer(
                 useTls,
-                largeResponse ? NettyPacketToHttpConsumerTest::makeResponseContextLarge : NettyPacketToHttpConsumerTest::makeResponseContext
+                largeResponse
+                    ? NettyPacketToHttpConsumerTest::makeResponseContextLarge
+                    : NettyPacketToHttpConsumerTest::makeResponseContext
             )
         ) {
             var sslContext = !testServer.localhostEndpoint().getScheme().equalsIgnoreCase("https")
@@ -293,7 +317,11 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
             var sendingFactory = new ReplayEngine(
                 new RequestSenderOrchestrator(
                     clientConnectionPool,
-                    (replaySession, ctx1) -> new NettyPacketToHttpConsumer(replaySession, ctx1, REGULAR_RESPONSE_TIMEOUT)
+                    (replaySession, ctx1) -> new NettyPacketToHttpConsumer(
+                        replaySession,
+                        ctx1,
+                        REGULAR_RESPONSE_TIMEOUT
+                    )
                 ),
                 new TestFlowController(),
                 timeShifter
@@ -317,7 +345,10 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
                     if (!largeResponse) {
                         Assertions.assertEquals(EXPECTED_RESPONSE_STRING, responseAsString);
                     } else {
-                        Assertions.assertEquals(LARGE_RESPONSE_LENGTH, responseAsString.getBytes(StandardCharsets.UTF_8).length);
+                        Assertions.assertEquals(
+                            LARGE_RESPONSE_LENGTH,
+                            responseAsString.getBytes(StandardCharsets.UTF_8).length
+                        );
 
                     }
                 }
@@ -445,7 +476,12 @@ public class NettyPacketToHttpConsumerTest extends InstrumentationTest {
                     + timeBetweenRequests
             )
             .log();
-        try (var testServer = SimpleNettyHttpServer.makeServer(useTls, NettyPacketToHttpConsumerTest::makeResponseContext)) {
+        try (
+            var testServer = SimpleNettyHttpServer.makeServer(
+                useTls,
+                NettyPacketToHttpConsumerTest::makeResponseContext
+            )
+        ) {
             var sslContext = !testServer.localhostEndpoint().getScheme().equalsIgnoreCase("https")
                 ? null
                 : SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE).build();

@@ -25,7 +25,10 @@ public class AdaptiveRateLimiter<D, T> {
 
     public TrackedFuture<D, T> get(Supplier<TrackedFuture<D, T>> producer) {
         var intervalFunction = IntervalFunction.ofExponentialBackoff(Duration.ofMillis(1), 2, Duration.ofSeconds(1));
-        RetryConfig retryConfig = RetryConfig.custom().maxAttempts(Integer.MAX_VALUE).intervalFunction(intervalFunction).build();
+        RetryConfig retryConfig = RetryConfig.custom()
+            .maxAttempts(Integer.MAX_VALUE)
+            .intervalFunction(intervalFunction)
+            .build();
         var rateLimiterConfig = RateLimiterConfig.custom()
             .timeoutDuration(Duration.ofSeconds(1))
             .limitRefreshPeriod(Duration.ofSeconds(1))

@@ -71,7 +71,8 @@ public class RfsMigrateDocuments {
             "--lucene-dir" }, required = true, description = "The absolute path to the directory where we'll put the Lucene docs")
         public String luceneDir;
 
-        @Parameter(names = { "--target-host" }, required = true, description = "The target host and port (e.g. http://localhost:9200)")
+        @Parameter(names = {
+            "--target-host" }, required = true, description = "The target host and port (e.g. http://localhost:9200)")
         public String targetHost;
 
         @Parameter(names = {
@@ -86,8 +87,9 @@ public class RfsMigrateDocuments {
             + " (e.g. 'logs_2024_01, logs_2024_02').  Default: all non-system indices (e.g. those not starting with '.')"), required = false)
         public List<String> indexAllowlist = List.of();
 
-        @Parameter(names = { "--max-shard-size-bytes" }, description = ("Optional. The maximum shard size, in bytes, to allow when"
-            + " performing the document migration.  Useful for preventing disk overflow.  Default: 50 * 1024 * 1024 * 1024 (50 GB)"), required = false)
+        @Parameter(names = {
+            "--max-shard-size-bytes" }, description = ("Optional. The maximum shard size, in bytes, to allow when"
+                + " performing the document migration.  Useful for preventing disk overflow.  Default: 50 * 1024 * 1024 * 1024 (50 GB)"), required = false)
         public long maxShardSizeBytes = 50 * 1024 * 1024 * 1024L;
     }
 
@@ -115,7 +117,9 @@ public class RfsMigrateDocuments {
         }
 
         if (!isSnapshotLocalDirProvided && !areAllS3ArgsProvided) {
-            throw new ParameterException("You must provide either --snapshot-local-dir or --s3-local-dir, --s3-repo-uri, and --s3-region.");
+            throw new ParameterException(
+                "You must provide either --snapshot-local-dir or --s3-local-dir, --s3-repo-uri, and --s3-region."
+            );
         }
 
     }
@@ -152,7 +156,11 @@ public class RfsMigrateDocuments {
 
                 SourceRepo sourceRepo;
                 if (snapshotLocalDirPath == null) {
-                    sourceRepo = S3Repo.create(Paths.get(arguments.s3LocalDir), new S3Uri(arguments.s3RepoUri), arguments.s3Region);
+                    sourceRepo = S3Repo.create(
+                        Paths.get(arguments.s3LocalDir),
+                        new S3Uri(arguments.s3RepoUri),
+                        arguments.s3Region
+                    );
                 } else {
                     sourceRepo = new FileSystemRepo(snapshotLocalDirPath);
                 }

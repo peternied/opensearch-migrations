@@ -62,6 +62,7 @@ public class KafkaRecordContext extends BaseNestedSpanContext<IRootKafkaOffloade
 
     @Override
     public AttributesBuilder fillAttributesForSpansBelow(AttributesBuilder builder) {
-        return super.fillAttributesForSpansBelow(builder).put(TOPIC_ATTR, getTopic()).put(RECORD_ID_ATTR, getRecordId());
+        return super.fillAttributesForSpansBelow(builder).put(TOPIC_ATTR, getTopic())
+            .put(RECORD_ID_ATTR, getRecordId());
     }
 }

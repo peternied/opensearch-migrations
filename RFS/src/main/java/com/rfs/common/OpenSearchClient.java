@@ -187,7 +187,10 @@ public class OpenSearchClient {
         } else if (response.code == HttpURLConnection.HTTP_NOT_FOUND) {
             return Optional.empty();
         } else {
-            String errorMessage = "Should not have gotten here while parsing response for: _snapshot/" + repoName + "/" + snapshotName;
+            String errorMessage = "Should not have gotten here while parsing response for: _snapshot/"
+                + repoName
+                + "/"
+                + snapshotName;
             throw new OperationFailed(errorMessage, response);
         }
     }

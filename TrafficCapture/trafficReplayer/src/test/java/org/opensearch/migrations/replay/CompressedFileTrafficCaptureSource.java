@@ -26,7 +26,8 @@ public abstract class CompressedFileTrafficCaptureSource implements ISimpleTraff
         this.trafficSource = getTrafficSource(context, filename);
     }
 
-    private static InputStreamOfTraffic getTrafficSource(RootReplayerContext context, String filename) throws IOException {
+    private static InputStreamOfTraffic getTrafficSource(RootReplayerContext context, String filename)
+        throws IOException {
         var compressedIs = new FileInputStream(filename);
         var is = new GZIPInputStream(compressedIs);
         return new InputStreamOfTraffic(context, is);

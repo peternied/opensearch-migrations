@@ -117,7 +117,12 @@ public class WorkCoordinatorTest {
             + "}";
         log.atInfo().setMessage(() -> "Searching with... " + body).log();
         var response = httpClientSupplier.get()
-            .makeJsonRequest(AbstractedHttpClient.GET_METHOD, OpenSearchWorkCoordinator.INDEX_NAME + "/_search", null, body);
+            .makeJsonRequest(
+                AbstractedHttpClient.GET_METHOD,
+                OpenSearchWorkCoordinator.INDEX_NAME + "/_search",
+                null,
+                body
+            );
 
         var objectMapper = new ObjectMapper();
         return objectMapper.readTree(response.getPayloadStream()).path("hits");
@@ -145,20 +150,27 @@ public class WorkCoordinatorTest {
             for (int i = 0; i < NUM_DOCS; ++i) {
                 var label = run + "-" + i;
                 allFutures.add(
-                    CompletableFuture.supplyAsync(() -> getWorkItemAndVerify(label, seenWorkerItems, expiration, markAsComplete))
+                    CompletableFuture.supplyAsync(
+                        () -> getWorkItemAndVerify(label, seenWorkerItems, expiration, markAsComplete)
+                    )
                 );
             }
             CompletableFuture.allOf(allFutures.toArray(CompletableFuture[]::new)).join();
             Assertions.assertEquals(NUM_DOCS, seenWorkerItems.size());
 
-            try (var workCoordinator = new OpenSearchWorkCoordinator(httpClientSupplier.get(), 3600, "firstPass_NONE")) {
+            try (
+                var workCoordinator = new OpenSearchWorkCoordinator(httpClientSupplier.get(), 3600, "firstPass_NONE")
+            ) {
                 var nextWorkItem = workCoordinator.acquireNextWorkItem(Duration.ofSeconds(2));
                 log.atInfo().setMessage(() -> "Next work item picked=" + nextWorkItem).log();
                 Assertions.assertInstanceOf(IWorkCoordinator.NoAvailableWorkToBeDone.class, nextWorkItem);
             } catch (OpenSearchWorkCoordinator.PotentialClockDriftDetectedException e) {
                 log.atError()
                     .setCause(e)
-                    .setMessage(() -> "Unexpected clock drift error.  Got response: " + searchForExpiredDocs(e.getTimestampEpochSeconds()))
+                    .setMessage(
+                        () -> "Unexpected clock drift error.  Got response: "
+                            + searchForExpiredDocs(e.getTimestampEpochSeconds())
+                    )
                     .log();
             }
 
@@ -178,40 +190,51 @@ public class WorkCoordinatorTest {
         Duration expirationWindow,
         boolean markCompleted
     ) {
-        try (var workCoordinator = new OpenSearchWorkCoordinator(httpClientSupplier.get(), 3600, "firstPass_" + workerSuffix)) {
+        try (
+            var workCoordinator = new OpenSearchWorkCoordinator(
+                httpClientSupplier.get(),
+                3600,
+                "firstPass_" + workerSuffix
+            )
+        ) {
             var doneId = DUMMY_FINISHED_DOC_ID + "_" + nonce.incrementAndGet();
             workCoordinator.createOrUpdateLeaseForDocument(doneId, 1);
             workCoordinator.completeWorkItem(doneId);
 
-            return workCoordinator.acquireNextWorkItem(expirationWindow).visit(new IWorkCoordinator.WorkAcquisitionOutcomeVisitor<>() {
-                @Override
-                public String onAlreadyCompleted() throws IOException {
-                    throw new IllegalStateException();
-                }
-
-                @Override
-                public String onNoAvailableWorkToBeDone() throws IOException {
-                    throw new IllegalStateException();
-                }
-
-                @Override
-                public String onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) throws IOException, InterruptedException {
-                    log.atInfo().setMessage(() -> "Next work item picked=" + workItem).log();
-                    Assertions.assertNotNull(workItem);
-                    Assertions.assertNotNull(workItem.workItemId);
-                    Assertions.assertTrue(workItem.leaseExpirationTime.isAfter(Instant.now()));
-                    seenWorkerItems.put(workItem.workItemId, workItem.workItemId);
-
-                    if (markCompleted) {
-                        workCoordinator.completeWorkItem(workItem.workItemId);
+            return workCoordinator.acquireNextWorkItem(expirationWindow)
+                .visit(new IWorkCoordinator.WorkAcquisitionOutcomeVisitor<>() {
+                    @Override
+                    public String onAlreadyCompleted() throws IOException {
+                        throw new IllegalStateException();
                     }
-                    return workItem.workItemId;
-                }
-            });
+
+                    @Override
+                    public String onNoAvailableWorkToBeDone() throws IOException {
+                        throw new IllegalStateException();
+                    }
+
+                    @Override
+                    public String onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) throws IOException,
+                        InterruptedException {
+                        log.atInfo().setMessage(() -> "Next work item picked=" + workItem).log();
+                        Assertions.assertNotNull(workItem);
+                        Assertions.assertNotNull(workItem.workItemId);
+                        Assertions.assertTrue(workItem.leaseExpirationTime.isAfter(Instant.now()));
+                        seenWorkerItems.put(workItem.workItemId, workItem.workItemId);
+
+                        if (markCompleted) {
+                            workCoordinator.completeWorkItem(workItem.workItemId);
+                        }
+                        return workItem.workItemId;
+                    }
+                });
         } catch (OpenSearchWorkCoordinator.PotentialClockDriftDetectedException e) {
             log.atError()
                 .setCause(e)
-                .setMessage(() -> "Unexpected clock drift error.  Got response: " + searchForExpiredDocs(e.getTimestampEpochSeconds()))
+                .setMessage(
+                    () -> "Unexpected clock drift error.  Got response: "
+                        + searchForExpiredDocs(e.getTimestampEpochSeconds())
+                )
                 .log();
             throw e;
         }

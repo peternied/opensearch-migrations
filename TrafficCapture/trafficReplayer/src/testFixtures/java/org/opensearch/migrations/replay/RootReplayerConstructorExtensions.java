@@ -67,7 +67,8 @@ public class RootReplayerConstructorExtensions extends TrafficReplayerTopLevel {
         return makeClientConnectionPool(serverUri, true, 0, poolPrefix);
     }
 
-    public static ClientConnectionPool makeClientConnectionPool(URI serverUri, int numSendingThreads) throws SSLException {
+    public static ClientConnectionPool makeClientConnectionPool(URI serverUri, int numSendingThreads)
+        throws SSLException {
         return makeClientConnectionPool(serverUri, true, numSendingThreads, null);
     }
 }

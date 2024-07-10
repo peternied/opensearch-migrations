@@ -65,7 +65,9 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
     @Container
     // see
     // https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
-    private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
+    private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(
+        DockerImageName.parse("confluentinc/cp-kafka:7.5.0")
+    );
 
     private static class CounterLimitedReceiverFactory implements Supplier<Consumer<SourceTargetCaptureTuple>> {
         AtomicInteger nextStopPointRef = new AtomicInteger(INITIAL_STOP_REPLAYER_REQUEST_COUNT);
@@ -106,10 +108,17 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
             );
             var trafficStreams = streamAndConsumer.stream.collect(Collectors.toList());
             log.atInfo()
-                .setMessage(() -> trafficStreams.stream().map(TrafficStreamUtils::summarizeTrafficStream).collect(Collectors.joining("\n")))
+                .setMessage(
+                    () -> trafficStreams.stream()
+                        .map(TrafficStreamUtils::summarizeTrafficStream)
+                        .collect(Collectors.joining("\n"))
+                )
                 .log();
 
-            loadStreamsToKafka(buildKafkaConsumer(), Streams.concat(trafficStreams.stream(), Stream.of(SENTINEL_TRAFFIC_STREAM)));
+            loadStreamsToKafka(
+                buildKafkaConsumer(),
+                Streams.concat(trafficStreams.stream(), Stream.of(SENTINEL_TRAFFIC_STREAM))
+            );
             TrafficReplayerRunner.runReplayer(
                 streamAndConsumer.numHttpTransactions,
                 httpServer.localhostEndpoint(),
@@ -143,7 +152,8 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
         return kafkaConsumer;
     }
 
-    private void loadStreamsToKafka(KafkaConsumer<String, byte[]> kafkaConsumer, Stream<TrafficStream> streams) throws Exception {
+    private void loadStreamsToKafka(KafkaConsumer<String, byte[]> kafkaConsumer, Stream<TrafficStream> streams)
+        throws Exception {
         var kafkaProducer = buildKafkaProducer();
         var counter = new AtomicInteger();
         loadStreamsAsynchronouslyWithCloseableResource(
@@ -171,7 +181,9 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
             var startTime = Instant.now();
             while (!kafkaConsumer.listTopics().isEmpty()) {
                 Thread.sleep(10);
-                Assertions.assertTrue(Duration.between(startTime, Instant.now()).compareTo(MAX_WAIT_TIME_FOR_TOPIC) < 0);
+                Assertions.assertTrue(
+                    Duration.between(startTime, Instant.now()).compareTo(MAX_WAIT_TIME_FOR_TOPIC) < 0
+                );
             }
         } finally {
             closeableResource.close();
@@ -180,8 +192,14 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
 
     Producer<String, byte[]> buildKafkaProducer() {
         var kafkaProps = new Properties();
-        kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
-        kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArraySerializer");
+        kafkaProps.put(
+            ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+            "org.apache.kafka.common.serialization.StringSerializer"
+        );
+        kafkaProps.put(
+            ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+            "org.apache.kafka.common.serialization.ByteArraySerializer"
+        );
         // Property details:
         // https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#delivery-timeout-ms
         kafkaProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 10000);
@@ -212,7 +230,8 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
                 try {
                     for (int i = 0; i < recordCount; ++i) {
                         List<ITrafficStreamWithKey> chunks = null;
-                        chunks = originalTrafficSource.readNextTrafficStreamChunk(rootCtx::createReadChunkContext).get();
+                        chunks = originalTrafficSource.readNextTrafficStreamChunk(rootCtx::createReadChunkContext)
+                            .get();
                         for (int j = 0; j < chunks.size(); ++j) {
                             KafkaTestUtils.writeTrafficStreamRecord(
                                 kafkaProducer,
@@ -228,7 +247,12 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
                 }
             }
         );
-        return () -> new KafkaTrafficCaptureSource(rootCtx, kafkaConsumer, TEST_TOPIC_NAME, Duration.ofMillis(DEFAULT_POLL_INTERVAL_MS));
+        return () -> new KafkaTrafficCaptureSource(
+            rootCtx,
+            kafkaConsumer,
+            TEST_TOPIC_NAME,
+            Duration.ofMillis(DEFAULT_POLL_INTERVAL_MS)
+        );
     }
 
 }

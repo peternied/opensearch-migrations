@@ -60,7 +60,9 @@ public class SlowAndExpiredTrafficStreamBecomesTwoTargetChannelsTest {
             .setConnectionId(connectionId)
             .setNodeId("testNodeId")
             .setPriorRequestsReceived(tsRequestNumber);
-        streamBuilder = last ? streamBuilder.setNumberOfThisLastChunk(tsRequestNumber) : streamBuilder.setNumber(tsRequestNumber);
+        streamBuilder = last
+            ? streamBuilder.setNumberOfThisLastChunk(tsRequestNumber)
+            : streamBuilder.setNumber(tsRequestNumber);
         return streamBuilder.addAllSubStream(
             trafficObservationFillers.apply(() -> TrafficObservation.newBuilder().setTs(fixedTimestamp))
                 .map(b -> b.build())
@@ -72,7 +74,12 @@ public class SlowAndExpiredTrafficStreamBecomesTwoTargetChannelsTest {
         return "GET " + makePath(connectionId, index) + " HTTP/1.0\r\n\r\n";
     }
 
-    private static TrafficStream makeTrafficStreamFor(String connectionId, int connectionIndex, boolean last, int timeShift) {
+    private static TrafficStream makeTrafficStreamFor(
+        String connectionId,
+        int connectionIndex,
+        boolean last,
+        int timeShift
+    ) {
         return makeTrafficStream(
             START_TIME.plus(Duration.ofSeconds(SPACING_SECONDS * timeShift)),
             connectionId,
@@ -123,7 +130,9 @@ public class SlowAndExpiredTrafficStreamBecomesTwoTargetChannelsTest {
                 )
             )
         ) {
-            new Thread(() -> responseTracker.onCountDownFinished(Duration.ofSeconds(10), () -> replayer.shutdown(null).join()));
+            new Thread(
+                () -> responseTracker.onCountDownFinished(Duration.ofSeconds(10), () -> replayer.shutdown(null).join())
+            );
             replayer.setupRunAndWaitForReplayWithShutdownChecks(
                 Duration.ofMillis(1),
                 Duration.ofSeconds(30),
@@ -153,7 +162,8 @@ public class SlowAndExpiredTrafficStreamBecomesTwoTargetChannelsTest {
             .stream()
             .forEach(
                 kvp -> Assertions.assertTrue(
-                    IntStream.range(0, kvp.getValue().size()).allMatch(i -> i == Integer.valueOf(kvp.getValue().get(i))),
+                    IntStream.range(0, kvp.getValue().size())
+                        .allMatch(i -> i == Integer.valueOf(kvp.getValue().get(i))),
                     "unordered " + kvp.getKey() + ": " + String.join(",", kvp.getValue())
                 )
             );

@@ -63,7 +63,10 @@ public class FullReplayerWithTracingChecksTest extends FullTrafficReplayerTest {
             )
         ) {
             var baseTime = Instant.now();
-            var fixedTimestamp = Timestamp.newBuilder().setSeconds(baseTime.getEpochSecond()).setNanos(baseTime.getNano()).build();
+            var fixedTimestamp = Timestamp.newBuilder()
+                .setSeconds(baseTime.getEpochSecond())
+                .setNanos(baseTime.getNano())
+                .build();
             var tsb = TrafficStream.newBuilder().setConnectionId("C");
             for (int i = 0; i < numRequests; ++i) {
                 tsb = tsb.addSubStream(
@@ -73,9 +76,11 @@ public class FullReplayerWithTracingChecksTest extends FullTrafficReplayerTest {
                             ReadObservation.newBuilder()
                                 .setData(
                                     ByteString.copyFrom(
-                                        ("GET /" + i + " HTTP/1.1\r\n" + "Connection: Keep-Alive\r\n" + "Host: localhost\r\n").getBytes(
-                                            StandardCharsets.UTF_8
-                                        )
+                                        ("GET /"
+                                            + i
+                                            + " HTTP/1.1\r\n"
+                                            + "Connection: Keep-Alive\r\n"
+                                            + "Host: localhost\r\n").getBytes(StandardCharsets.UTF_8)
                                     )
                                 )
                                 .build()
@@ -86,7 +91,10 @@ public class FullReplayerWithTracingChecksTest extends FullTrafficReplayerTest {
                         TrafficObservation.newBuilder()
                             .setTs(fixedTimestamp)
                             .setEndOfMessageIndicator(
-                                EndOfMessageIndication.newBuilder().setFirstLineByteLength(14).setHeadersByteLength(58).build()
+                                EndOfMessageIndication.newBuilder()
+                                    .setFirstLineByteLength(14)
+                                    .setHeadersByteLength(58)
+                                    .build()
                             )
                             .build()
                     )
@@ -95,7 +103,9 @@ public class FullReplayerWithTracingChecksTest extends FullTrafficReplayerTest {
                             .setTs(fixedTimestamp)
                             .setWrite(
                                 WriteObservation.newBuilder()
-                                    .setData(ByteString.copyFrom("HTTP/1.1 OK 200\r\n".getBytes(StandardCharsets.UTF_8)))
+                                    .setData(
+                                        ByteString.copyFrom("HTTP/1.1 OK 200\r\n".getBytes(StandardCharsets.UTF_8))
+                                    )
                                     .build()
                             )
                             .build()
@@ -154,7 +164,10 @@ public class FullReplayerWithTracingChecksTest extends FullTrafficReplayerTest {
         }
 
         public String getRemainingItemsString() {
-            return byName.entrySet().stream().map(kvp -> kvp.getKey() + ":" + kvp.getValue()).collect(Collectors.joining());
+            return byName.entrySet()
+                .stream()
+                .map(kvp -> kvp.getKey() + ":" + kvp.getValue())
+                .collect(Collectors.joining());
         }
     }
 
@@ -162,7 +175,10 @@ public class FullReplayerWithTracingChecksTest extends FullTrafficReplayerTest {
      * This function is written like this rather than with a loop so that the backtrace will show WHICH
      * key was corrupted.
      */
-    private void checkSpansForSimpleReplayedTransactions(InMemoryInstrumentationBundle inMemoryBundle, int numRequests) {
+    private void checkSpansForSimpleReplayedTransactions(
+        InMemoryInstrumentationBundle inMemoryBundle,
+        int numRequests
+    ) {
         var traceProcessor = new TraceProcessor(inMemoryBundle.getFinishedSpans());
 
         Assertions.assertEquals(1, traceProcessor.getCountAndRemoveSpan("channel"));

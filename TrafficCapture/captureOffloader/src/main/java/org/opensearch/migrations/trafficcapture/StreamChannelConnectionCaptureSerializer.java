@@ -90,8 +90,8 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
         @NonNull StreamLifecycleManager<T> streamLifecycleManager
     ) {
         this.streamManager = streamLifecycleManager;
-        assert (nodeId == null ? 0 : CodedOutputStream.computeStringSize(TrafficStream.NODEID_FIELD_NUMBER, nodeId)) + CodedOutputStream
-            .computeStringSize(TrafficStream.CONNECTIONID_FIELD_NUMBER, connectionId) <= MAX_ID_SIZE;
+        assert (nodeId == null ? 0 : CodedOutputStream.computeStringSize(TrafficStream.NODEID_FIELD_NUMBER, nodeId))
+            + CodedOutputStream.computeStringSize(TrafficStream.CONNECTIONID_FIELD_NUMBER, connectionId) <= MAX_ID_SIZE;
         this.connectionIdString = connectionId;
         this.nodeIdString = nodeId;
     }
@@ -178,11 +178,17 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
     }
 
     private void writeTrafficStreamTag(int fieldNumber) throws IOException {
-        getOrCreateCodedOutputStream().writeTag(fieldNumber, getWireTypeForFieldIndex(TrafficStream.getDescriptor(), fieldNumber));
+        getOrCreateCodedOutputStream().writeTag(
+            fieldNumber,
+            getWireTypeForFieldIndex(TrafficStream.getDescriptor(), fieldNumber)
+        );
     }
 
     private void writeObservationTag(int fieldNumber) throws IOException {
-        getOrCreateCodedOutputStream().writeTag(fieldNumber, getWireTypeForFieldIndex(TrafficObservation.getDescriptor(), fieldNumber));
+        getOrCreateCodedOutputStream().writeTag(
+            fieldNumber,
+            getWireTypeForFieldIndex(TrafficObservation.getDescriptor(), fieldNumber)
+        );
     }
 
     /**
@@ -190,14 +196,23 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
      * CodedOutputStream and flushing if space does not exist. This should be called before writing any observation to
      * the TrafficStream.
      */
-    private void beginSubstreamObservation(Instant timestamp, int captureTagFieldNumber, int captureTagLengthAndContentSize)
-        throws IOException {
+    private void beginSubstreamObservation(
+        Instant timestamp,
+        int captureTagFieldNumber,
+        int captureTagLengthAndContentSize
+    ) throws IOException {
         final var tsContentSize = CodedOutputStreamSizeUtil.getSizeOfTimestamp(timestamp);
         final var tsTagSize = CodedOutputStream.computeInt32Size(TrafficObservation.TS_FIELD_NUMBER, tsContentSize);
         final var captureTagNoLengthSize = CodedOutputStream.computeTagSize(captureTagFieldNumber);
-        final var observationContentSize = tsTagSize + tsContentSize + captureTagNoLengthSize + captureTagLengthAndContentSize;
+        final var observationContentSize = tsTagSize + tsContentSize + captureTagNoLengthSize
+            + captureTagLengthAndContentSize;
         // Ensure space is available before starting an observation
-        flushIfNeeded(CodedOutputStreamSizeUtil.bytesNeededForObservationAndClosingIndex(observationContentSize, numFlushesSoFar + 1));
+        flushIfNeeded(
+            CodedOutputStreamSizeUtil.bytesNeededForObservationAndClosingIndex(
+                observationContentSize,
+                numFlushesSoFar + 1
+            )
+        );
         // e.g. 2 {
         writeTrafficStreamTag(TrafficStream.SUBSTREAM_FIELD_NUMBER);
         // Write observation content length
@@ -231,9 +246,11 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
      *         and thus an additional space on the return value would require two additional space to write.
      */
     public static int computeMaxLengthDelimitedFieldSizeForSpace(int totalAvailableSpace, int requestedFieldSize) {
-        // A pessimistic calculation space required for the length field due to not accounting for the space of the length field
+        // A pessimistic calculation space required for the length field due to not accounting for the space of the
+        // length field
         // itself.
-        // This may yield a length space one byte greater than optimal, potentially leaving at most one length delimited byte
+        // This may yield a length space one byte greater than optimal, potentially leaving at most one length delimited
+        // byte
         // which the availableSpace has space for.
         final int pessimisticLengthFieldSpace = CodedOutputStream.computeUInt32SizeNoTag(totalAvailableSpace);
         int maxWriteBytesSpace = totalAvailableSpace - pessimisticLengthFieldSpace;
@@ -253,7 +270,9 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
             codedOutputStream.writeTag(fieldNum, WireFormat.WIRETYPE_LENGTH_DELIMITED);
             codedOutputStream.writeUInt32NoTag(bufReadableLength);
             buf.readBytes(new ByteOutputGatheringByteChannel(codedOutputStream), bufReadableLength);
-            assert buf.readableBytes() == 0 : "Expected buf bytes read but instead left " + buf.readableBytes() + " unread.";
+            assert buf.readableBytes() == 0 : "Expected buf bytes read but instead left "
+                + buf.readableBytes()
+                + " unread.";
         } else {
             codedOutputStream.writeUInt32NoTag(0);
         }
@@ -285,7 +304,9 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
         }
         try {
             CodedOutputStream currentStream = getOrCreateCodedOutputStream();
-            var fieldNum = isFinal ? TrafficStream.NUMBEROFTHISLASTCHUNK_FIELD_NUMBER : TrafficStream.NUMBER_FIELD_NUMBER;
+            var fieldNum = isFinal
+                ? TrafficStream.NUMBEROFTHISLASTCHUNK_FIELD_NUMBER
+                : TrafficStream.NUMBER_FIELD_NUMBER;
             // e.g. 3: 1
             currentStream.writeInt32(fieldNum, ++numFlushesSoFar);
             log.trace("Flushing the current CodedOutputStream for {}.{}", connectionIdString, numFlushesSoFar);
@@ -331,7 +352,10 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
     @Override
     public void addCloseEvent(Instant timestamp) throws IOException {
         beginSubstreamObservation(timestamp, TrafficObservation.CLOSE_FIELD_NUMBER, 1);
-        getOrCreateCodedOutputStream().writeMessage(TrafficObservation.CLOSE_FIELD_NUMBER, CloseObservation.getDefaultInstance());
+        getOrCreateCodedOutputStream().writeMessage(
+            TrafficObservation.CLOSE_FIELD_NUMBER,
+            CloseObservation.getDefaultInstance()
+        );
     }
 
     @Override
@@ -339,7 +363,8 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
         // not implemented for this serializer. The v1.0 version of the replayer will ignore this type of observation
     }
 
-    private void addStringMessage(int captureFieldNumber, int dataFieldNumber, Instant timestamp, @NonNull String str) throws IOException {
+    private void addStringMessage(int captureFieldNumber, int dataFieldNumber, Instant timestamp, @NonNull String str)
+        throws IOException {
         int dataSize = 0;
         int lengthSize = 1;
         if (str.length() > 0) {
@@ -355,7 +380,8 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
         writeByteStringToCurrentStream(dataFieldNumber, str);
     }
 
-    private void addDataMessage(int captureFieldNumber, int dataFieldNumber, Instant timestamp, ByteBuf buf) throws IOException {
+    private void addDataMessage(int captureFieldNumber, int dataFieldNumber, Instant timestamp, ByteBuf buf)
+        throws IOException {
         int segmentFieldNumber;
         int segmentDataFieldNumber;
         if (captureFieldNumber == TrafficObservation.READ_FIELD_NUMBER) {
@@ -367,8 +393,10 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
         }
 
         // The message bytes here are not optimizing for space and instead are calculated on the worst case estimate of
-        // the potentially required bytes for simplicity. This could leave ~5 bytes of unused space in the CodedOutputStream
-        // when considering the case of a message that does not need segments or for the case of a smaller segment created
+        // the potentially required bytes for simplicity. This could leave ~5 bytes of unused space in the
+        // CodedOutputStream
+        // when considering the case of a message that does not need segments or for the case of a smaller segment
+        // created
         // from a much larger message
         final int messageAndOverheadBytesLeft = CodedOutputStreamSizeUtil.maxBytesNeededForASegmentedObservation(
             timestamp,
@@ -386,7 +414,8 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
         var spaceLeft = currentOutputStreamWriteableSpaceLeft();
 
         var bufToRead = buf.duplicate();
-        // If our message is empty or can fit in the current CodedOutputStream no chunking is needed, and we can continue
+        // If our message is empty or can fit in the current CodedOutputStream no chunking is needed, and we can
+        // continue
         if (bufToRead.readableBytes() == 0 || spaceLeft == -1 || messageAndOverheadBytesLeft <= spaceLeft) {
             int minExpectedSpaceAfterObservation = spaceLeft - messageAndOverheadBytesLeft;
             addSubstreamMessage(captureFieldNumber, dataFieldNumber, timestamp, bufToRead);
@@ -394,7 +423,10 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
         } else {
             while (bufToRead.readableBytes() > 0) {
                 spaceLeft = currentOutputStreamWriteableSpaceLeft();
-                var bytesToRead = computeMaxLengthDelimitedFieldSizeForSpace(spaceLeft - trafficStreamOverhead, bufToRead.readableBytes());
+                var bytesToRead = computeMaxLengthDelimitedFieldSizeForSpace(
+                    spaceLeft - trafficStreamOverhead,
+                    bufToRead.readableBytes()
+                );
                 if (bytesToRead <= 0) {
                     throw new IllegalStateException("Stream space is not allowing forward progress on byteBuf reading");
                 }
@@ -448,7 +480,8 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
         }
     }
 
-    private void addSubstreamMessage(int captureFieldNumber, int dataFieldNumber, Instant timestamp, ByteBuf byteBuf) throws IOException {
+    private void addSubstreamMessage(int captureFieldNumber, int dataFieldNumber, Instant timestamp, ByteBuf byteBuf)
+        throws IOException {
         addSubstreamMessage(captureFieldNumber, dataFieldNumber, 0, 0, timestamp, byteBuf);
     }
 
@@ -537,15 +570,26 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
     }
 
     private void writeEndOfHttpMessage(Instant timestamp) throws IOException {
-        int eomPairSize = CodedOutputStream.computeInt32Size(EndOfMessageIndication.FIRSTLINEBYTELENGTH_FIELD_NUMBER, firstLineByteLength)
-            + CodedOutputStream.computeInt32Size(EndOfMessageIndication.HEADERSBYTELENGTH_FIELD_NUMBER, headersByteLength);
+        int eomPairSize = CodedOutputStream.computeInt32Size(
+            EndOfMessageIndication.FIRSTLINEBYTELENGTH_FIELD_NUMBER,
+            firstLineByteLength
+        ) + CodedOutputStream.computeInt32Size(
+            EndOfMessageIndication.HEADERSBYTELENGTH_FIELD_NUMBER,
+            headersByteLength
+        );
         int eomDataSize = eomPairSize + CodedOutputStream.computeInt32SizeNoTag(eomPairSize);
         beginSubstreamObservation(timestamp, TrafficObservation.ENDOFMESSAGEINDICATOR_FIELD_NUMBER, eomDataSize);
         // e.g. 15 {
         writeObservationTag(TrafficObservation.ENDOFMESSAGEINDICATOR_FIELD_NUMBER);
         getOrCreateCodedOutputStream().writeUInt32NoTag(eomPairSize);
-        getOrCreateCodedOutputStream().writeInt32(EndOfMessageIndication.FIRSTLINEBYTELENGTH_FIELD_NUMBER, firstLineByteLength);
-        getOrCreateCodedOutputStream().writeInt32(EndOfMessageIndication.HEADERSBYTELENGTH_FIELD_NUMBER, headersByteLength);
+        getOrCreateCodedOutputStream().writeInt32(
+            EndOfMessageIndication.FIRSTLINEBYTELENGTH_FIELD_NUMBER,
+            firstLineByteLength
+        );
+        getOrCreateCodedOutputStream().writeInt32(
+            EndOfMessageIndication.HEADERSBYTELENGTH_FIELD_NUMBER,
+            headersByteLength
+        );
     }
 
     private void writeEndOfSegmentMessage(Instant timestamp) throws IOException {

@@ -104,7 +104,12 @@ public class ConnectionDetailsTest {
 
     @ParameterizedTest
     @MethodSource("unhappyPathArgs")
-    void ConnectionDetails_UnhappyPath_AsExpected(String url, String username, String password, Class<Exception> expectedException) {
+    void ConnectionDetails_UnhappyPath_AsExpected(
+        String url,
+        String username,
+        String password,
+        Class<Exception> expectedException
+    ) {
         assertThrows(expectedException, () -> new ConnectionDetails(url, username, password));
     }
 }

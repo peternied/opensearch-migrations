@@ -37,8 +37,10 @@ public class SigV4Signer extends IAuthTransformer.StreamingFullMessageTransforme
 
     static {
         AUTH_HEADERS_TO_PULL_NO_PAYLOAD = new HashSet<>(Set.of("authorization", "x-amz-date", "x-amz-security-token"));
-        AUTH_HEADERS_TO_PULL_WITH_PAYLOAD = Stream.concat(AUTH_HEADERS_TO_PULL_NO_PAYLOAD.stream(), Stream.of(AMZ_CONTENT_SHA_256))
-            .collect(Collectors.toCollection(HashSet::new));
+        AUTH_HEADERS_TO_PULL_WITH_PAYLOAD = Stream.concat(
+            AUTH_HEADERS_TO_PULL_NO_PAYLOAD.stream(),
+            Stream.of(AMZ_CONTENT_SHA_256)
+        ).collect(Collectors.toCollection(HashSet::new));
     }
 
     private MessageDigest messageDigest;
@@ -130,7 +132,12 @@ public class SigV4Signer extends IAuthTransformer.StreamingFullMessageTransforme
         }
         var signedRequest = signer.sign(request, signingParamsBuilder.build());
 
-        var headersToReturn = messageDigest == null ? AUTH_HEADERS_TO_PULL_NO_PAYLOAD : AUTH_HEADERS_TO_PULL_WITH_PAYLOAD;
-        return signedRequest.headers().entrySet().stream().filter(kvp -> headersToReturn.contains(kvp.getKey().toLowerCase()));
+        var headersToReturn = messageDigest == null
+            ? AUTH_HEADERS_TO_PULL_NO_PAYLOAD
+            : AUTH_HEADERS_TO_PULL_WITH_PAYLOAD;
+        return signedRequest.headers()
+            .entrySet()
+            .stream()
+            .filter(kvp -> headersToReturn.contains(kvp.getKey().toLowerCase()));
     }
 }

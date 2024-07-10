@@ -59,7 +59,10 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
             // we wrote the correct data to the downstream handler/channel
             var outputDataStream = new SequenceInputStream(
                 Collections.enumeration(
-                    channel.inboundMessages().stream().map(m -> new ByteBufInputStream((ByteBuf) m, false)).collect(Collectors.toList())
+                    channel.inboundMessages()
+                        .stream()
+                        .map(m -> new ByteBufInputStream((ByteBuf) m, false))
+                        .collect(Collectors.toList())
                 )
             );
             var outputData = outputDataStream.readAllBytes();
@@ -101,7 +104,8 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
         testThatAPostInASinglePacketBlocksFutureActivity(usePool, true);
     }
 
-    public void testThatAPostInASinglePacketBlocksFutureActivity(boolean usePool, boolean checkInstrumentation) throws IOException {
+    public void testThatAPostInASinglePacketBlocksFutureActivity(boolean usePool, boolean checkInstrumentation)
+        throws IOException {
         byte[] fullTrafficBytes = SimpleRequests.SMALL_POST.getBytes(StandardCharsets.UTF_8);
         var bb = TestUtilities.getByteBuf(fullTrafficBytes, usePool);
         writeMessageAndVerify(fullTrafficBytes, w -> w.writeInbound(bb), checkInstrumentation);
@@ -114,9 +118,14 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
         testThatAPostInTinyPacketsBlocksFutureActivity(usePool, true);
     }
 
-    public void testThatAPostInTinyPacketsBlocksFutureActivity(boolean usePool, boolean checkInstrumentation) throws IOException {
+    public void testThatAPostInTinyPacketsBlocksFutureActivity(boolean usePool, boolean checkInstrumentation)
+        throws IOException {
         byte[] fullTrafficBytes = SimpleRequests.SMALL_POST.getBytes(StandardCharsets.UTF_8);
-        writeMessageAndVerify(fullTrafficBytes, getSingleByteAtATimeWriter(usePool, fullTrafficBytes), checkInstrumentation);
+        writeMessageAndVerify(
+            fullTrafficBytes,
+            getSingleByteAtATimeWriter(usePool, fullTrafficBytes),
+            checkInstrumentation
+        );
     }
 
     private static Consumer<EmbeddedChannel> getSingleByteAtATimeWriter(boolean usePool, byte[] fullTrafficBytes) {
@@ -141,7 +150,14 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
 
             var headerCapturePredicate = new HeaderValueFilteringCapturePredicate(Map.of("user-Agent", "uploader"));
             EmbeddedChannel channel = new EmbeddedChannel(
-                new ConditionallyReliableLoggingHttpHandler(rootInstrumenter, "n", "c", ctx -> offloader, headerCapturePredicate, x -> true)
+                new ConditionallyReliableLoggingHttpHandler(
+                    rootInstrumenter,
+                    "n",
+                    "c",
+                    ctx -> offloader,
+                    headerCapturePredicate,
+                    x -> true
+                )
             );
             getWriter(false, true, SimpleRequests.HEALTH_CHECK.getBytes(StandardCharsets.UTF_8)).accept(channel);
             channel.finishAndReleaseAll();
@@ -152,7 +168,10 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
             // we wrote the correct data to the downstream handler/channel
             var outputData = new SequenceInputStream(
                 Collections.enumeration(
-                    channel.inboundMessages().stream().map(m -> new ByteBufInputStream((ByteBuf) m, true)).collect(Collectors.toList())
+                    channel.inboundMessages()
+                        .stream()
+                        .map(m -> new ByteBufInputStream((ByteBuf) m, true))
+                        .collect(Collectors.toList())
                 )
             ).readAllBytes();
             log.info("outputdata = " + new String(outputData, StandardCharsets.UTF_8));
@@ -184,12 +203,17 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
             var bytesForResponsePreserved = "response2".getBytes(StandardCharsets.UTF_8);
             channel.writeOutbound(Unpooled.wrappedBuffer(bytesForResponsePreserved));
             channel.close();
-            var requestBytes = (SimpleRequests.HEALTH_CHECK + SimpleRequests.SMALL_POST).getBytes(StandardCharsets.UTF_8);
+            var requestBytes = (SimpleRequests.HEALTH_CHECK + SimpleRequests.SMALL_POST).getBytes(
+                StandardCharsets.UTF_8
+            );
 
             // we wrote the correct data to the downstream handler/channel
             var consumedData = new SequenceInputStream(
                 Collections.enumeration(
-                    channel.inboundMessages().stream().map(m -> new ByteBufInputStream((ByteBuf) m, false)).collect(Collectors.toList())
+                    channel.inboundMessages()
+                        .stream()
+                        .map(m -> new ByteBufInputStream((ByteBuf) m, false))
+                        .collect(Collectors.toList())
                 )
             ).readAllBytes();
             log.info("captureddata = " + new String(consumedData, StandardCharsets.UTF_8));
@@ -205,7 +229,9 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
             Assertions.assertEquals(1, streamMgr.flushCount.get());
             var observations = trafficStream.getSubStreamList();
             {
-                var readObservationStreamToUse = singleBytes ? skipReadsBeforeDrop(observations) : observations.stream();
+                var readObservationStreamToUse = singleBytes
+                    ? skipReadsBeforeDrop(observations)
+                    : observations.stream();
                 var combinedTrafficPacketsSteam = new SequenceInputStream(
                     Collections.enumeration(
                         readObservationStreamToUse.filter(to -> to.hasRead())
@@ -214,7 +240,10 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
                     )
                 );
                 var reconstitutedTrafficStreamReads = combinedTrafficPacketsSteam.readAllBytes();
-                Assertions.assertArrayEquals(SimpleRequests.SMALL_POST.getBytes(StandardCharsets.UTF_8), reconstitutedTrafficStreamReads);
+                Assertions.assertArrayEquals(
+                    SimpleRequests.SMALL_POST.getBytes(StandardCharsets.UTF_8),
+                    reconstitutedTrafficStreamReads
+                );
             }
 
             // check that we only got one response
@@ -228,7 +257,10 @@ public class ConditionallyReliableLoggingHttpHandlerTest {
                     )
                 );
                 var reconstitutedTrafficStreamWrites = combinedTrafficPacketsSteam.readAllBytes();
-                log.info("reconstitutedTrafficStreamWrites=" + new String(reconstitutedTrafficStreamWrites, StandardCharsets.UTF_8));
+                log.info(
+                    "reconstitutedTrafficStreamWrites="
+                        + new String(reconstitutedTrafficStreamWrites, StandardCharsets.UTF_8)
+                );
                 Assertions.assertArrayEquals(bytesForResponsePreserved, reconstitutedTrafficStreamWrites);
             }
 

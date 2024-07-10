@@ -33,7 +33,9 @@ public class RootWireLoggingContextTest {
         Set<String> expectedTraces
     ) throws IOException {
         try (var rootContext = new TestRootContext(true, true)) {
-            Consumer<EmbeddedChannel> channelWriter = w -> w.writeInbound(TestUtilities.getByteBuf(fullTrafficBytes, false));
+            Consumer<EmbeddedChannel> channelWriter = w -> w.writeInbound(
+                TestUtilities.getByteBuf(fullTrafficBytes, false)
+            );
             var streamManager = new TestStreamManager();
             var offloader = new StreamChannelConnectionCaptureSerializer("Test", "c", streamManager);
 
@@ -52,7 +54,10 @@ public class RootWireLoggingContextTest {
             // we wrote the correct data to the downstream handler/channel
             var outputData = new SequenceInputStream(
                 Collections.enumeration(
-                    channel.inboundMessages().stream().map(m -> new ByteBufInputStream((ByteBuf) m, true)).collect(Collectors.toList())
+                    channel.inboundMessages()
+                        .stream()
+                        .map(m -> new ByteBufInputStream((ByteBuf) m, true))
+                        .collect(Collectors.toList())
                 )
             ).readAllBytes();
             Assertions.assertArrayEquals(fullTrafficBytes, outputData);
@@ -110,7 +115,12 @@ public class RootWireLoggingContextTest {
     @Test
     public void testThatAGetProducesGatheringRequestTrace_WithClosingChannel() throws IOException {
         byte[] fullTrafficBytes = SimpleRequests.HEALTH_CHECK.getBytes(StandardCharsets.UTF_8);
-        writeMessageAndVerifyTraces(fullTrafficBytes, false, true, Set.of("captureConnection", "gatheringRequest", "waitingForResponse"));
+        writeMessageAndVerifyTraces(
+            fullTrafficBytes,
+            false,
+            true,
+            Set.of("captureConnection", "gatheringRequest", "waitingForResponse")
+        );
     }
 
     @Test

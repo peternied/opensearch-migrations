@@ -33,7 +33,9 @@ public class KafkaCommitsWorkBetweenLongPollsTest extends InstrumentationTest {
     @Container
     // see
     // https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
-    private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
+    private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(
+        DockerImageName.parse("confluentinc/cp-kafka:7.5.0")
+    );
 
     @SneakyThrows
     private KafkaConsumer<String, byte[]> buildKafkaConsumer() {
