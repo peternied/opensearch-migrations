@@ -12,6 +12,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.lucene.codecs.CodecUtil;
 
 public class IndexMetadata {
+    private IndexMetadata() {}
 
     /**
     * Defines the behavior required to read a snapshot's index metadata as JSON and convert it into a Data object

@@ -23,7 +23,7 @@ public class DocumentReindexer {
         return documentStream.map(this::convertDocumentToBulkSection)  // Convert each Document to part of a bulk
                                                                        // operation
             .buffer(MAX_BATCH_SIZE) // Collect until you hit the batch size
-            .doOnNext(bulk -> logger.info(bulk.size() + " documents in current bulk request"))
+            .doOnNext(bulk -> logger.info("{} documents in current bulk request", bulk.size()))
             .map(this::convertToBulkRequestBody)  // Assemble the bulk request body from the parts
             .flatMap(
                 bulkJson -> client.sendBulkRequest(indexName, bulkJson) // Send the request
@@ -52,9 +52,9 @@ public class DocumentReindexer {
         return builder.toString();
     }
 
-    public void refreshAllDocuments(ConnectionDetails targetConnection) throws Exception {
+    public void refreshAllDocuments(ConnectionDetails targetConnection) {
         // Send the request
-        OpenSearchClient client = new OpenSearchClient(targetConnection);
-        client.refresh();
+        OpenSearchClient refreshClient = new OpenSearchClient(targetConnection);
+        refreshClient.refresh();
     }
 }

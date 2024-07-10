@@ -9,6 +9,8 @@ import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
 
 public class Logging {
+    private Logging() {}
+
     public static void setLevel(Level level) {
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration config = ctx.getConfiguration();

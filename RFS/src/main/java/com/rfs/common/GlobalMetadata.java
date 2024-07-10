@@ -12,6 +12,8 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.lucene.codecs.CodecUtil;
 
 public class GlobalMetadata {
+    private GlobalMetadata() {}
+
     /**
     * Defines the behavior required to read a snapshot's global metadata as JSON and convert it into a Data object
     */

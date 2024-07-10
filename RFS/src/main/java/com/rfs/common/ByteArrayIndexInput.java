@@ -31,7 +31,9 @@ public class ByteArrayIndexInput extends IndexInput {
     }
 
     @Override
-    public void close() throws IOException {}
+    public void close() throws IOException {
+        // Empty in the original implementation, and seems to work
+    }
 
     @Override
     public long getFilePointer() {

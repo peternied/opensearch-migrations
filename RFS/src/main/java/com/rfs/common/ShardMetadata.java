@@ -13,6 +13,7 @@ import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.util.BytesRef;
 
 public class ShardMetadata {
+    private ShardMetadata() {}
 
     /**
     * Defines the behavior required to read a snapshot's shard metadata as JSON and convert it into a Data object
