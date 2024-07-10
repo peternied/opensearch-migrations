@@ -9,7 +9,7 @@ import java.util.stream.IntStream;
 import com.rfs.cms.IWorkCoordinator;
 import com.rfs.cms.ScopedWorkCoordinator;
 import com.rfs.common.FilterScheme;
-import com.rfs.common.IndexMetadata;
+import com.rfs.models.IndexMetadata;
 import com.rfs.common.SnapshotRepo;
 import lombok.Lombok;
 import lombok.SneakyThrows;
@@ -84,7 +84,7 @@ public class ShardWorkPreparer {
             .stream()
             .filter(FilterScheme.filterIndicesByAllowList(indexAllowlist, logger))
             .peek(index -> {
-                IndexMetadata.Data indexMetadata = metadataFactory.fromRepo(snapshotName, index.getName());
+                IndexMetadata indexMetadata = metadataFactory.fromRepo(snapshotName, index.getName());
                 log.info("Index " + indexMetadata.getName() + " has " + indexMetadata.getNumberOfShards() + " shards");
                 IntStream.range(0, indexMetadata.getNumberOfShards()).forEach(shardId -> {
                     log.info(

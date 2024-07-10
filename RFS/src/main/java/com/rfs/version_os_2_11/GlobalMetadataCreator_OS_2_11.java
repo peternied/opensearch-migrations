@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.rfs.common.OpenSearchClient;
+import com.rfs.models.GlobalMetadata;
 
 public class GlobalMetadataCreator_OS_2_11 {
     private static final Logger logger = LogManager.getLogger(GlobalMetadataCreator_OS_2_11.class);
@@ -29,10 +30,10 @@ public class GlobalMetadataCreator_OS_2_11 {
         this.indexTemplateAllowlist = indexTemplateAllowlist;
     }
 
-    public void create(ObjectNode root) {
+    public void create(GlobalMetadata root) {
         logger.info("Setting Global Metadata");
 
-        GlobalMetadataData_OS_2_11 globalMetadata = new GlobalMetadataData_OS_2_11(root);
+        GlobalMetadataData_OS_2_11 globalMetadata = new GlobalMetadataData_OS_2_11(root.toObjectNode());
         createLegacyTemplates(globalMetadata, client, legacyTemplateAllowlist);
         createComponentTemplates(globalMetadata, client, componentTemplateAllowlist);
         createIndexTemplates(globalMetadata, client, indexTemplateAllowlist);

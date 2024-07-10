@@ -2,6 +2,8 @@ package com.rfs.common;
 
 import java.nio.file.Path;
 
+import com.rfs.models.ShardMetadata;
+
 public interface SourceRepo {
     public Path getRepoRootDir();
 
@@ -23,5 +25,5 @@ public interface SourceRepo {
     * Performs any work necessary to facilitate access to a given shard's blob files.  Depending on the implementation,
     * may involve no work at all, bulk downloading objects from a remote source, or any other operations.
     */
-    public void prepBlobFiles(ShardMetadata.Data shardMetadata);
+    public void prepBlobFiles(ShardMetadata shardMetadata);
 }
