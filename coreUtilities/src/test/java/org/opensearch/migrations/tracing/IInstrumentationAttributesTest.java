@@ -34,7 +34,8 @@ class IInstrumentationAttributesTest {
 
         @Override
         public AttributesBuilder fillAttributesForSpansBelow(AttributesBuilder builder) {
-            return super.fillAttributesForSpansBelow(builder).put(OVERRIDE_KEY, "a-toBeOverridden").put(UNIQUE_KEY, "a-toStay");
+            return super.fillAttributesForSpansBelow(builder).put(OVERRIDE_KEY, "a-toBeOverridden")
+                .put(UNIQUE_KEY, "a-toStay");
         }
     }
 

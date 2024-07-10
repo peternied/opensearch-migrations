@@ -20,7 +20,8 @@ public class DocumentReindexer {
 
     public Mono<Void> reindex(String indexName, Flux<Document> documentStream) {
 
-        return documentStream.map(this::convertDocumentToBulkSection)  // Convert each Document to part of a bulk operation
+        return documentStream.map(this::convertDocumentToBulkSection)  // Convert each Document to part of a bulk
+                                                                       // operation
             .buffer(MAX_BATCH_SIZE) // Collect until you hit the batch size
             .doOnNext(bulk -> logger.info(bulk.size() + " documents in current bulk request"))
             .map(this::convertToBulkRequestBody)  // Assemble the bulk request body from the parts

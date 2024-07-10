@@ -32,7 +32,11 @@ public class PortFinder {
                 return port;
             } catch (Exception e) {
                 if (++numTries >= MAX_PORT_TRIES) {
-                    log.atError().setCause(e).setMessage(() -> "Exceeded max tries {} giving up").addArgument(MAX_PORT_TRIES).log();
+                    log.atError()
+                        .setCause(e)
+                        .setMessage(() -> "Exceeded max tries {} giving up")
+                        .addArgument(MAX_PORT_TRIES)
+                        .log();
                     throw new ExceededMaxPortAssigmentAttemptException(e);
                 }
                 log.atWarn().setCause(e).setMessage(() -> "Eating exception and trying again").log();

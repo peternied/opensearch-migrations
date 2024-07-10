@@ -47,7 +47,8 @@ public class Transformer_ES_7_10_OS_2_11 implements Transformer {
 
                 logger.info("Transforming template: " + templateName);
                 logger.debug("Original template: " + template.toString());
-                TransformFunctions.removeIntermediateIndexSettingsLevel(templateSubRoot); // run before fixNumberOfReplicas
+                TransformFunctions.removeIntermediateIndexSettingsLevel(templateSubRoot); // run before
+                                                                                          // fixNumberOfReplicas
                 TransformFunctions.fixReplicasForDimensionality(templateSubRoot, awarenessAttributeDimensionality);
                 logger.debug("Transformed template: " + template.toString());
                 indexTemplateValuesRoot.set(templateName, template);

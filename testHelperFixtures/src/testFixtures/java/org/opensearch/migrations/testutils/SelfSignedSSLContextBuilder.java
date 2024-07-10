@@ -41,7 +41,8 @@ public class SelfSignedSSLContextBuilder {
         return keyStore;
     }
 
-    private static X509Certificate generateSelfSignedCertificate(KeyPair keyPair) throws OperatorCreationException, CertificateException {
+    private static X509Certificate generateSelfSignedCertificate(KeyPair keyPair) throws OperatorCreationException,
+        CertificateException {
         var startValidityInstant = Instant.now();
         var validityEndDate = Date.from(startValidityInstant.plus(Duration.ofHours(1)));
         var validityStartDate = Date.from(startValidityInstant);

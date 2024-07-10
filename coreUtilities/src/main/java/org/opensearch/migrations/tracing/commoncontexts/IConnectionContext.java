@@ -20,7 +20,9 @@ public interface IConnectionContext extends IScopedInstrumentationAttributes {
 
     @Override
     default AttributesBuilder fillAttributesForSpansBelow(AttributesBuilder builder) {
-        return IScopedInstrumentationAttributes.super.fillAttributesForSpansBelow(builder).put(CONNECTION_ID_ATTR, getConnectionId())
-            .put(NODE_ID_ATTR, getNodeId());
+        return IScopedInstrumentationAttributes.super.fillAttributesForSpansBelow(builder).put(
+            CONNECTION_ID_ATTR,
+            getConnectionId()
+        ).put(NODE_ID_ATTR, getNodeId());
     }
 }

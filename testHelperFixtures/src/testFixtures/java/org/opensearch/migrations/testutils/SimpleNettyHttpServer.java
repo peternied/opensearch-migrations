@@ -54,8 +54,10 @@ public class SimpleNettyHttpServer implements AutoCloseable {
     private Channel serverChannel;
     private Duration timeout;
 
-    public static SimpleNettyHttpServer makeServer(boolean useTls, Function<HttpRequestFirstLine, SimpleHttpResponse> makeContext)
-        throws PortFinder.ExceededMaxPortAssigmentAttemptException {
+    public static SimpleNettyHttpServer makeServer(
+        boolean useTls,
+        Function<HttpRequestFirstLine, SimpleHttpResponse> makeContext
+    ) throws PortFinder.ExceededMaxPortAssigmentAttemptException {
         return makeServer(useTls, null, makeContext);
     }
 
@@ -128,7 +130,9 @@ public class SimpleNettyHttpServer implements AutoCloseable {
                     var cf = ctx.writeAndFlush(fullResponse);
                     log.atInfo().setMessage(() -> "wrote " + fullResponse).log();
                     cf.addListener(
-                        f -> log.atInfo().setMessage(() -> "success=" + f.isSuccess() + " finished writing " + fullResponse).log()
+                        f -> log.atInfo()
+                            .setMessage(() -> "success=" + f.isSuccess() + " finished writing " + fullResponse)
+                            .log()
                     );
                 } catch (Exception e) {
                     log.atWarn().setCause(e).log("Closing connection due to exception");
@@ -138,32 +142,38 @@ public class SimpleNettyHttpServer implements AutoCloseable {
         };
     }
 
-    SimpleNettyHttpServer(boolean useTLS, int port, Duration timeout, Function<HttpRequestFirstLine, SimpleHttpResponse> responseBuilder)
-        throws Exception {
+    SimpleNettyHttpServer(
+        boolean useTLS,
+        int port,
+        Duration timeout,
+        Function<HttpRequestFirstLine, SimpleHttpResponse> responseBuilder
+    ) throws Exception {
         this.useTls = useTLS;
         this.port = port;
         this.timeout = timeout;
         final SSLContext javaSSLContext = useTLS ? SelfSignedSSLContextBuilder.getSSLContext() : null;
 
         var b = new ServerBootstrap();
-        b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(SocketChannel ch) {
-                var pipeline = ch.pipeline();
-                if (javaSSLContext != null) {
-                    SSLEngine engine = javaSSLContext.createSSLEngine();
-                    engine.setUseClientMode(false);
-                    pipeline.addFirst("SSL", new SslHandler(engine));
+        b.group(bossGroup, workerGroup)
+            .channel(NioServerSocketChannel.class)
+            .childHandler(new ChannelInitializer<SocketChannel>() {
+                @Override
+                protected void initChannel(SocketChannel ch) {
+                    var pipeline = ch.pipeline();
+                    if (javaSSLContext != null) {
+                        SSLEngine engine = javaSSLContext.createSSLEngine();
+                        engine.setUseClientMode(false);
+                        pipeline.addFirst("SSL", new SslHandler(engine));
+                    }
+                    if (timeout != null) {
+                        pipeline.addLast(new ReadTimeoutHandler(timeout.toMillis(), TimeUnit.MILLISECONDS));
+                    }
+                    pipeline.addLast(new HttpRequestDecoder());
+                    pipeline.addLast(new HttpObjectAggregator(16 * 1024));
+                    pipeline.addLast(new HttpResponseEncoder());
+                    pipeline.addLast(makeHandlerFromResponseContext(responseBuilder));
                 }
-                if (timeout != null) {
-                    pipeline.addLast(new ReadTimeoutHandler(timeout.toMillis(), TimeUnit.MILLISECONDS));
-                }
-                pipeline.addLast(new HttpRequestDecoder());
-                pipeline.addLast(new HttpObjectAggregator(16 * 1024));
-                pipeline.addLast(new HttpResponseEncoder());
-                pipeline.addLast(makeHandlerFromResponseContext(responseBuilder));
-            }
-        });
+            });
         serverChannel = b.bind(port).sync().channel();
     }
 

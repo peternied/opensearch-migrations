@@ -24,7 +24,8 @@ public class EndToEndTest {
     public void migrateFrom_ES_v6_8(final SearchClusterContainer.Version targetVersion) throws Exception {
         // Setup
         // PSEUDO: Create a source cluster running ES 6.8
-        // PSEUDO: Create 2 templates on the cluster, see https://www.elastic.co/guide/en/elasticsearch/reference/6.8/indices-templates.html
+        // PSEUDO: Create 2 templates on the cluster, see
+        // https://www.elastic.co/guide/en/elasticsearch/reference/6.8/indices-templates.html
         // - logs-*
         // - data-rolling
         // PSEUDO: Create 5 indices on the cluster
@@ -60,7 +61,8 @@ public class EndToEndTest {
 
         // PSEUDO: Additional validation:
         if (SearchClusterContainer.OS_V2_14_0.equals(targetVersion)) {
-            // - Mapping type parameter is removed https://opensearch.org/docs/latest/breaking-changes/#remove-mapping-types-parameter
+            // - Mapping type parameter is removed
+            // https://opensearch.org/docs/latest/breaking-changes/#remove-mapping-types-parameter
         }
     }
 

@@ -24,8 +24,10 @@ public class SimpleHttpServer implements AutoCloseable {
     protected final HttpServer httpServer;
     public final boolean useTls;
 
-    public static SimpleHttpServer makeServer(boolean useTls, Function<HttpRequestFirstLine, SimpleHttpResponse> makeContext)
-        throws PortFinder.ExceededMaxPortAssigmentAttemptException {
+    public static SimpleHttpServer makeServer(
+        boolean useTls,
+        Function<HttpRequestFirstLine, SimpleHttpResponse> makeContext
+    ) throws PortFinder.ExceededMaxPortAssigmentAttemptException {
         var testServerRef = new AtomicReference<SimpleHttpServer>();
         PortFinder.retryWithNewPortUntilNoThrow(port -> {
             try {
@@ -91,8 +93,11 @@ public class SimpleHttpServer implements AutoCloseable {
      * @param port
      * @return the port upon successfully binding the server
      */
-    public SimpleHttpServer(boolean useTls, int port, Function<HttpRequestFirstLine, SimpleHttpResponse> uriToContentMapper)
-        throws Exception {
+    public SimpleHttpServer(
+        boolean useTls,
+        int port,
+        Function<HttpRequestFirstLine, SimpleHttpResponse> uriToContentMapper
+    ) throws Exception {
         var addr = new InetSocketAddress(LOCALHOST, port);
         this.useTls = useTls;
         httpServer = useTls ? createSecureServer(addr) : HttpServer.create(addr, 0);

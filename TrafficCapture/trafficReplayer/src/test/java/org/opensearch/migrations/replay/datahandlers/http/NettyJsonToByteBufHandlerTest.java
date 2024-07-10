@@ -47,8 +47,10 @@ public class NettyJsonToByteBufHandlerTest {
         IntStream.range(0, ORIGINAL_NUMBER_OF_CHUNKS) // fill the incoming chunks
             .forEach(i -> asCapturedSizes.add(genRandom.get()));
         var preSizesFromUpstreamHandler = new ArrayList<Integer>();
-        var totalBytesWritten = IntStream.range(0, ORIGINAL_NUMBER_OF_CHUNKS + ADDITIONAL_CHUNKS) // simulate data going through the
-                                                                                                  // pipeline and being changed and now
+        var totalBytesWritten = IntStream.range(0, ORIGINAL_NUMBER_OF_CHUNKS + ADDITIONAL_CHUNKS) // simulate data going
+                                                                                                  // through the
+                                                                                                  // pipeline and being
+                                                                                                  // changed and now
                                                                                                   // landing
             .map(i -> writeAndCheck(channel, preSizesFromUpstreamHandler, genRandom.get()))
             .sum();

@@ -50,7 +50,10 @@ public abstract class BaseSpanContext<S extends IInstrumentConstructor>
         initializeSpanWithLinkedSpans(constructor, null);
     }
 
-    protected void initializeSpanWithLinkedSpans(@NonNull IInstrumentConstructor constructor, Stream<Span> linkedSpans) {
+    protected void initializeSpanWithLinkedSpans(
+        @NonNull IInstrumentConstructor constructor,
+        Stream<Span> linkedSpans
+    ) {
         initializeSpan(constructor, rootInstrumentationScope.buildSpan(this, getActivityName(), linkedSpans));
     }
 

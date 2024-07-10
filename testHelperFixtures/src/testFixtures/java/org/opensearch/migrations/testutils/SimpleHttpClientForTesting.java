@@ -42,8 +42,8 @@ public class SimpleHttpClientForTesting implements AutoCloseable {
 
     private final CloseableHttpClient httpClient;
 
-    private static BasicHttpClientConnectionManager getInsecureTlsConnectionManager() throws NoSuchAlgorithmException, KeyStoreException,
-        KeyManagementException {
+    private static BasicHttpClientConnectionManager getInsecureTlsConnectionManager() throws NoSuchAlgorithmException,
+        KeyStoreException, KeyManagementException {
         final var sslContext = SSLContexts.custom().loadTrustMaterial(null, new TrustAllStrategy()).build();
 
         return new BasicHttpClientConnectionManager(
@@ -58,9 +58,13 @@ public class SimpleHttpClientForTesting implements AutoCloseable {
         this(new BasicHttpClientConnectionManager());
     }
 
-    public SimpleHttpClientForTesting(boolean useTlsAndInsecurelyInsteadOfClearText) throws NoSuchAlgorithmException, KeyStoreException,
-        KeyManagementException {
-        this(useTlsAndInsecurelyInsteadOfClearText ? getInsecureTlsConnectionManager() : new BasicHttpClientConnectionManager());
+    public SimpleHttpClientForTesting(boolean useTlsAndInsecurelyInsteadOfClearText) throws NoSuchAlgorithmException,
+        KeyStoreException, KeyManagementException {
+        this(
+            useTlsAndInsecurelyInsteadOfClearText
+                ? getInsecureTlsConnectionManager()
+                : new BasicHttpClientConnectionManager()
+        );
     }
 
     private SimpleHttpClientForTesting(BasicHttpClientConnectionManager connectionManager) {
@@ -69,7 +73,10 @@ public class SimpleHttpClientForTesting implements AutoCloseable {
             .setResponseTimeout(DEFAULT_RESPONSE_TIMEOUT)
             .build();
 
-        httpClient = HttpClients.custom().setConnectionManager(connectionManager).setDefaultRequestConfig(requestConfig).build();
+        httpClient = HttpClients.custom()
+            .setConnectionManager(connectionManager)
+            .setDefaultRequestConfig(requestConfig)
+            .build();
     }
 
     @AllArgsConstructor
@@ -79,7 +86,8 @@ public class SimpleHttpClientForTesting implements AutoCloseable {
         // public final Charset charset;
     }
 
-    public SimpleHttpResponse makeGetRequest(URI endpoint, Stream<Map.Entry<String, String>> requestHeaders) throws IOException {
+    public SimpleHttpResponse makeGetRequest(URI endpoint, Stream<Map.Entry<String, String>> requestHeaders)
+        throws IOException {
         var request = new HttpGet(endpoint);
         requestHeaders.forEach(kvp -> request.setHeader(kvp.getKey(), kvp.getValue()));
         var response = httpClient.execute(request);
@@ -99,7 +107,12 @@ public class SimpleHttpClientForTesting implements AutoCloseable {
     ) throws IOException {
         var request = new HttpPut(endpoint);
         if (payloadAndContentType != null) {
-            request.setEntity(new InputStreamEntity(payloadAndContentType.contents, ContentType.create(payloadAndContentType.contentType)));
+            request.setEntity(
+                new InputStreamEntity(
+                    payloadAndContentType.contents,
+                    ContentType.create(payloadAndContentType.contentType)
+                )
+            );
         }
         requestHeaders.forEach(kvp -> request.setHeader(kvp.getKey(), kvp.getValue()));
         var response = httpClient.execute(request);

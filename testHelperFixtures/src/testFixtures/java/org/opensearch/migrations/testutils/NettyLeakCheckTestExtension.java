@@ -18,7 +18,11 @@ public class NettyLeakCheckTestExtension implements InvocationInterceptor {
         allLeakChecksAreDisabled = System.getProperty("disableMemoryLeakTests", "").equalsIgnoreCase("true");
     }
 
-    private <T> void wrapWithLeakChecks(ExtensionContext extensionContext, Callable<T> repeatCall, Callable<T> finalCall) throws Throwable {
+    private <T> void wrapWithLeakChecks(
+        ExtensionContext extensionContext,
+        Callable<T> repeatCall,
+        Callable<T> finalCall
+    ) throws Throwable {
         if (allLeakChecksAreDisabled || getAnnotation(extensionContext).map(a -> a.disableLeakChecks()).orElse(false)) {
             CountingNettyResourceLeakDetector.deactivate();
             finalCall.call();
@@ -41,7 +45,10 @@ public class NettyLeakCheckTestExtension implements InvocationInterceptor {
     private static Optional<WrapWithNettyLeakDetection> getAnnotation(ExtensionContext extensionContext) {
         return extensionContext.getTestMethod()
             .flatMap(m -> Optional.ofNullable(m.getAnnotation(WrapWithNettyLeakDetection.class)))
-            .or(() -> extensionContext.getTestClass().flatMap(m -> Optional.ofNullable(m.getAnnotation(WrapWithNettyLeakDetection.class))));
+            .or(
+                () -> extensionContext.getTestClass()
+                    .flatMap(m -> Optional.ofNullable(m.getAnnotation(WrapWithNettyLeakDetection.class)))
+            );
     }
 
     @Override
@@ -51,7 +58,8 @@ public class NettyLeakCheckTestExtension implements InvocationInterceptor {
         ExtensionContext extensionContext
     ) throws Throwable {
 
-        var selfInstance = invocationContext.getTarget().orElseThrow(() -> new IllegalStateException("Target instance not found"));
+        var selfInstance = invocationContext.getTarget()
+            .orElseThrow(() -> new IllegalStateException("Target instance not found"));
         wrapWithLeakChecks(extensionContext, () -> {
             Method m = invocationContext.getExecutable();
             m.setAccessible(true);
@@ -65,7 +73,8 @@ public class NettyLeakCheckTestExtension implements InvocationInterceptor {
         ReflectiveInvocationContext<Method> invocationContext,
         ExtensionContext extensionContext
     ) throws Throwable {
-        var selfInstance = invocationContext.getTarget().orElseThrow(() -> new IllegalStateException("Target instance not found"));
+        var selfInstance = invocationContext.getTarget()
+            .orElseThrow(() -> new IllegalStateException("Target instance not found"));
         wrapWithLeakChecks(extensionContext, () -> {
             {
                 Method m = invocationContext.getExecutable();
