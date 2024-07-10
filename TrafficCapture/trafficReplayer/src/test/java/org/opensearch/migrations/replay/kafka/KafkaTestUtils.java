@@ -35,7 +35,8 @@ public class KafkaTestUtils {
         var kafkaProps = new Properties();
         kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArraySerializer");
-        // Property details: https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#delivery-timeout-ms
+        // Property details:
+        // https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#delivery-timeout-ms
         kafkaProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 10000);
         kafkaProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000);
         kafkaProps.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 10000);

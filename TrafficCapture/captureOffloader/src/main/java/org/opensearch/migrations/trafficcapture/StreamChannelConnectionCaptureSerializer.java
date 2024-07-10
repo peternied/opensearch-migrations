@@ -231,7 +231,8 @@ public class StreamChannelConnectionCaptureSerializer<T> implements IChannelConn
      *         and thus an additional space on the return value would require two additional space to write.
      */
     public static int computeMaxLengthDelimitedFieldSizeForSpace(int totalAvailableSpace, int requestedFieldSize) {
-        // A pessimistic calculation space required for the length field due to not accounting for the space of the length field itself.
+        // A pessimistic calculation space required for the length field due to not accounting for the space of the length field
+        // itself.
         // This may yield a length space one byte greater than optimal, potentially leaving at most one length delimited byte
         // which the availableSpace has space for.
         final int pessimisticLengthFieldSpace = CodedOutputStream.computeUInt32SizeNoTag(totalAvailableSpace);

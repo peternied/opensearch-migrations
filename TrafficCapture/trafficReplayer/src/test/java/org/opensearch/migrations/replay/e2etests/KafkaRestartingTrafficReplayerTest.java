@@ -63,7 +63,8 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
     public static final long DEFAULT_POLL_INTERVAL_MS = 5000;
 
     @Container
-    // see https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
+    // see
+    // https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
     private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
 
     private static class CounterLimitedReceiverFactory implements Supplier<Consumer<SourceTargetCaptureTuple>> {
@@ -181,7 +182,8 @@ public class KafkaRestartingTrafficReplayerTest extends InstrumentationTest {
         var kafkaProps = new Properties();
         kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArraySerializer");
-        // Property details: https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#delivery-timeout-ms
+        // Property details:
+        // https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html#delivery-timeout-ms
         kafkaProps.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, 10000);
         kafkaProps.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 5000);
         kafkaProps.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, 10000);

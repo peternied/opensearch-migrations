@@ -69,7 +69,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class KafkaTrafficCaptureSource implements ISimpleTrafficCaptureSource {
     public static final String MAX_POLL_INTERVAL_KEY = "max.poll.interval.ms";
-    // see https://stackoverflow.com/questions/39730126/difference-between-session-timeout-ms-and-max-poll-interval-ms-for-kafka-0-10
+    // see
+    // https://stackoverflow.com/questions/39730126/difference-between-session-timeout-ms-and-max-poll-interval-ms-for-kafka-0-10
     public static final String DEFAULT_POLL_INTERVAL_MS = "60000";
 
     final TrackingKafkaConsumer trackingKafkaConsumer;

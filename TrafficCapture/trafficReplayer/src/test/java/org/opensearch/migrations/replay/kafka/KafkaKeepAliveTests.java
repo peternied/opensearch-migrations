@@ -46,7 +46,8 @@ public class KafkaKeepAliveTests extends InstrumentationTest {
     ArrayList<ITrafficStreamKey> keysReceived;
 
     @Container
-    // see https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
+    // see
+    // https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
     private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
 
     private KafkaTrafficCaptureSource kafkaSource;

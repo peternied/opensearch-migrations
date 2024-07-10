@@ -29,7 +29,8 @@ public class KafkaTrafficCaptureSourceLongTermTest extends InstrumentationTest {
     public static final int PRODUCER_SLEEP_INTERVAL_MS = 100;
 
     @Container
-    // see https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
+    // see
+    // https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
     private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
 
     @Test

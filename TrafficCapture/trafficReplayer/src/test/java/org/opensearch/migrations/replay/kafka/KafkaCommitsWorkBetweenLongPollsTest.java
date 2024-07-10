@@ -31,7 +31,8 @@ public class KafkaCommitsWorkBetweenLongPollsTest extends InstrumentationTest {
     private static final int NUM_RUNS = 5;
     public static final String TEST_TOPIC_NAME = "test-topic";
     @Container
-    // see https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
+    // see
+    // https://docs.confluent.io/platform/current/installation/versions-interoperability.html#cp-and-apache-kafka-compatibility
     private final KafkaContainer embeddedKafkaBroker = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"));
 
     @SneakyThrows
