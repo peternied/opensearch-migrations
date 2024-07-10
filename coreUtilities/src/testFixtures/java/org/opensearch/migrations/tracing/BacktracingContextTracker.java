@@ -34,11 +34,7 @@ public class BacktracingContextTracker implements IContextTracker, AutoCloseable
             if (priorValue != null) {
                 var priorKey = scopedContextToCallDetails.entrySet().stream().findFirst().get().getKey();
                 if (priorKey.equals(ctx)) {
-                    log.atError()
-                        .setMessage(
-                            () -> "Trying to re-add the same context (" + ctx + ") back into this context tracker"
-                        )
-                        .log();
+                    log.atError().setMessage(() -> "Trying to re-add the same context (" + ctx + ") back into this context tracker").log();
                 }
             }
             assert priorValue == null;

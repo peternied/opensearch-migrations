@@ -44,8 +44,7 @@ public interface IScopedInstrumentationAttributes extends IWithStartTimeAndAttri
             stack.addFirst((IScopedInstrumentationAttributes) currentObj);
             currentObj = currentObj.getEnclosingScope();
         }
-        var builder = stack.stream()
-            .collect(Utils.foldLeft(Attributes.builder(), (b, iia) -> iia.fillAttributesForSpansBelow(b)));
+        var builder = stack.stream().collect(Utils.foldLeft(Attributes.builder(), (b, iia) -> iia.fillAttributesForSpansBelow(b)));
         return fillExtraAttributesForThisSpan(builder);
     }
 

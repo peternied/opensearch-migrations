@@ -19,12 +19,7 @@ public class CommonScopedMetricInstruments extends CommonMetricInstruments {
         this(meter, activityName, null);
     }
 
-    public CommonScopedMetricInstruments(
-        Meter meter,
-        String activityName,
-        double firstBucketSize,
-        double lastBucketCeiling
-    ) {
+    public CommonScopedMetricInstruments(Meter meter, String activityName, double firstBucketSize, double lastBucketCeiling) {
         this(meter, activityName, getBuckets(activityName, firstBucketSize, lastBucketCeiling));
     }
 
@@ -45,11 +40,7 @@ public class CommonScopedMetricInstruments extends CommonMetricInstruments {
         return getExponentialBucketsBetween(firstBucketSize, lastBucketCeiling, 2.0);
     }
 
-    private static List<Double> getExponentialBucketsBetween(
-        double firstBucketSize,
-        double lastBucketCeiling,
-        double rate
-    ) {
+    private static List<Double> getExponentialBucketsBetween(double firstBucketSize, double lastBucketCeiling, double rate) {
         if (firstBucketSize <= 0) {
             throw new IllegalArgumentException("firstBucketSize value " + firstBucketSize + " must be > 0");
         }

@@ -33,19 +33,12 @@ public class ActiveContextTrackerByActivityType implements IContextTracker {
         skipListByType.remove(scopedContext);
     }
 
-    public Stream<IScopedInstrumentationAttributes> getOldestActiveScopes(
-        Class<IScopedInstrumentationAttributes> activityType
-    ) {
-        return Optional.ofNullable(orderedScopesByScopeType.getOrDefault(activityType, null))
-            .stream()
-            .flatMap(Collection::stream);
+    public Stream<IScopedInstrumentationAttributes> getOldestActiveScopes(Class<IScopedInstrumentationAttributes> activityType) {
+        return Optional.ofNullable(orderedScopesByScopeType.getOrDefault(activityType, null)).stream().flatMap(Collection::stream);
     }
 
     public Stream<Class<IScopedInstrumentationAttributes>> getActiveScopeTypes() {
-        return orderedScopesByScopeType.entrySet()
-            .stream()
-            .filter(kvp -> !kvp.getValue().isEmpty())
-            .map(Map.Entry::getKey);
+        return orderedScopesByScopeType.entrySet().stream().filter(kvp -> !kvp.getValue().isEmpty()).map(Map.Entry::getKey);
     }
 
     public long numScopesFor(Class<IScopedInstrumentationAttributes> c) {

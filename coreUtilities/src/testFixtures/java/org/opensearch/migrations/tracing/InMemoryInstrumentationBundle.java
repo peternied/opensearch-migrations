@@ -33,10 +33,7 @@ public class InMemoryInstrumentationBundle implements AutoCloseable {
     private final InMemoryMetricReader testMetricReader;
 
     public InMemoryInstrumentationBundle(boolean collectTraces, boolean collectMetrics) {
-        this(
-            collectTraces ? InMemorySpanExporter.create() : null,
-            collectMetrics ? InMemoryMetricReader.create() : null
-        );
+        this(collectTraces ? InMemorySpanExporter.create() : null, collectMetrics ? InMemoryMetricReader.create() : null);
     }
 
     public InMemoryInstrumentationBundle(InMemorySpanExporter testSpanExporter, InMemoryMetricReader testMetricReader) {
@@ -50,9 +47,7 @@ public class InMemoryInstrumentationBundle implements AutoCloseable {
             );
         }
         if (testMetricReader != null) {
-            otelBuilder = otelBuilder.setMeterProvider(
-                SdkMeterProvider.builder().registerMetricReader(testMetricReader).build()
-            );
+            otelBuilder = otelBuilder.setMeterProvider(SdkMeterProvider.builder().registerMetricReader(testMetricReader).build());
         }
         openTelemetrySdk = otelBuilder.build();
     }
@@ -91,16 +86,10 @@ public class InMemoryInstrumentationBundle implements AutoCloseable {
         });
     }
 
-    public List<MetricData> getMetricsUntil(
-        String metricName,
-        IntStream sleepTimes,
-        Predicate<List<MetricData>> untilPredicate
-    ) {
+    public List<MetricData> getMetricsUntil(String metricName, IntStream sleepTimes, Predicate<List<MetricData>> untilPredicate) {
         AtomicReference<List<MetricData>> matchingMetrics = new AtomicReference<>();
         sleepTimes.mapToObj(sleepAmount -> {
-            matchingMetrics.set(
-                getFinishedMetrics().stream().filter(md -> md.getName().equals(metricName)).collect(Collectors.toList())
-            );
+            matchingMetrics.set(getFinishedMetrics().stream().filter(md -> md.getName().equals(metricName)).collect(Collectors.toList()));
             if (untilPredicate.test(matchingMetrics.get())) {
                 return true;
             } else {

@@ -43,11 +43,7 @@ public class SequentialSpanCompressingReducer {
             }
         } else {
             if (lastWasSpan()) {
-                return new SequentialSpanCompressingReducer(
-                    shift,
-                    b,
-                    accumulatedText.append(last).append(",").append(b)
-                );
+                return new SequentialSpanCompressingReducer(shift, b, accumulatedText.append(last).append(",").append(b));
             } else {
                 return new SequentialSpanCompressingReducer(
                     shift,
