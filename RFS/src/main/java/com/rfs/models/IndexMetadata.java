@@ -1,8 +1,5 @@
 package com.rfs.models;
 
-import org.apache.lucene.codecs.CodecUtil;
-import org.opensearch.migrations.transformation.entity.Index;
-
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -10,8 +7,11 @@ import java.nio.file.Path;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import org.apache.lucene.codecs.CodecUtil;
+
+import org.opensearch.migrations.transformation.entity.Index;
+
 import com.rfs.common.ByteArrayIndexInput;
 import com.rfs.common.RfsException;
 import com.rfs.common.SnapshotRepo;
@@ -24,11 +24,17 @@ public interface IndexMetadata extends Index {
     * See: https://github.com/elastic/elasticsearch/blob/v6.8.23/server/src/main/java/org/elasticsearch/cluster/metadata/IndexMetaData.java#L1284
     */
     public JsonNode getAliases();
+
     public String getId();
+
     public JsonNode getMappings();
+
     public String getName();
+
     public int getNumberOfShards();
+
     public JsonNode getSettings();
+
     public IndexMetadata deepCopy();
 
     /**

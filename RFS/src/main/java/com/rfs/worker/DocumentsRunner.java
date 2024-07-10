@@ -15,15 +15,10 @@ import com.rfs.common.LuceneDocumentsReader;
 import com.rfs.common.RfsException;
 import com.rfs.common.ShardMetadata;
 import com.rfs.common.SnapshotShardUnpacker;
+import com.rfs.models.ShardMetadata;
 import lombok.AllArgsConstructor;
 import lombok.Lombok;
 import lombok.extern.slf4j.Slf4j;
-
-import com.rfs.common.DocumentReindexer;
-import com.rfs.common.LuceneDocumentsReader;
-import com.rfs.common.SnapshotShardUnpacker;
-import com.rfs.models.ShardMetadata;
-import org.apache.lucene.document.Document;
 import reactor.core.publisher.Flux;
 
 @Slf4j
@@ -32,7 +27,7 @@ public class DocumentsRunner {
     public static final String ALL_INDEX_MANIFEST = "all_index_manifest";
 
     ScopedWorkCoordinator workCoordinator;
-    private final BiFunction<String,Integer,ShardMetadata> shardMetadataFactory;
+    private final BiFunction<String, Integer, ShardMetadata> shardMetadataFactory;
     private final SnapshotShardUnpacker.Factory unpackerFactory;
     private final Function<Path, LuceneDocumentsReader> readerFactory;
     private final DocumentReindexer reindexer;

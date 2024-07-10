@@ -1,10 +1,5 @@
 package com.rfs;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.ParameterException;
-import com.beust.jcommander.ParametersDelegate;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -12,6 +7,7 @@ import java.util.List;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
+import com.beust.jcommander.ParametersDelegate;
 import com.rfs.common.ClusterVersion;
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.FileSystemRepo;
@@ -59,8 +55,8 @@ public class MetadataMigration {
 
         @ParametersDelegate
         public ConnectionDetails.TargetArgs targetArgs;
-        
-        @Parameter(names = {"--index-allowlist"}, description = ("Optional.  List of index names to migrate"
+
+        @Parameter(names = { "--index-allowlist" }, description = ("Optional.  List of index names to migrate"
             + " (e.g. 'logs_2024_01, logs_2024_02').  Default: all non-system indices (e.g. those not starting with '.')"), required = false)
         public List<String> indexAllowlist = List.of();
 
@@ -109,7 +105,6 @@ public class MetadataMigration {
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
         final ConnectionDetails targetConnection = new ConnectionDetails(arguments.targetArgs);
-
 
         TryHandlePhaseFailure.executeWithTryCatch(() -> {
             log.info("Running RfsWorker");

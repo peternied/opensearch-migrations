@@ -1,9 +1,5 @@
 package com.rfs;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.ParametersDelegate;
-
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,6 +11,7 @@ import org.apache.logging.log4j.Level;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParametersDelegate;
 import com.rfs.cms.ApacheHttpClient;
 import com.rfs.cms.LeaseExpireTrigger;
 import com.rfs.cms.OpenSearchWorkCoordinator;
@@ -29,17 +26,13 @@ import com.rfs.common.OpenSearchClient;
 import com.rfs.common.S3Repo;
 import com.rfs.common.S3SnapshotCreator;
 import com.rfs.common.S3Uri;
-import com.rfs.common.S3Repo;
 import com.rfs.common.SnapshotCreator;
-import com.rfs.common.SourceRepo;
-import com.rfs.common.TryHandlePhaseFailure;
-import com.rfs.models.GlobalMetadata;
-import com.rfs.models.IndexMetadata;
-import com.rfs.models.ShardMetadata;
-import com.rfs.common.S3SnapshotCreator;
 import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SnapshotShardUnpacker;
 import com.rfs.common.SourceRepo;
+import com.rfs.models.GlobalMetadata;
+import com.rfs.models.IndexMetadata;
+import com.rfs.models.ShardMetadata;
 import com.rfs.transformers.TransformFunctions;
 import com.rfs.transformers.Transformer;
 import com.rfs.version_es_7_10.ElasticsearchConstants_ES_7_10;
@@ -79,7 +72,7 @@ public class RunRfsWorker {
         @Parameter(names = {
             "--lucene-dir" }, description = "The absolute path to the directory where we'll put the Lucene docs", required = true)
         public String luceneDirPath;
-        
+
         @ParametersDelegate
         public ConnectionDetails.SourceArgs sourceArgs;
 
@@ -178,8 +171,11 @@ public class RunRfsWorker {
                 ElasticsearchConstants_ES_7_10.BUFFER_SIZE_IN_BYTES
             );
             DocumentReindexer reindexer = new DocumentReindexer(targetClient);
-            var workCoordinator = new OpenSearchWorkCoordinator(new ApacheHttpClient(new URI(arguments.targetArgs.getHost())),
-                    5, UUID.randomUUID().toString());
+            var workCoordinator = new OpenSearchWorkCoordinator(
+                new ApacheHttpClient(new URI(arguments.targetArgs.getHost())),
+                5,
+                UUID.randomUUID().toString()
+            );
             var scopedWorkCoordinator = new ScopedWorkCoordinator(workCoordinator, processManager);
             new ShardWorkPreparer().run(scopedWorkCoordinator, indexMetadataFactory, snapshotName, indexAllowlist);
             new DocumentsRunner(

@@ -44,8 +44,8 @@ public abstract class SourceRepoAccessor {
     public InputStream getBlobFile(String indexId, int shardId, String blobName) {
         return load(repo.getBlobFilePath(indexId, shardId, blobName));
     }
-    
-    public void prepBlobFiles(ShardMetadata shardMetadata){
+
+    public void prepBlobFiles(ShardMetadata shardMetadata) {
         repo.prepBlobFiles(shardMetadata);
     }
 

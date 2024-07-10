@@ -15,8 +15,6 @@ public class SupportedTargetCluster implements ArgumentsProvider {
 
     @Override
     public Stream<? extends Arguments> provideArguments(final ExtensionContext context) {
-        return Stream.of(
-                Arguments.of(SearchClusterContainer.OS_V2_14_0)
-        );
+        return Stream.of(Arguments.of(SearchClusterContainer.OS_V2_14_0));
     }
 }

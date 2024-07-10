@@ -56,7 +56,6 @@ import com.rfs.common.SourceRepo;
 import com.rfs.framework.PreloadedSearchClusterContainer;
 import com.rfs.framework.SearchClusterContainer;
 import com.rfs.http.SearchClusterRequests;
-import com.rfs.framework.PreloadedSearchClusterContainer;
 import com.rfs.models.GlobalMetadata;
 import com.rfs.models.IndexMetadata;
 import com.rfs.models.ShardMetadata;
@@ -90,9 +89,7 @@ public class FullTest {
         SearchClusterContainer.ES_V7_10_2,
         SearchClusterContainer.ES_V7_17
     );
-    final static List<SearchClusterContainer.Version> TARGET_IMAGES = List.of(
-        SearchClusterContainer.OS_V2_14_0
-    );
+    final static List<SearchClusterContainer.Version> TARGET_IMAGES = List.of(SearchClusterContainer.OS_V2_14_0);
     public static final String SOURCE_SERVER_ALIAS = "source";
     public static final int MAX_SHARD_SIZE_BYTES = 64 * 1024 * 1024;
 

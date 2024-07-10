@@ -12,10 +12,10 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rfs.models.ShardFileInfo;
-import com.rfs.models.ShardMetadata;
 
 import com.rfs.common.ShardMetadata;
+import com.rfs.models.ShardFileInfo;
+import com.rfs.models.ShardMetadata;
 
 public class ShardMetadataData_ES_6_8 implements ShardMetadata {
     private static final ObjectMapper objectMapper = new ObjectMapper();

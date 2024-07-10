@@ -6,11 +6,6 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.ParametersDelegate;
-
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-
 import com.rfs.common.ConnectionDetails;
 import com.rfs.common.FileSystemSnapshotCreator;
 import com.rfs.common.OpenSearchClient;
@@ -75,11 +70,18 @@ public class CreateSnapshot {
         }
 
         log.info("Running CreateSnapshot with {}", String.join(" ", args));
-        run(c -> ((arguments.fileSystemRepoPath != null)
-                        ? new FileSystemSnapshotCreator(arguments.snapshotName, c, arguments.fileSystemRepoPath)
-                        : new S3SnapshotCreator(arguments.snapshotName, c, arguments.s3RepoUri, arguments.s3Region, arguments.maxSnapshotRateMBPerNode)),
-                new OpenSearchClient(new ConnectionDetails(arguments.sourceArgs)),
-                arguments.noWait
+        run(
+            c -> ((arguments.fileSystemRepoPath != null)
+                ? new FileSystemSnapshotCreator(arguments.snapshotName, c, arguments.fileSystemRepoPath)
+                : new S3SnapshotCreator(
+                    arguments.snapshotName,
+                    c,
+                    arguments.s3RepoUri,
+                    arguments.s3Region,
+                    arguments.maxSnapshotRateMBPerNode
+                )),
+            new OpenSearchClient(new ConnectionDetails(arguments.sourceArgs)),
+            arguments.noWait
         );
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+
 import com.rfs.models.SnapshotMetadata;
 
 public class SnapshotMetadataFactory_ES_6_8 implements SnapshotMetadata.Factory {

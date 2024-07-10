@@ -1,6 +1,8 @@
 package com.rfs.framework;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -11,11 +13,6 @@ import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 
 import lombok.SneakyThrows;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -36,13 +33,15 @@ public class ClusterOperations {
 
     public void createSnapshotRepository(final String repoPath) throws IOException {
         // Create snapshot repository
-        final var repositoryJson = "{\n" +
-        "  \"type\": \"fs\",\n" +
-        "  \"settings\": {\n" +
-        "    \"location\": \"" + repoPath + "\",\n" +
-        "    \"compress\": false\n" +
-        "  }\n" +
-        "}";
+        final var repositoryJson = "{\n"
+            + "  \"type\": \"fs\",\n"
+            + "  \"settings\": {\n"
+            + "    \"location\": \""
+            + repoPath
+            + "\",\n"
+            + "    \"compress\": false\n"
+            + "  }\n"
+            + "}";
 
         final var createRepoRequest = new HttpPut(clusterUrl + "/_snapshot/test-repo");
         createRepoRequest.setEntity(new StringEntity(repositoryJson));
@@ -106,8 +105,7 @@ public class ClusterOperations {
      */
     @SneakyThrows
     public void createES6LegacyTemplate(final String templateName, final String pattern) throws IOException {
-        final var templateJson =
-            "{\r\n" + //
+        final var templateJson = "{\r\n" + //
             "  \"index_patterns\": [\r\n" + //
             "    \"" + pattern + "\"\r\n" + //
             "  ],\r\n" + //
@@ -133,14 +131,18 @@ public class ClusterOperations {
             "      }\r\n" + //
             "    }\r\n" + //
             "  }\r\n" + //
-            "}";    
+            "}";
 
         final var createRepoRequest = new HttpPut(clusterUrl + "/_template/" + templateName);
         createRepoRequest.setEntity(new StringEntity(templateJson));
         createRepoRequest.setHeader("Content-Type", "application/json");
 
         try (var response = httpClient.execute(createRepoRequest)) {
-            assertThat(EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8), response.getCode(), equalTo(200));
+            assertThat(
+                EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8),
+                response.getCode(),
+                equalTo(200)
+            );
         }
     }
 }

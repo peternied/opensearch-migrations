@@ -7,10 +7,9 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
-import lombok.RequiredArgsConstructor;
-
 import com.rfs.common.SnapshotRepo;
 import com.rfs.models.ShardMetadata;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class ShardMetadataFactory_ES_7_10 implements ShardMetadata.Factory {

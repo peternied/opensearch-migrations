@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,13 +14,6 @@ import org.apache.lucene.document.Document;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.lucene.document.Document;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
-import reactor.core.publisher.Flux;
-
 import com.rfs.common.*;
 import com.rfs.models.GlobalMetadata;
 import com.rfs.models.IndexMetadata;
@@ -159,9 +151,11 @@ public class ReindexFromSnapshot {
          * If you provide the source host, you still need to provide the S3 details or the snapshotLocalRepoDirPath to write the snapshot to.
          */
         if (snapshotDirPath != null && (arguments.sourceArgs.getHost() != null || s3RepoUri != null)) {
-            throw new IllegalArgumentException("If you specify a local directory to take the snapshot from, you cannot specify a source host or S3 URI");
+            throw new IllegalArgumentException(
+                "If you specify a local directory to take the snapshot from, you cannot specify a source host or S3 URI"
+            );
         } else if (arguments.sourceArgs.getHost() != null) {
-           if (s3RepoUri == null && s3Region == null && s3LocalDirPath == null && snapshotLocalRepoDirPath == null) {
+            if (s3RepoUri == null && s3Region == null && s3LocalDirPath == null && snapshotLocalRepoDirPath == null) {
                 throw new IllegalArgumentException(
                     "If you specify a source host, you must also specify the S3 details or the snapshotLocalRepoDirPath to write the snapshot to as well"
                 );
@@ -297,11 +291,21 @@ public class ReindexFromSnapshot {
 
                 OpenSearchClient targetClient = new OpenSearchClient(targetConnection);
                 if (sourceVersion == ClusterVersion.ES_6_8) {
-                    GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(targetClient, templateWhitelist, componentTemplateWhitelist, List.of());
+                    GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
+                        targetClient,
+                        templateWhitelist,
+                        componentTemplateWhitelist,
+                        List.of()
+                    );
                     var transformedRoot = transformer.transformGlobalMetadata(globalMetadata);
                     metadataCreator.create(transformedRoot);
                 } else if (sourceVersion == ClusterVersion.ES_7_10) {
-                    GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(targetClient, List.of(), componentTemplateWhitelist, templateWhitelist);
+                    GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
+                        targetClient,
+                        List.of(),
+                        componentTemplateWhitelist,
+                        templateWhitelist
+                    );
                     var transformedRoot = transformer.transformGlobalMetadata(globalMetadata);
                     metadataCreator.create(transformedRoot);
                 }

@@ -3,12 +3,9 @@ package com.rfs.worker;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-import com.rfs.common.SnapshotRepo;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import com.rfs.models.IndexMetadata;
 import com.rfs.common.FilterScheme;
+import com.rfs.common.SnapshotRepo;
+import com.rfs.models.IndexMetadata;
 import com.rfs.transformers.Transformer;
 import com.rfs.version_os_2_11.IndexCreator_OS_2_11;
 import lombok.AllArgsConstructor;

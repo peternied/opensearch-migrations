@@ -9,6 +9,7 @@ import java.util.List;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+
 import com.rfs.common.ByteArrayIndexInput;
 import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SourceRepo;
@@ -22,17 +23,28 @@ public interface SnapshotMetadata {
     // TODO: Turn into an ENUM when we know the other possible values
     public static final String SNAPSHOT_SUCCEEDED = "SUCCESS";
 
-    public String getName();    
-    public String getUuid();    
-    public int getVersionId();    
-    public List<String> getIndices();    
-    public String getState();    
-    public String getReason();    
-    public boolean isIncludeGlobalState();    
-    public long getStartTime();    
-    public long getEndTime();    
-    public int getTotalShards();    
+    public String getName();
+
+    public String getUuid();
+
+    public int getVersionId();
+
+    public List<String> getIndices();
+
+    public String getState();
+
+    public String getReason();
+
+    public boolean isIncludeGlobalState();
+
+    public long getStartTime();
+
+    public long getEndTime();
+
+    public int getTotalShards();
+
     public int getSuccessfulShards();
+
     public List<?> getFailures();
 
     /**
@@ -70,12 +82,15 @@ public interface SnapshotMetadata {
             }
         }
 
-        default SnapshotMetadata fromRepo(SourceRepo repo, SnapshotRepo.Provider repoDataProvider, String snapshotName) throws Exception {
+        default SnapshotMetadata fromRepo(SourceRepo repo, SnapshotRepo.Provider repoDataProvider, String snapshotName)
+            throws Exception {
             SmileFactory smileFactory = getSmileFactory();
             JsonNode root = getJsonNode(repo, repoDataProvider, snapshotName, smileFactory);
             return fromJsonNode(root);
         }
+
         public SnapshotMetadata fromJsonNode(JsonNode root) throws Exception;
+
         public SmileFactory getSmileFactory();
     }
 

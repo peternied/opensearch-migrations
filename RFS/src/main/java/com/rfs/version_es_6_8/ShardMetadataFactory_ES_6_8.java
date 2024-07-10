@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
 import com.rfs.common.SnapshotRepo;
-import com.rfs.models.ShardFileInfo;
 import com.rfs.models.ShardMetadata;
 
 @RequiredArgsConstructor

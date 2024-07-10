@@ -1,7 +1,5 @@
 package com.rfs.models;
 
-import org.apache.lucene.codecs.CodecUtil;
-
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -11,6 +9,8 @@ import java.util.List;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import org.apache.lucene.codecs.CodecUtil;
+
 import com.rfs.common.ByteArrayIndexInput;
 import com.rfs.common.RfsException;
 import com.rfs.common.SnapshotRepo;
@@ -22,15 +22,24 @@ import com.rfs.common.SnapshotRepo;
  */
 public interface ShardMetadata {
 
-    public String getSnapshotName();    
-    public String getIndexName();    
-    public String getIndexId();    
-    public int getShardId();    
-    public int getIndexVersion();    
-    public long getStartTime();    
-    public long getTime();    
-    public int getNumberOfFiles();    
+    public String getSnapshotName();
+
+    public String getIndexName();
+
+    public String getIndexId();
+
+    public int getShardId();
+
+    public int getIndexVersion();
+
+    public long getStartTime();
+
+    public long getTime();
+
+    public int getNumberOfFiles();
+
     public long getTotalSizeBytes();
+
     public List<ShardFileInfo> getFiles();
 
     /**

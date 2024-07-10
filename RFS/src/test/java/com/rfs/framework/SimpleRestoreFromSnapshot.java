@@ -35,8 +35,16 @@ public interface SimpleRestoreFromSnapshot {
         updateTargetCluster(indices, unpackedShardDataDir, targetClusterClient);
     }
 
-    public List<IndexMetadata> extractSnapshotIndexData(final String localPath, final String snapshotName, final Path unpackedShardDataDir) throws Exception;
+    public List<IndexMetadata> extractSnapshotIndexData(
+        final String localPath,
+        final String snapshotName,
+        final Path unpackedShardDataDir
+    ) throws Exception;
 
-    public void updateTargetCluster(final List<IndexMetadata> indices, final Path unpackedShardDataDir, final OpenSearchClient client) throws Exception;
+    public void updateTargetCluster(
+        final List<IndexMetadata> indices,
+        final Path unpackedShardDataDir,
+        final OpenSearchClient client
+    ) throws Exception;
 
 }
