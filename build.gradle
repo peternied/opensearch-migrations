@@ -23,12 +23,6 @@ spotless {
         indentWithSpaces()
         endWithNewline()
     }
-    python {
-        target "**/*.py"
-        trimTrailingWhitespace()
-        indentWithSpaces()
-        endWithNewline()
-    }
 }
 
 subprojects {
