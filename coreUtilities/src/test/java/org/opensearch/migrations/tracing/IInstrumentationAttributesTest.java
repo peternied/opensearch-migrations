@@ -15,6 +15,8 @@ class IInstrumentationAttributesTest {
     private static class AContext extends BaseSpanContext<RootOtelContext> {
         protected AContext(RootOtelContext rootScope) {
             super(rootScope);
+            var temp = "{\"foo\":\"bar\","
+            + "\"baz\":\"true\"}";
         }
 
         @Override

@@ -37,16 +37,16 @@ subprojects {
         java {
             target "**/*.java"
             targetExclude '**/build/**', ".gradle/**"
-            importOrder(
-                'java|javax',
-                'io.opentelemetry|com.google|com.fasterxml|org.apache|org.hamcrest|org.junit',
-                'org.opensearch',
-                '',
-                '\\#java|\\#org.apache|\\#org.hamcrest|\\#org.opensearch|\\#'
-            )
-            indentWithSpaces()
-            endWithNewline()
-            removeUnusedImports()
+            // importOrder(
+            //     'java|javax',
+            //     'io.opentelemetry|com.google|com.fasterxml|org.apache|org.hamcrest|org.junit',
+            //     'org.opensearch',
+            //     '',
+            //     '\\#java|\\#org.apache|\\#org.hamcrest|\\#org.opensearch|\\#'
+            // )
+            // indentWithSpaces()
+            // endWithNewline()
+            // removeUnusedImports()
         }
     }
 
