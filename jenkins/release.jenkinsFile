@@ -104,10 +104,11 @@ pipeline {
                             }
                         }
 
-                        copyDockerImage('opensearch-migrations-console');
-                        copyDockerImage('opensearch-migrations-traffic-replayer');
-                        copyDockerImage('opensearch-migrations-traffic-capture-proxy');
-                        copyDockerImage('opensearch-migrations-reindex-from-snapshot');
+                        // Waiting on internal review before publishing from staging environments to production
+                        // copyDockerImage('opensearch-migrations-console');
+                        // copyDockerImage('opensearch-migrations-traffic-replayer');
+                        // copyDockerImage('opensearch-migrations-traffic-capture-proxy');
+                        // copyDockerImage('opensearch-migrations-reindex-from-snapshot');
                     }
                 }
             }
