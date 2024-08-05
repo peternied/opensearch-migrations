@@ -1,49 +1,55 @@
 package org.opensearch.migrations.cli;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import lombok.Builder;
+import org.opensearch.migrations.clusters.SourceCluster;
+import org.opensearch.migrations.clusters.TargetCluster;
+import org.slf4j.event.Level;
+
 import lombok.extern.slf4j.Slf4j;
+import com.rfs.common.ConnectionDetails;
 
 @Slf4j
-public class Clusters {
-    public Source source;
-    public Target target;
-    public List<Message> messages;
+public class Clusters implements Printable, Validate {
+    private SourceCluster source;
+    private TargetCluster target;
+    private List<Message> messages = new ArrayList<>();
 
     public Clusters() {
     }
 
-    public String print() {
-        return new Printable.Builder()
-            .level(1)
-            .section("Clusters")
-            .build()
-            .prettyPrint();
+    public void setSource(SourceCluster source) {
+        this.source = source;
     }
 
-    @Builder(builderClassName = "Builder")
-    public static class Printable {
-        private static final int LEVEL_SPACER_AMOUNT = 3; 
-        private static final String SPACER = " "; 
-        private static final String SECTION_ENDING = ":"; 
+    public void setTarget(TargetCluster target) {
+        this.target = target;
+    }
 
-        public int level;
-        public String section;
-        public List<String> entries;
+    @Override
+    public Printer asPrinter() {
+       var printerBuilder = new Printer.Builder()
+            .section("Clusters")
+            .entry(source)
+            .entry(target);
 
-        public String prettyPrint() {
-            var topIntentLevel = SPACER.repeat(level * LEVEL_SPACER_AMOUNT);
-            var sb = new StringBuilder();
-            sb.append(topIntentLevel + section + SECTION_ENDING + System.lineSeparator());
-
-            var lowerIntentLevel = SPACER.repeat((level + 1) * LEVEL_SPACER_AMOUNT);
-            entries.forEach(entry -> {
-                sb.append(lowerIntentLevel + entry + System.lineSeparator());
-            });
-
-
-            return sb.toString();
+        if (messages != null && !messages.isEmpty()) {
+            printerBuilder.messages(messages);
         }
+        return printerBuilder.build();
+    }
+
+    @Override
+    public boolean validate() {
+        if (source == null) {
+            messages.add(Message.Builder().level(Level.ERROR).body("No source cluster specified").build());
+            return false;
+        }
+    
+        if (target == null) {
+            messages.add(Message.Builder().level(Level.WARN).body("No target cluster specified").build());
+        }
+        return true;
     }
 }

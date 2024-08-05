@@ -1,6 +1,8 @@
 package org.opensearch.migrations.clusters;
 
-public interface SourceCluster {
-    boolean isAvaliable();
-    
+import org.opensearch.migrations.cli.Printable;
+import org.opensearch.migrations.cli.Validate;
+
+public interface SourceCluster extends Printable, Validate {
+    // boolean isAvaliable();
 }

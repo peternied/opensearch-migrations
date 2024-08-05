@@ -1,30 +1,28 @@
 package org.opensearch.migrations.clusters;
 
+import org.opensearch.migrations.cli.Printable;
 import org.opensearch.migrations.cli.Printer;
+import org.opensearch.migrations.cli.Validate;
 
-import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.RequiredArgsConstructor;
 
 @Builder
-public class HostSource implements SourceCluster {
-
-    private final String url;
-    private final String flavor;
-    private final int version;
+@AllArgsConstructor
+public class TargetCluster implements Printable, Validate {
+    private String url;
+    private String flavor;
+    private int version;
 
     public Printer asPrinter() {
         return Printer.builder()
-            .section("Cluster")
+            .section("Target Cluster")
             .field("Version", flavor + " " + version)
             .field("Url", url)
             .build();
     }
 
-    public boolean isAvailable() {
-        return true;
-    }
-
+    @Override
     public boolean validate() {
         return true;
     }

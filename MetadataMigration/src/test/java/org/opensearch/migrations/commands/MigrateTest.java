@@ -6,6 +6,8 @@ import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.MetadataMigration;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
+import com.rfs.common.ConnectionDetails.TargetArgs;
+
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -27,6 +29,8 @@ class MigrateTest {
     void migrate_failsUnexpectedException() {
         var args = new MetadataArgs();
         args.fileSystemRepoPath = "";
+        args.targetArgs = new TargetArgs();
+        args.targetArgs.host = "http://foo.com";
         var context = mock(RootMetadataMigrationContext.class);
         var meta = new MetadataMigration(args);
 

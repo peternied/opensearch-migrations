@@ -17,7 +17,7 @@ class ConfigureTest {
         var meta = new MetadataMigration(mock(MetadataArgs.class));
 
         var configureSource = meta.configure()
-            .source(Sources.withHost("https://localhost:9200"))
+            // .source(Sources.withHost("https://localhost:9200"))
             .execute();
 
         assertThat(configureSource.getExitCode(), equalTo(9999));

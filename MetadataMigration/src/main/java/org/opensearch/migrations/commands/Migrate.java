@@ -5,6 +5,7 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import org.opensearch.migrations.MetadataArgs;
+import org.opensearch.migrations.cli.Clusters;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.beust.jcommander.ParameterException;
@@ -35,6 +36,7 @@ public class Migrate {
     private static final int INVALID_PARAMETER_CODE = 999;
     private static final int UNEXPECTED_FAILURE_CODE = 888;
     private final MetadataArgs arguments;
+    private final Clusters clusters = new Clusters();
 
     public Migrate(MetadataArgs arguments) {
         this.arguments = arguments;
@@ -70,8 +72,8 @@ public class Migrate {
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
         final ConnectionDetails targetConnection = new ConnectionDetails(arguments.targetArgs);
-
         try {
+
             log.info("Running RfsWorker");
             OpenSearchClient targetClient = new OpenSearchClient(targetConnection);
 
