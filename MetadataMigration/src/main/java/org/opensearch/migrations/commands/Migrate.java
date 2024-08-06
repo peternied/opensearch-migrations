@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.cli.Clusters;
+import org.opensearch.migrations.clusters.TargetCluster;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.beust.jcommander.ParameterException;
@@ -36,13 +37,13 @@ public class Migrate {
     private static final int INVALID_PARAMETER_CODE = 999;
     private static final int UNEXPECTED_FAILURE_CODE = 888;
     private final MetadataArgs arguments;
-    private final Clusters clusters = new Clusters();
 
     public Migrate(MetadataArgs arguments) {
         this.arguments = arguments;
     }
 
     public MigrateResult execute(RootMetadataMigrationContext context) {
+        var migrateResult = MigrateResult.builder();
         log.atInfo().setMessage("Command line arguments {0}").addArgument(arguments::toString).log();
         try {
             if (arguments.fileSystemRepoPath == null && arguments.s3RepoUri == null) {
@@ -56,7 +57,7 @@ public class Migrate {
             } 
         } catch (Exception e) {
             log.atError().setMessage("Invalid parameter").setCause(e).log();
-            return new MigrateResult(INVALID_PARAMETER_CODE);
+            return migrateResult.exitCode(INVALID_PARAMETER_CODE).build();
         }
 
         final String snapshotName = arguments.snapshotName;
@@ -71,7 +72,9 @@ public class Migrate {
         final List<String> componentTemplateAllowlist = arguments.componentTemplateAllowlist;
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
+        var clusters = new Clusters();
         final ConnectionDetails targetConnection = new ConnectionDetails(arguments.targetArgs);
+        clusters.setTarget(new TargetCluster(arguments.targetArgs.getHost(), "OpenSearch", 211));
         try {
 
             log.info("Running RfsWorker");
@@ -110,9 +113,9 @@ public class Migrate {
             log.info("Index copy complete.");
         } catch (Exception e) {
             log.atError().setMessage("Unexpected failure").setCause(e).log();
-            return new MigrateResult(UNEXPECTED_FAILURE_CODE);
+            return migrateResult.exitCode(UNEXPECTED_FAILURE_CODE).build();
         }
 
-        return new MigrateResult(0);
+        return migrateResult.build();
     }
 }
