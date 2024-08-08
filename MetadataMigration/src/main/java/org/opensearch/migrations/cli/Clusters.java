@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensearch.migrations.clusters.SourceCluster;
-import org.opensearch.migrations.clusters.TargetCluster;
+import org.opensearch.migrations.clusters.RemoteCluster;
 import org.slf4j.event.Level;
 
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +13,7 @@ import com.rfs.common.ConnectionDetails;
 @Slf4j
 public class Clusters implements Printable, Validate {
     private SourceCluster source;
-    private TargetCluster target;
+    private RemoteCluster target;
     private List<Message> messages = new ArrayList<>();
 
     public Clusters() {
@@ -23,7 +23,7 @@ public class Clusters implements Printable, Validate {
         this.source = source;
     }
 
-    public void setTarget(TargetCluster target) {
+    public void setTarget(RemoteCluster target) {
         this.target = target;
     }
 

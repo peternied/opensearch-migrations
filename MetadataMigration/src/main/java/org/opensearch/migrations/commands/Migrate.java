@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.cli.Clusters;
-import org.opensearch.migrations.clusters.TargetCluster;
+import org.opensearch.migrations.clusters.RemoteCluster;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.beust.jcommander.ParameterException;
@@ -73,8 +73,14 @@ public class Migrate {
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
         var clusters = new Clusters();
+        migrateResult.clusters(clusters);
+        clusters.setSource(new LocalSnapshotSource(fileSystemRepoPath));
+        clusters.setSource(new S3SnapshotSource(s3LocalDirPath, s3RepoUri, s3Region));
+        clusters.setSource(new RemoteCluster(new ConnectionDetails(null)));
+
         final ConnectionDetails targetConnection = new ConnectionDetails(arguments.targetArgs);
-        clusters.setTarget(new TargetCluster(arguments.targetArgs.getHost(), "OpenSearch", 211));
+        clusters.setTarget(new RemoteCluster(arguments.targetArgs.getHost(), "OpenSearch", 211));
+
         try {
 
             log.info("Running RfsWorker");
@@ -113,7 +119,7 @@ public class Migrate {
             log.info("Index copy complete.");
         } catch (Exception e) {
             log.atError().setMessage("Unexpected failure").setCause(e).log();
-            return migrateResult.exitCode(UNEXPECTED_FAILURE_CODE).build();
+            migrateResult.exitCode(UNEXPECTED_FAILURE_CODE);
         }
 
         return migrateResult.build();

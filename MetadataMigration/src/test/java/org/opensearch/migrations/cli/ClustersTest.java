@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 import org.junit.jupiter.api.Test;
 import org.opensearch.migrations.clusters.Sources;
-import org.opensearch.migrations.clusters.TargetCluster;
+import org.opensearch.migrations.clusters.RemoteCluster;
 
 import com.rfs.common.ConnectionDetails;
 
@@ -17,7 +17,7 @@ class ClustersTest {
         var clusters = new Clusters();
 
         clusters.setSource(Sources.withHost("http://source.org"));
-        clusters.setTarget(TargetCluster.builder().url("http://foo.com").build());
+        clusters.setTarget(RemoteCluster.builder().url("http://foo.com").build());
 
         assertThat(clusters.validate(), equalTo(true));
 

@@ -2,9 +2,7 @@ package org.opensearch.migrations.clusters;
 
 import org.opensearch.migrations.cli.Printer;
 
-import lombok.AccessLevel;
 import lombok.Builder;
-import lombok.RequiredArgsConstructor;
 
 @Builder
 public class HostSource implements SourceCluster {
