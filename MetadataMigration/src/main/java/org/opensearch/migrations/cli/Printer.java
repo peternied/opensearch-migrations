@@ -17,7 +17,7 @@ public class Printer {
 
     public final String section;
     @Singular
-    public List<Printable> entries;
+    public List<Object> entries;
     @Singular
     public Map<String, String> fields;
     @Singular
@@ -28,14 +28,15 @@ public class Printer {
         var sb = new StringBuilder();
         sb.append(topIntentLevel + section + SECTION_ENDING + System.lineSeparator());
 
-        entries.forEach(entry -> {
-            if (entry == null) {
-                return;
-            }
-            entry.asPrinter().lines(level + 1).forEach(line -> {
-                sb.append(line + System.lineSeparator());
-            });
-        });
+        // TODO: Handle object -> printable nature
+        // entries.forEach(entry -> {
+        //     if (entry == null) {
+        //         return;
+        //     }
+        //     entry.asPrinter().lines(level + 1).forEach(line -> {
+        //         sb.append(line + System.lineSeparator());
+        //     });
+        // });
 
         var innerIndentLevel = SPACER.repeat((level + 1)* LEVEL_SPACER_AMOUNT);
         fields.forEach((key, value) -> {

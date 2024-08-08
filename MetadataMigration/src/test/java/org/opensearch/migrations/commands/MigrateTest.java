@@ -6,7 +6,7 @@ import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.MetadataMigration;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
-import com.rfs.common.ConnectionDetails.TargetArgs;
+import com.rfs.common.http.ConnectionContext.TargetArgs;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;

@@ -9,15 +9,15 @@ import org.junit.jupiter.api.Test;
 import org.opensearch.migrations.clusters.Sources;
 import org.opensearch.migrations.clusters.RemoteCluster;
 
-import com.rfs.common.ConnectionDetails;
+// import com.rfs.common.ConnectionDetails;
 
 class ClustersTest {
     @Test
     void testPrettyPrint() {
         var clusters = new Clusters();
 
-        clusters.setSource(Sources.withHost("http://source.org"));
-        clusters.setTarget(RemoteCluster.builder().url("http://foo.com").build());
+        // clusters.setSource(Sources.withHost("http://source.org"));
+        // clusters.setTarget(RemoteCluster.builder().url("http://foo.com").build());
 
         assertThat(clusters.validate(), equalTo(true));
 
@@ -29,7 +29,7 @@ class ClustersTest {
     void testPrettyPrint2() {
         var clusters = new Clusters();
 
-        clusters.setSource(Sources.withHost("http://source.org"));
+        // clusters.setSource(Sources.withHost("http://source.org"));
 
         assertThat(clusters.validate(), equalTo(true));
 

@@ -1,7 +1,6 @@
 package com.rfs;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Clock;
@@ -20,7 +19,8 @@ import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
-import com.rfs.cms.ApacheHttpClient;
+import com.beust.jcommander.ParametersDelegate;
+import com.rfs.cms.CoordinateWorkHttpClient;
 import com.rfs.cms.IWorkCoordinator;
 import com.rfs.cms.LeaseExpireTrigger;
 import com.rfs.cms.OpenSearchWorkCoordinator;
@@ -36,6 +36,7 @@ import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SnapshotShardUnpacker;
 import com.rfs.common.SourceRepo;
 import com.rfs.common.TryHandlePhaseFailure;
+import com.rfs.common.http.ConnectionContext;
 import com.rfs.models.IndexMetadata;
 import com.rfs.models.ShardMetadata;
 import com.rfs.tracing.RootWorkCoordinationContext;
@@ -60,6 +61,9 @@ public class RfsMigrateDocuments {
     }
 
     public static class Args {
+        @Parameter(names = {"--help", "-h"}, help = true, description = "Displays information about how to use this tool")
+        private boolean help;
+
         @Parameter(names = { "--snapshot-name" }, required = true, description = "The name of the snapshot to migrate")
         public String snapshotName;
 
@@ -87,17 +91,8 @@ public class RfsMigrateDocuments {
             "--lucene-dir" }, required = true, description = "The absolute path to the directory where we'll put the Lucene docs")
         public String luceneDir;
 
-        @Parameter(names = {
-            "--target-host" }, required = true, description = "The target host and port (e.g. http://localhost:9200)")
-        public String targetHost;
-
-        @Parameter(names = {
-            "--target-username" }, description = "Optional.  The target username; if not provided, will assume no auth on target")
-        public String targetUser = null;
-
-        @Parameter(names = {
-            "--target-password" }, description = "Optional.  The target password; if not provided, will assume no auth on target")
-        public String targetPass = null;
+        @ParametersDelegate
+        public ConnectionContext.TargetArgs targetArgs = new ConnectionContext.TargetArgs();
 
         @Parameter(names = { "--index-allowlist" }, description = ("Optional.  List of index names to migrate"
             + " (e.g. 'logs_2024_01, logs_2024_02').  Default: all non-system indices (e.g. those not starting with '.')"), required = false)
@@ -105,8 +100,9 @@ public class RfsMigrateDocuments {
 
         @Parameter(names = {
             "--max-shard-size-bytes" }, description = ("Optional. The maximum shard size, in bytes, to allow when"
-                + " performing the document migration.  Useful for preventing disk overflow.  Default: 50 * 1024 * 1024 * 1024 (50 GB)"), required = false)
-        public long maxShardSizeBytes = 50 * 1024 * 1024 * 1024L;
+                + " performing the document migration.  Useful for preventing disk overflow.  Default: 80 * 1024 * 1024 * 1024 (80 GB)"), required = false)
+        public long maxShardSizeBytes = 80 * 1024 * 1024 * 1024L;
+
         @Parameter(names = { "--max-initial-lease-duration" }, description = ("Optional. The maximum time that the "
             + "first attempt to migrate a shard's documents should take.  If a process takes longer than this "
             + "the process will terminate, allowing another process to attempt the migration, but with double the "
@@ -117,6 +113,17 @@ public class RfsMigrateDocuments {
             "--otel-collector-endpoint" }, arity = 1, description = "Endpoint (host:port) for the OpenTelemetry Collector to which metrics logs should be"
                 + "forwarded. If no value is provided, metrics will not be forwarded.")
         String otelCollectorEndpoint;
+
+        @Parameter(required = false,
+        names = "--documents-per-bulk-request",
+        description = "Optional.  The number of documents to be included within each bulk request sent.")
+        int numDocsPerBulkRequest = 1000;
+
+        @Parameter(required = false,
+            names = "--max-connections",
+            description = "Optional.  The maximum number of connections to simultaneously " +
+                "used to communicate to the target.")
+        int maxConnections = -1;
     }
 
     public static class NoWorkLeftException extends Exception {
@@ -152,7 +159,13 @@ public class RfsMigrateDocuments {
 
     public static void main(String[] args) throws Exception {
         Args arguments = new Args();
-        JCommander.newBuilder().addObject(arguments).build().parse(args);
+        JCommander jCommander = JCommander.newBuilder().addObject(arguments).build();
+        jCommander.parse(args);
+
+        if (arguments.help) {
+            jCommander.usage();
+            return;
+        }
 
         validateArgs(arguments);
 
@@ -164,22 +177,17 @@ public class RfsMigrateDocuments {
             log.error("Terminating RfsMigrateDocuments because the lease has expired for " + workItemId);
             System.exit(PROCESS_TIMED_OUT);
         }, Clock.systemUTC())) {
+            ConnectionContext connectionContext = arguments.targetArgs.toConnectionContext();
             var workCoordinator = new OpenSearchWorkCoordinator(
-                new ApacheHttpClient(new URI(arguments.targetHost)),
+                new CoordinateWorkHttpClient(connectionContext),
                 TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS,
                 UUID.randomUUID().toString()
             );
-
             TryHandlePhaseFailure.executeWithTryCatch(() -> {
                 log.info("Running RfsWorker");
 
-                OpenSearchClient targetClient = new OpenSearchClient(
-                    arguments.targetHost,
-                    arguments.targetUser,
-                    arguments.targetPass,
-                    false
-                );
-                DocumentReindexer reindexer = new DocumentReindexer(targetClient);
+                OpenSearchClient targetClient = new OpenSearchClient(connectionContext, arguments.maxConnections);
+                DocumentReindexer reindexer = new DocumentReindexer(targetClient, arguments.numDocsPerBulkRequest);
 
                 SourceRepo sourceRepo;
                 if (snapshotLocalDirPath == null) {

@@ -5,7 +5,7 @@ import org.opensearch.migrations.cli.Printer;
 import lombok.Builder;
 
 @Builder
-public class HostSource implements SourceCluster {
+public class HostSource {
 
     private final String url;
     private final String flavor;

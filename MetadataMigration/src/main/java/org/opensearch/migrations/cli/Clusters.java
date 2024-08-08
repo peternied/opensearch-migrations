@@ -8,7 +8,6 @@ import org.opensearch.migrations.clusters.RemoteCluster;
 import org.slf4j.event.Level;
 
 import lombok.extern.slf4j.Slf4j;
-import com.rfs.common.ConnectionDetails;
 
 @Slf4j
 public class Clusters implements Printable, Validate {

@@ -11,7 +11,6 @@ import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.beust.jcommander.ParameterException;
 import com.rfs.common.ClusterVersion;
-import com.rfs.common.ConnectionDetails;
 import com.rfs.common.FileSystemRepo;
 import com.rfs.common.OpenSearchClient;
 import com.rfs.common.S3Repo;
@@ -76,15 +75,14 @@ public class Migrate {
         migrateResult.clusters(clusters);
         clusters.setSource(new LocalSnapshotSource(fileSystemRepoPath));
         clusters.setSource(new S3SnapshotSource(s3LocalDirPath, s3RepoUri, s3Region));
-        clusters.setSource(new RemoteCluster(new ConnectionDetails(null)));
+        clusters.setSource(new RemoteCluster(arguments.targetArgs.toConnectionContext()));
 
-        final ConnectionDetails targetConnection = new ConnectionDetails(arguments.targetArgs);
-        clusters.setTarget(new RemoteCluster(arguments.targetArgs.getHost(), "OpenSearch", 211));
+         clusters.setTarget(new RemoteCluster(arguments.targetArgs.toConnectionContext()));
 
         try {
 
             log.info("Running RfsWorker");
-            OpenSearchClient targetClient = new OpenSearchClient(targetConnection);
+            OpenSearchClient targetClient = new OpenSearchClient(arguments.targetArgs.toConnectionContext());
 
             final SourceRepo sourceRepo = fileSystemRepoPath != null
                 ? new FileSystemRepo(fileSystemRepoPath)

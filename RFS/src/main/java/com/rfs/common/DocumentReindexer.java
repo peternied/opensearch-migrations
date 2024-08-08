@@ -17,8 +17,8 @@ import reactor.util.retry.Retry;
 @RequiredArgsConstructor
 public class DocumentReindexer {
     private static final Logger logger = LogManager.getLogger(DocumentReindexer.class);
-    private static final int MAX_BATCH_SIZE = 1000; // Arbitrarily chosen
     protected final OpenSearchClient client;
+    private final int numDocsPerBulkRequest;
 
     public Mono<Void> reindex(
         String indexName,
@@ -28,7 +28,7 @@ public class DocumentReindexer {
 
         return documentStream.map(this::convertDocumentToBulkSection)  // Convert each Document to part of a bulk
                                                                        // operation
-            .buffer(MAX_BATCH_SIZE) // Collect until you hit the batch size
+            .buffer(numDocsPerBulkRequest) // Collect until you hit the batch size
             .doOnNext(bulk -> logger.info("{} documents in current bulk request", bulk.size()))
             .map(this::convertToBulkRequestBody)  // Assemble the bulk request body from the parts
             .flatMap(
@@ -56,13 +56,5 @@ public class DocumentReindexer {
             builder.append(section).append("\n");
         }
         return builder.toString();
-    }
-
-    public void refreshAllDocuments(
-        ConnectionDetails targetConnection,
-        IDocumentMigrationContexts.IDocumentReindexContext context
-    ) {
-        // Send the request
-        new OpenSearchClient(targetConnection).refresh(context.createRefreshContext());
     }
 }
