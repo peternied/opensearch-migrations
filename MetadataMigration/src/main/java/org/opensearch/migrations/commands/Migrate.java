@@ -7,6 +7,7 @@ import java.util.List;
 import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.cli.Clusters;
 import org.opensearch.migrations.clusters.RemoteCluster;
+import org.opensearch.migrations.clusters.SnapshotSource;
 import org.opensearch.migrations.clusters.SourceCluster;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
@@ -30,6 +31,7 @@ import com.rfs.version_os_2_11.IndexCreator_OS_2_11;
 import com.rfs.worker.IndexRunner;
 import com.rfs.worker.MetadataRunner;
 import lombok.extern.slf4j.Slf4j;
+import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 
 @Slf4j
 public class Migrate {
@@ -92,21 +94,19 @@ public class Migrate {
                 context.createMetadataMigrationContext()
             );
             final Transformer transformer = TransformFunctions.getTransformer(
-                sourceCluster.getVersion(),
-                targetCluster.getVersion(),
+                ClusterVersion.fromVersion(sourceCluster.getVersion()),
+                ClusterVersion.fromVersion(targetCluster.getVersion()),
                 awarenessDimensionality
             );
-            new MetadataRunner(snapshotName, metadataFactory, metadataCreator, transformer).migrateMetadata();
+            new MetadataRunner(snapshotName, sourceCluster.getMetadata(), metadataCreator, transformer).migrateMetadata();
             log.info("Metadata copy complete.");
 
-            final IndexMetadata.Factory indexMetadataFactory = new IndexMetadataFactory_ES_7_10(repoDataProvider);
-            final IndexCreator_OS_2_11 indexCreator = new IndexCreator_OS_2_11(targetClient);
             new IndexRunner(
                 snapshotName,
-                indexMetadataFactory,
-                indexCreator,
+                sourceCluster.getIndexMetadata(),
+                targetCluster.getIndexCreator(),
                 transformer,
-                indexAllowlist,
+                arguments.dataFilterArgs.indexAllowlist,
                 context.createIndexContext()
             ).migrateIndices();
             log.info("Index copy complete.");

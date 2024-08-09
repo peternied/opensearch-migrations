@@ -34,7 +34,7 @@ public class MetadataArgs {
     public ConnectionContext.TargetArgs targetArgs = new ConnectionContext.TargetArgs();
 
     @ParametersDelegate
-    public DataFiltersArgs dataFiltersArgs = new DataFiltersArgs(); 
+    public DataFiltersArgs dataFilterArgs = new DataFiltersArgs(); 
 
     // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
     @Parameter(names = {

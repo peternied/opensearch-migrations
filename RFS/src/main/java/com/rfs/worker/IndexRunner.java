@@ -3,13 +3,13 @@ package com.rfs.worker;
 import java.util.List;
 import java.util.function.BiConsumer;
 
+import org.opensearch.migrations.metadata.IndexCreator;
 import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts;
 
 import com.rfs.common.FilterScheme;
 import com.rfs.common.SnapshotRepo;
 import com.rfs.models.IndexMetadata;
 import com.rfs.transformers.Transformer;
-import com.rfs.version_os_2_11.IndexCreator_OS_2_11;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,7 +19,7 @@ public class IndexRunner {
 
     private final String snapshotName;
     private final IndexMetadata.Factory metadataFactory;
-    private final IndexCreator_OS_2_11 indexCreator;
+    private final IndexCreator indexCreator;
     private final Transformer transformer;
     private final List<String> indexAllowlist;
     private final IMetadataMigrationContexts.ICreateIndexContext context;
@@ -39,7 +39,7 @@ public class IndexRunner {
             .forEach(index -> {
                 var indexMetadata = metadataFactory.fromRepo(snapshotName, index.getName());
                 var transformedRoot = transformer.transformIndexMetadata(indexMetadata);
-                var resultOp = indexCreator.create(transformedRoot, index.getName(), indexMetadata.getId(), context);
+                var resultOp = indexCreator.create(transformedRoot, context);
                 resultOp.ifPresentOrElse(
                     value -> log.info("Index " + index.getName() + " created successfully"),
                     () -> log.info("Index " + index.getName() + " already existed; no work required")

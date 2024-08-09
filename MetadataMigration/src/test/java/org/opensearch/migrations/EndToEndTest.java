@@ -89,9 +89,13 @@ class EndToEndTest {
         arguments.sourceVersion = Version.fromString("ES 7.10");
         arguments.fileSystemRepoPath = localDirectory.getAbsolutePath();
         arguments.snapshotName = snapshotName;
-        arguments.indexAllowlist = List.of(indexName);
-        arguments.componentTemplateAllowlist = List.of(compoTemplateName);
-        arguments.indexTemplateAllowlist = List.of(indexTemplateName);
+
+        var dataFilterArgs = new DataFiltersArgs();
+        dataFilterArgs.indexAllowlist = List.of(indexName);
+        dataFilterArgs.componentTemplateAllowlist = List.of(compoTemplateName);
+        dataFilterArgs.indexTemplateAllowlist = List.of(indexTemplateName);
+        arguments.dataFilterArgs = dataFilterArgs;
+
         arguments.targetArgs = targetArgs;
         arguments.targetVersion = Version.fromString("OS 2.14");
 
