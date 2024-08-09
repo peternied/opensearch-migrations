@@ -1,45 +1,42 @@
 package org.opensearch.migrations.clusters;
 
+import java.util.List;
+
+import org.opensearch.migrations.DataFiltersArgs;
 import org.opensearch.migrations.Version;
 import org.opensearch.migrations.cli.Printer;
+import org.opensearch.migrations.metadata.GlobalMetadataCreator;
+import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.IClusterMetadataContext;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 
 import com.rfs.common.http.ConnectionContext;
 import com.rfs.models.GlobalMetadata.Factory;
 
-public class RemoteCluster implements SourceCluster {
+@AllArgsConstructor
+public class RemoteCluster implements TargetCluster {
+    private final Version version;
     private final ConnectionContext connection;
-    private String flavor;
-    private int version;
-
-    public RemoteCluster(ConnectionContext connection) {
-        this.connection = connection;
-    }
 
     public Printer asPrinter() {
         return Printer.builder()
             .section("Target Cluster")
-            .field("Version", flavor + " " + version)
+            .field("Version", version.toString())
             .field("Url", connection.toString())
             .build();
     }
 
-    @Override
     public Version getVersion() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getVersion'");
+        return version;
     }
 
     @Override
-    public Factory getMetadata() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getMetadata'");
-    }
-
-    @Override
-    public com.rfs.models.IndexMetadata.Factory getIndexMetadata() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getIndexMetadata'");
+    public GlobalMetadataCreator getGlobalMetadataCreator(
+        DataFiltersArgs dataFilters,
+        IClusterMetadataContext context
+    ) {
+        
+        throw new UnsupportedOperationException("Unimplemented method 'getGlobalMetadataCreator'");
     }
 }

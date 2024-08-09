@@ -7,6 +7,7 @@ import java.util.List;
 import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.cli.Clusters;
 import org.opensearch.migrations.clusters.RemoteCluster;
+import org.opensearch.migrations.clusters.SourceCluster;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.beust.jcommander.ParameterException;
@@ -60,45 +61,39 @@ public class Migrate {
         }
 
         final String snapshotName = arguments.snapshotName;
-        final Path fileSystemRepoPath = arguments.fileSystemRepoPath != null
-            ? Paths.get(arguments.fileSystemRepoPath)
-            : null;
-        final Path s3LocalDirPath = arguments.s3LocalDirPath != null ? Paths.get(arguments.s3LocalDirPath) : null;
         final String s3RepoUri = arguments.s3RepoUri;
         final String s3Region = arguments.s3Region;
-        final List<String> indexAllowlist = arguments.indexAllowlist;
-        final List<String> indexTemplateAllowlist = arguments.indexTemplateAllowlist;
-        final List<String> componentTemplateAllowlist = arguments.componentTemplateAllowlist;
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
         var clusters = new Clusters();
         migrateResult.clusters(clusters);
-        clusters.setSource(new LocalSnapshotSource(arguments.version, fileSystemRepoPath, arguments.snapshotName));
-        clusters.setSource(new S3SnapshotSource(s3LocalDirPath, s3RepoUri, s3Region));
-        clusters.setSource(new RemoteCluster(arguments.targetArgs.toConnectionContext()));
+        SourceCluster sourceCluster = null;
+        if (arguments.fileSystemRepoPath != null) {
+            sourceCluster = new SnapshotSource(arguments.sourceVersion, arguments.fileSystemRepoPath);
+        } else if (arguments.s3LocalDirPath != null) {
+            sourceCluster = new SnapshotSource(arguments.sourceVersion, arguments.s3LocalDirPath, arguments.s3RepoUri, arguments.s3Region);
+        } else {
+            log.atError().setMessage("No valid source for migration").log();
+            return migrateResult.exitCode(INVALID_PARAMETER_CODE).build();
+        }
+        clusters.setSource(sourceCluster);
 
-         clusters.setTarget(new RemoteCluster(arguments.targetArgs.toConnectionContext()));
+        var targetCluster = new RemoteCluster(arguments.targetVersion, arguments.targetArgs.toConnectionContext());
+        clusters.setTarget(targetCluster);
 
         try {
 
             log.info("Running RfsWorker");
             OpenSearchClient targetClient = new OpenSearchClient(arguments.targetArgs.toConnectionContext());
 
-            final SourceRepo sourceRepo = fileSystemRepoPath != null
-                ? new FileSystemRepo(fileSystemRepoPath)
-                : S3Repo.create(s3LocalDirPath, new S3Uri(s3RepoUri), s3Region);
-            final SnapshotRepo.Provider repoDataProvider = new SnapshotRepoProvider_ES_7_10(sourceRepo);
-            final GlobalMetadata.Factory metadataFactory = new GlobalMetadataFactory_ES_7_10(repoDataProvider);
-            final GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
-                targetClient,
-                List.of(),
-                componentTemplateAllowlist,
-                indexTemplateAllowlist,
+            
+            final GlobalMetadataCreator metadataCreator = targetCluster.getGlobalMetadataCreator(
+                arguments.dataFilterArgs,
                 context.createMetadataMigrationContext()
             );
             final Transformer transformer = TransformFunctions.getTransformer(
-                ClusterVersion.ES_7_10,
-                ClusterVersion.OS_2_11,
+                sourceCluster.getVersion(),
+                targetCluster.getVersion(),
                 awarenessDimensionality
             );
             new MetadataRunner(snapshotName, metadataFactory, metadataCreator, transformer).migrateMetadata();

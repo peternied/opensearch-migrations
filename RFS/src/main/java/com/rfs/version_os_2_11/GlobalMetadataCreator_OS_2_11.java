@@ -6,13 +6,16 @@ import java.util.List;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
+import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts;
 
 import com.rfs.common.OpenSearchClient;
 import com.rfs.models.GlobalMetadata;
 
-public class GlobalMetadataCreator_OS_2_11 {
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
+public class GlobalMetadataCreator_OS_2_11 implements GlobalMetadataCreator {
     private static final Logger logger = LogManager.getLogger(GlobalMetadataCreator_OS_2_11.class);
 
     private final OpenSearchClient client;
@@ -20,20 +23,6 @@ public class GlobalMetadataCreator_OS_2_11 {
     private final List<String> componentTemplateAllowlist;
     private final List<String> indexTemplateAllowlist;
     private final IMetadataMigrationContexts.IClusterMetadataContext context;
-
-    public GlobalMetadataCreator_OS_2_11(
-        OpenSearchClient client,
-        List<String> legacyTemplateAllowlist,
-        List<String> componentTemplateAllowlist,
-        List<String> indexTemplateAllowlist,
-        IMetadataMigrationContexts.IClusterMetadataContext context
-    ) {
-        this.client = client;
-        this.legacyTemplateAllowlist = legacyTemplateAllowlist;
-        this.componentTemplateAllowlist = componentTemplateAllowlist;
-        this.indexTemplateAllowlist = indexTemplateAllowlist;
-        this.context = context;
-    }
 
     public void create(GlobalMetadata root) {
         logger.info("Setting Global Metadata");

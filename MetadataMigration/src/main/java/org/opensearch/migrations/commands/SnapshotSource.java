@@ -9,23 +9,30 @@ import org.opensearch.migrations.clusters.SourceCluster;
 import com.rfs.models.GlobalMetadata;
 import com.rfs.models.IndexMetadata;
 import com.rfs.common.SnapshotRepo;
+import com.rfs.common.S3Repo;
+import com.rfs.common.SourceRepo;
 
 import com.rfs.common.FileSystemRepo;
 import com.rfs.version_es_7_10.GlobalMetadataFactory_ES_7_10;
 import com.rfs.version_es_7_10.IndexMetadataFactory_ES_7_10;
 import com.rfs.version_es_7_10.SnapshotRepoProvider_ES_7_10;
 
+import com.rfs.common.S3Uri;
 
-public class LocalSnapshotSource implements SourceCluster {
 
-    private final FileSystemRepo fileSystemRepo;
-    private final String snapshotName;
+public class SnapshotSource implements SourceCluster {
+
+    private final SourceRepo repo;
     private final Version version;
 
-    public LocalSnapshotSource(Version version, Path snapshotRepoPath, String snapshotName) {
+    public SnapshotSource(Version version, String snapshotRepoPath) {
         this.version = version;
-        this.fileSystemRepo = new FileSystemRepo(snapshotRepoPath);
-        this.snapshotName = snapshotName;
+        this.repo = new FileSystemRepo(Path.of(snapshotRepoPath));
+    }
+
+    public SnapshotSource(Version version, String s3LocalDirPath, String s3RepoUri, String s3Region) {
+        this.version = version;
+        this.repo = S3Repo.create(Path.of(s3LocalDirPath), new S3Uri(s3RepoUri), s3Region);
     }
 
     @Override
@@ -40,7 +47,7 @@ public class LocalSnapshotSource implements SourceCluster {
 
     private SnapshotRepo.Provider getProvider() {
         if (version.equals(Version.builder().flavor(Flavor.Elasticsearch).major(7).minor(10).build())) {
-            return new SnapshotRepoProvider_ES_7_10(this.fileSystemRepo);
+            return new SnapshotRepoProvider_ES_7_10(this.repo);
         }
 
         throw new UnsupportedOperationException("Unsupported version " + getVersion());
@@ -60,7 +67,6 @@ public class LocalSnapshotSource implements SourceCluster {
         if (version.equals(Version.builder().flavor(Flavor.Elasticsearch).major(7).minor(10).build())) {
             return new IndexMetadataFactory_ES_7_10(getProvider());
         }
-
 
         throw new UnsupportedOperationException("Unsupported version " + getVersion());
     }

@@ -4,24 +4,26 @@ import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
 @RequiredArgsConstructor
 @Getter
 @Builder
 @EqualsAndHashCode
-@ToString
 public class Version {
     private final Flavor flavor;
     private final int major;
     private final int minor;
     private final int patch;
 
+    public String toString() {
+        return String.format("%s %d.%d.%d", flavor.name(), major, minor, patch);
+    }
+
     public static Version fromString(final String raw) throws RuntimeException {
         var builder = Version.builder();
         var remainingString = raw.toLowerCase();
 
-        for(var flavor : Flavor.values()) {
+        for (var flavor : Flavor.values()) {
             if (remainingString.startsWith(flavor.name().toLowerCase())) {
                 remainingString = remainingString.substring(flavor.name().length());
                 builder.flavor(flavor);

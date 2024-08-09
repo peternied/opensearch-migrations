@@ -2,7 +2,7 @@ package com.rfs.worker;
 
 import com.rfs.models.GlobalMetadata;
 import com.rfs.transformers.Transformer;
-import com.rfs.version_os_2_11.GlobalMetadataCreator_OS_2_11;
+import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -12,7 +12,7 @@ public class MetadataRunner {
 
     private final String snapshotName;
     private final GlobalMetadata.Factory metadataFactory;
-    private final GlobalMetadataCreator_OS_2_11 metadataCreator;
+    private final GlobalMetadataCreator metadataCreator;
     private final Transformer transformer;
 
     public void migrateMetadata() {

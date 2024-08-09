@@ -86,13 +86,14 @@ class EndToEndTest {
         targetArgs.host = targetCluster.getUrl();
 
         var arguments = new MetadataArgs();
+        arguments.sourceVersion = Version.fromString("ES 7.10");
         arguments.fileSystemRepoPath = localDirectory.getAbsolutePath();
         arguments.snapshotName = snapshotName;
-        arguments.targetArgs = targetArgs;
         arguments.indexAllowlist = List.of(indexName);
         arguments.componentTemplateAllowlist = List.of(compoTemplateName);
         arguments.indexTemplateAllowlist = List.of(indexTemplateName);
-        arguments.version = Version.fromString("ES 7.10");
+        arguments.targetArgs = targetArgs;
+        arguments.targetVersion = Version.fromString("OS 2.14");
 
         // ACTION: Migrate the templates
         var metadataContext = MetadataMigrationTestContext.factory().noOtelTracking();
