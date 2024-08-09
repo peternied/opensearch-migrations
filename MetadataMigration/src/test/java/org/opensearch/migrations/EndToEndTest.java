@@ -92,6 +92,7 @@ class EndToEndTest {
         arguments.indexAllowlist = List.of(indexName);
         arguments.componentTemplateAllowlist = List.of(compoTemplateName);
         arguments.indexTemplateAllowlist = List.of(indexTemplateName);
+        arguments.version = Version.fromString("ES 7.10");
 
         // ACTION: Migrate the templates
         var metadataContext = MetadataMigrationTestContext.factory().noOtelTracking();

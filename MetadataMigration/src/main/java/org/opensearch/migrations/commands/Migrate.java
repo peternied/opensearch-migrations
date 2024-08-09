@@ -73,7 +73,7 @@ public class Migrate {
 
         var clusters = new Clusters();
         migrateResult.clusters(clusters);
-        clusters.setSource(new LocalSnapshotSource(fileSystemRepoPath));
+        clusters.setSource(new LocalSnapshotSource(arguments.version, fileSystemRepoPath, arguments.snapshotName));
         clusters.setSource(new S3SnapshotSource(s3LocalDirPath, s3RepoUri, s3Region));
         clusters.setSource(new RemoteCluster(arguments.targetArgs.toConnectionContext()));
 

@@ -5,6 +5,7 @@ import java.util.List;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
 import com.rfs.common.http.ConnectionContext;
+import org.opensearch.migrations.VersionConverter;
 
 public class MetadataArgs {
     @Parameter(names = {"--help", "-h"}, help = true, description = "Displays information about how to use this tool")
@@ -56,4 +57,7 @@ public class MetadataArgs {
         "--otel-collector-endpoint" }, arity = 1, description = "Endpoint (host:port) for the OpenTelemetry Collector to which metrics logs should be"
             + "forwarded. If no value is provided, metrics will not be forwarded.")
     String otelCollectorEndpoint;
+
+    @Parameter(required = true, names = {"--source-version" }, description = "Version of the source clusters, for example: Elasticsearch 7.10 or OS 1.3", converter = VersionConverter.class)
+    public Version version;
 }
