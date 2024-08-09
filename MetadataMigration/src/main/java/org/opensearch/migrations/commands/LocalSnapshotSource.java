@@ -8,14 +8,26 @@ import org.opensearch.migrations.clusters.SourceCluster;
 import com.rfs.models.GlobalMetadata;
 import com.rfs.models.IndexMetadata;
 
+import com.rfs.common.FileSystemRepo;
+
 public class LocalSnapshotSource implements SourceCluster {
 
-    public LocalSnapshotSource(Path fileSystemRepoPath) {
-        //TODO Auto-generated constructor stub
+    private final FileSystemRepo fileSystemRepo;
+    private final String snapshotName;
+
+    public LocalSnapshotSource(Path snapshotRepoPath, String snapshotName) {
+        this.snapshotName = snapshotName;
+        this.fileSystemRepo = new FileSystemRepo(snapshotRepoPath);
     }
 
     @Override
     public Version getVersion() {
+        // Make sure the snapshot exists
+        //   Else throw
+        // Read the snapshot file, get the version
+        //   Else throw
+        //
+
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getVersion'");
     }
