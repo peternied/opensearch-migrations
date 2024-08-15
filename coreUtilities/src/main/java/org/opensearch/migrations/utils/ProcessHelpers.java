@@ -3,9 +3,11 @@ package org.opensearch.migrations.utils;
 import java.util.Optional;
 import java.util.UUID;
 
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@UtilityClass
 public class ProcessHelpers {
     private static final String DEFAULT_NODE_ID = "generated_" + UUID.randomUUID().toString();
 

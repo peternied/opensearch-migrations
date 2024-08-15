@@ -263,7 +263,7 @@ public class TrafficReplayer {
         var topContext = new RootReplayerContext(
             RootOtelContext.initializeOpenTelemetryWithCollectorOrAsNoop(params.otelCollectorEndpoint,
                 "replay",
-                ProcessHelpers.getNodeInstanceName()),
+                workerId),
             contextTrackers
         );
 
