@@ -48,6 +48,7 @@ import com.rfs.worker.DocumentsRunner;
 import com.rfs.worker.ShardWorkPreparer;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.opensearch.migrations.reindexer.FailedRequestsLogger;
 
 @Slf4j
 public class RfsMigrateDocuments {
@@ -166,6 +167,10 @@ public class RfsMigrateDocuments {
     }
 
     public static void main(String[] args) throws Exception {
+        // TODO: Remove - useful for testing
+        var failedRequestsLoggger = new FailedRequestsLogger();
+        failedRequestsLoggger.logBulkFailure("index", () -> 11, () -> "<BODY>", new RuntimeException());
+
         Args arguments = new Args();
         JCommander jCommander = JCommander.newBuilder().addObject(arguments).build();
         jCommander.parse(args);

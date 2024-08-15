@@ -13,5 +13,9 @@
     "captureProxyESServiceEnabled": true,
     "reindexFromSnapshotEnabled": true,
     "otelCollectorEnabled": true
-  }
+  },
+  "availability-zones:account=336984078605:region=us-west-1": [
+    "us-west-1a",
+    "us-west-1b"
+  ]
 }
