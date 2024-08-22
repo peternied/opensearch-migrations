@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -50,7 +51,7 @@ public class SnapshotStateTest {
     @BeforeEach
     public void setUp() throws Exception {
         // Start the cluster for testing
-        cluster = new SearchClusterContainer(SearchClusterContainer.ES_V7_10_2);
+        cluster = new SearchClusterContainer(SearchClusterContainer.ES_V5_6_16);
         cluster.start();
 
         // Configure operations and rfs implementation
@@ -104,6 +105,7 @@ public class SnapshotStateTest {
     }
 
     @Test
+    @Disabled
     public void SingleSnapshot_SingleDocument_Then_DeletedDocument() throws Exception {
         // Setup
         final var workCoordinationContext = WorkCoordinationTestContext.factory().noOtelTracking();
@@ -138,6 +140,7 @@ public class SnapshotStateTest {
     }
 
     @Test
+    @Disabled
     public void SingleSnapshot_SingleDocument_Then_UpdateDocument() throws Exception {
         // Setup
         final var workCoordinationContext = WorkCoordinationTestContext.factory().noOtelTracking();

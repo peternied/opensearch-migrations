@@ -32,12 +32,17 @@ public class SearchClusterContainer extends GenericContainer<SearchClusterContai
         "docker.elastic.co/elasticsearch/elasticsearch:6.8.23",
         "ES 6.8.23"
     );
+    public static final Version ES_V5_6_16 = new ElasticsearchVersion(
+        "docker.elastic.co/elasticsearch/elasticsearch:5.6.16",
+        "ES 5.6.16"
+    );
+    
 
     public static final Version OS_V1_3_16 = new OpenSearchVersion("opensearchproject/opensearch:1.3.16", "OS 1.3.16");
     public static final Version OS_V2_14_0 = new OpenSearchVersion("opensearchproject/opensearch:2.14.0", "OS 2.14.0");
 
     private enum INITIALIZATION_FLAVOR {
-        ELASTICSEARCH(Map.of("discovery.type", "single-node", "path.repo", CLUSTER_SNAPSHOT_DIR)),
+        ELASTICSEARCH(Map.of("discovery.type", "single-node", "path.repo", CLUSTER_SNAPSHOT_DIR, "xpack.security.enabled", "false")),
         OPENSEARCH(
             new ImmutableMap.Builder<String, String>().putAll(ELASTICSEARCH.getEnvVariables())
                 .put("plugins.security.disabled", "true")

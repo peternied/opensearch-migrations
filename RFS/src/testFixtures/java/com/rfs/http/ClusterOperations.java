@@ -52,13 +52,15 @@ public class ClusterOperations {
         }
     }
 
+    @SneakyThrows
     public void createDocument(final String index, final String docId, final String body) throws IOException {
-        var indexDocumentRequest = new HttpPut(clusterUrl + "/" + index + "/_doc/" + docId);
+        var indexDocumentRequest = new HttpPut(clusterUrl + "/" + index + "/doc/" + docId);
         indexDocumentRequest.setEntity(new StringEntity(body));
         indexDocumentRequest.setHeader("Content-Type", "application/json");
 
         try (var response = httpClient.execute(indexDocumentRequest)) {
-            assertThat(response.getCode(), anyOf(equalTo(201), equalTo(200)));
+            var responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+            assertThat(responseBody, response.getCode(), anyOf(equalTo(201), equalTo(200)));
         }
     }
 
