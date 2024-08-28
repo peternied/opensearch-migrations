@@ -14,14 +14,15 @@ import {
     parseAndMergeArgs
 } from "../common-utilities";
 import { ClusterYaml, RFSBackfillYaml, SnapshotYaml } from "../migration-services-yaml";
-import cluster from "cluster";
+import { OtelCollectorSidecar } from "./migration-otel-collector-sidecar";
+import { SharedLogFileSystem } from "../components/shared-log-file-system";
 
 
 export interface ReindexFromSnapshotProps extends StackPropsExt {
     readonly vpc: IVpc,
     readonly fargateCpuArch: CpuArchitecture,
     readonly extraArgs?: string,
-    readonly otelCollectorEnabled?: boolean,
+    readonly otelCollectorEnabled: boolean,
     readonly clusterAuthDetails: ClusterYaml
 }
 
@@ -31,10 +32,6 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
 
     constructor(scope: Construct, id: string, props: ReindexFromSnapshotProps) {
         super(scope, id, props)
-        const sourceEndpoint = getMigrationStringParameterValue(this, {
-            ...props,
-            parameter: MigrationSSMParameter.SOURCE_CLUSTER_ENDPOINT,
-        });
 
         let securityGroups = [
             SecurityGroup.fromSecurityGroupId(this, "serviceSG", getMigrationStringParameterValue(this, {
@@ -44,6 +41,10 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
             SecurityGroup.fromSecurityGroupId(this, "defaultDomainAccessSG", getMigrationStringParameterValue(this, {
                 ...props,
                 parameter: MigrationSSMParameter.OS_ACCESS_SECURITY_GROUP_ID,
+            })),
+            SecurityGroup.fromSecurityGroupId(this, "sharedLogsAccessSG", getMigrationStringParameterValue(this, {
+                ...props,
+                parameter: MigrationSSMParameter.SHARED_LOGS_SECURITY_GROUP_ID,
             })),
         ]
 
@@ -67,6 +68,7 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
         });
         const s3Uri = `s3://migration-artifacts-${this.account}-${props.stage}-${this.region}/rfs-snapshot-repo`;
         let rfsCommand = `/rfs-app/runJavaWithClasspath.sh com.rfs.RfsMigrateDocuments --s3-local-dir /tmp/s3_files --s3-repo-uri ${s3Uri} --s3-region ${this.region} --snapshot-name rfs-snapshot --lucene-dir '/lucene' --target-host ${osClusterEndpoint}`
+        rfsCommand = props.otelCollectorEnabled ? rfsCommand.concat(` --otel-collector-endpoint ${OtelCollectorSidecar.getOtelLocalhostEndpoint()}`) : rfsCommand
         rfsCommand = parseAndMergeArgs(rfsCommand, props.extraArgs);
 
         let targetUser = "";
@@ -75,14 +77,14 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
         if (props.clusterAuthDetails.basic_auth) {
             targetUser = props.clusterAuthDetails.basic_auth.username,
             targetPassword = props.clusterAuthDetails.basic_auth.password? props.clusterAuthDetails.basic_auth.password : "",
-            targetPasswordArn = props.clusterAuthDetails.basic_auth.password_from_secret_arn? props.clusterAuthDetails.basic_auth.password_from_secret_arn : ""            
+            targetPasswordArn = props.clusterAuthDetails.basic_auth.password_from_secret_arn? props.clusterAuthDetails.basic_auth.password_from_secret_arn : ""
         };
-
+        const sharedLogFileSystem = new SharedLogFileSystem(this, props.stage, props.defaultDeployId);
         const openSearchPolicy = createOpenSearchIAMAccessPolicy(this.partition, this.region, this.account);
         const openSearchServerlessPolicy = createOpenSearchServerlessIAMAccessPolicy(this.partition, this.region, this.account);
-        let servicePolicies = [artifactS3PublishPolicy, openSearchPolicy, openSearchServerlessPolicy];
+        let servicePolicies = [sharedLogFileSystem.asPolicyStatement(), artifactS3PublishPolicy, openSearchPolicy, openSearchServerlessPolicy];
 
-        const getSecretsPolicy = props.clusterAuthDetails.basic_auth?.password_from_secret_arn ? 
+        const getSecretsPolicy = props.clusterAuthDetails.basic_auth?.password_from_secret_arn ?
             getTargetPasswordAccessPolicy(props.clusterAuthDetails.basic_auth.password_from_secret_arn) : null;
         if (getSecretsPolicy) {
             servicePolicies.push(getSecretsPolicy);
@@ -94,9 +96,11 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
             dockerDirectoryPath: join(__dirname, "../../../../../", "DocumentsFromSnapshotMigration/docker"),
             dockerImageCommand: ['/bin/sh', '-c', "/rfs-app/entrypoint.sh"],
             securityGroups: securityGroups,
+            volumes: [sharedLogFileSystem.asVolume()],
+            mountPoints: [sharedLogFileSystem.asMountPoint()],
             taskRolePolicies: servicePolicies,
             cpuArchitecture: props.fargateCpuArch,
-            taskCpuUnits: 1024,
+            taskCpuUnits: 2048,
             taskMemoryLimitMiB: 4096,
             ephemeralStorageGiB: 200,
             environment: {
@@ -104,6 +108,7 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
                 "RFS_TARGET_USER": targetUser,
                 "RFS_TARGET_PASSWORD": targetPassword,
                 "RFS_TARGET_PASSWORD_ARN": targetPasswordArn,
+                "SHARED_LOGS_DIR_PATH": `${sharedLogFileSystem.mountPointPath}/reindex-from-snapshot-${props.defaultDeployId}`,
             },
             ...props
         });

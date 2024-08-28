@@ -21,8 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class Migrate {
 
-    private static final int INVALID_PARAMETER_CODE = 999;
-    private static final int UNEXPECTED_FAILURE_CODE = 888;
+    static final int INVALID_PARAMETER_CODE = 999;
+    static final int UNEXPECTED_FAILURE_CODE = 888;
     private final MetadataArgs arguments;
 
     public Migrate(MetadataArgs arguments) {
@@ -67,16 +67,15 @@ public class Migrate {
         clusters.setTarget(targetCluster);
 
         try {
-
             log.info("Running RfsWorker");
-            OpenSearchClient targetClient = new OpenSearchClient(arguments.targetArgs.toConnectionContext());
+            var targetClient = new OpenSearchClient(arguments.targetArgs.toConnectionContext());
 
             
-            final GlobalMetadataCreator metadataCreator = targetCluster.getGlobalMetadataCreator(
+            var metadataCreator = targetCluster.getGlobalMetadataCreator(
                 arguments.dataFilterArgs,
                 context.createMetadataMigrationContext()
             );
-            final Transformer transformer = TransformFunctions.getTransformer(
+            var transformer = TransformFunctions.getTransformer(
                 ClusterVersion.fromVersion(sourceCluster.getVersion()),
                 ClusterVersion.fromVersion(targetCluster.getVersion()),
                 awarenessDimensionality
@@ -93,7 +92,7 @@ public class Migrate {
                 context.createIndexContext()
             ).migrateIndices();
             log.info("Index copy complete.");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             log.atError().setMessage("Unexpected failure").setCause(e).log();
             migrateResult.exitCode(UNEXPECTED_FAILURE_CODE);
         }

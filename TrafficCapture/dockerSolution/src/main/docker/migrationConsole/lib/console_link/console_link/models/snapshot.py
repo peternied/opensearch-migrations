@@ -79,6 +79,13 @@ class Snapshot(ABC):
                 logger.info("Using basic auth for source cluster")
             except KeyError as e:
                 raise ValueError(f"Missing required auth details for source cluster: {e}")
+        elif self.source_cluster.auth_type == AuthMethod.SIGV4:
+            signing_name, region = self.source_cluster._get_sigv4_details(force_region=True)
+            logger.info(f"Using sigv4 auth for source cluster with signing_name {signing_name} and region {region}")
+            command_args.update({
+                "--source-aws-service-signing-name": signing_name,
+                "--source-aws-region": region
+            })
 
         if self.source_cluster.allow_insecure:
             command_args["--source-insecure"] = None
@@ -128,8 +135,9 @@ class S3Snapshot(Snapshot):
         command_runner = CommandRunner(base_command, command_args, sensitive_fields=["--source-password"])
         try:
             command_runner.run()
-            logger.info(f"Snapshot {self.config['snapshot_name']} created successfully")
-            return CommandResult(success=True, value=f"Snapshot {self.config['snapshot_name']} created successfully")
+            logger.info(f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
+            return CommandResult(success=True,
+                                 value=f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
         except CommandRunnerError as e:
             logger.error(f"Failed to create snapshot: {str(e)}")
             return CommandResult(success=False, value=f"Failed to create snapshot: {str(e)}")
@@ -165,8 +173,9 @@ class FileSystemSnapshot(Snapshot):
         command_runner = CommandRunner(base_command, command_args, sensitive_fields=["--source-password"])
         try:
             command_runner.run()
-            logger.info(f"Snapshot {self.config['snapshot_name']} created successfully")
-            return CommandResult(success=True, value=f"Snapshot {self.config['snapshot_name']} created successfully")
+            logger.info(f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
+            return CommandResult(success=True,
+                                 value=f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
         except CommandRunnerError as e:
             logger.error(f"Failed to create snapshot: {str(e)}")
             return CommandResult(success=False, value=f"Failed to create snapshot: {str(e)}")
