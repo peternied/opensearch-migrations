@@ -3,11 +3,11 @@ package org.opensearch.migrations.cli;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.opensearch.migrations.clusters.SourceCluster;
 import org.opensearch.migrations.clusters.RemoteCluster;
-import org.slf4j.event.Level;
+import org.opensearch.migrations.clusters.SourceCluster;
 
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 
 @Slf4j
 public class Clusters implements Printable, Validate {

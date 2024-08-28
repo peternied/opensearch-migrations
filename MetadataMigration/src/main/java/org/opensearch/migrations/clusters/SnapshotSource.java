@@ -5,18 +5,16 @@ import java.nio.file.Path;
 import org.opensearch.migrations.Flavor;
 import org.opensearch.migrations.Version;
 
+import com.rfs.common.FileSystemRepo;
+import com.rfs.common.S3Repo;
+import com.rfs.common.S3Uri;
+import com.rfs.common.SnapshotRepo;
+import com.rfs.common.SourceRepo;
 import com.rfs.models.GlobalMetadata;
 import com.rfs.models.IndexMetadata;
-import com.rfs.common.SnapshotRepo;
-import com.rfs.common.S3Repo;
-import com.rfs.common.SourceRepo;
-
-import com.rfs.common.FileSystemRepo;
 import com.rfs.version_es_7_10.GlobalMetadataFactory_ES_7_10;
 import com.rfs.version_es_7_10.IndexMetadataFactory_ES_7_10;
 import com.rfs.version_es_7_10.SnapshotRepoProvider_ES_7_10;
-
-import com.rfs.common.S3Uri;
 
 
 public class SnapshotSource implements SourceCluster {

@@ -41,7 +41,7 @@ public class Version {
 
         try {
             // Remove any spaces
-            remainingString = remainingString.split("[ _]+", 2)[1];
+            remainingString = remainingString.trim().replace("_", "");
 
             // Break out into the numeric parts
             var versionParts = remainingString.split("[\\._]");

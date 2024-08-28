@@ -1,11 +1,10 @@
 package org.opensearch.migrations;
 
-import java.util.List;
+
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
 import com.rfs.common.http.ConnectionContext;
-import org.opensearch.migrations.VersionConverter;
 
 public class MetadataArgs {
     @Parameter(names = {"--help", "-h"}, help = true, description = "Displays information about how to use this tool")

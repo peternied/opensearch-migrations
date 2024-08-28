@@ -1,9 +1,8 @@
 package org.opensearch.migrations.cli;
 
-import org.slf4j.event.Level;
-
 import lombok.Builder;
 import lombok.Getter;
+import org.slf4j.event.Level;
 
 @Builder(builderMethodName = "Builder")
 @Getter

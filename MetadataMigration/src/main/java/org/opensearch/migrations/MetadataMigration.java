@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MetadataMigration {
 
     public static void main(String[] args) throws Exception {
-        var arguments = new MetadataArgs();
+        MetadataArgs arguments = new MetadataArgs();
         JCommander jCommander = JCommander.newBuilder().addObject(arguments).build();
         jCommander.parse(args);
 

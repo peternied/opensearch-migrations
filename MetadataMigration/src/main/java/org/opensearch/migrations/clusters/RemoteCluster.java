@@ -1,6 +1,5 @@
 package org.opensearch.migrations.clusters;
 
-import java.util.List;
 
 import org.opensearch.migrations.DataFiltersArgs;
 import org.opensearch.migrations.Flavor;
@@ -10,14 +9,11 @@ import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 import org.opensearch.migrations.metadata.IndexCreator;
 import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.IClusterMetadataContext;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-
+import com.rfs.common.OpenSearchClient;
 import com.rfs.common.http.ConnectionContext;
-import com.rfs.models.GlobalMetadata.Factory;
 import com.rfs.version_os_2_11.GlobalMetadataCreator_OS_2_11;
 import com.rfs.version_os_2_11.IndexCreator_OS_2_11;
-import com.rfs.common.OpenSearchClient;
+import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class RemoteCluster implements TargetCluster {

@@ -1,13 +1,10 @@
 package org.opensearch.migrations.cli;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-
-import java.lang.annotation.Target;
 
 import org.junit.jupiter.api.Test;
-import org.opensearch.migrations.clusters.Sources;
-import org.opensearch.migrations.clusters.RemoteCluster;
+
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 // import com.rfs.common.ConnectionDetails;
 

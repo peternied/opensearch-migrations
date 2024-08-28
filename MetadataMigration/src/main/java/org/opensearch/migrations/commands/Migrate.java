@@ -1,37 +1,22 @@
 package org.opensearch.migrations.commands;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
 
 import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.cli.Clusters;
 import org.opensearch.migrations.clusters.RemoteCluster;
 import org.opensearch.migrations.clusters.SnapshotSource;
 import org.opensearch.migrations.clusters.SourceCluster;
+import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.beust.jcommander.ParameterException;
 import com.rfs.common.ClusterVersion;
-import com.rfs.common.FileSystemRepo;
 import com.rfs.common.OpenSearchClient;
-import com.rfs.common.S3Repo;
-import com.rfs.common.S3Uri;
-import com.rfs.common.SnapshotRepo;
-import com.rfs.common.SourceRepo;
-import com.rfs.models.GlobalMetadata;
-import com.rfs.models.IndexMetadata;
 import com.rfs.transformers.TransformFunctions;
 import com.rfs.transformers.Transformer;
-import com.rfs.version_es_7_10.GlobalMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.IndexMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.SnapshotRepoProvider_ES_7_10;
-import com.rfs.version_os_2_11.GlobalMetadataCreator_OS_2_11;
-import com.rfs.version_os_2_11.IndexCreator_OS_2_11;
 import com.rfs.worker.IndexRunner;
 import com.rfs.worker.MetadataRunner;
 import lombok.extern.slf4j.Slf4j;
-import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 
 @Slf4j
 public class Migrate {
@@ -63,8 +48,6 @@ public class Migrate {
         }
 
         final String snapshotName = arguments.snapshotName;
-        final String s3RepoUri = arguments.s3RepoUri;
-        final String s3Region = arguments.s3Region;
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
         var clusters = new Clusters();

@@ -2,9 +2,11 @@ package org.opensearch.migrations.cli;
 
 import java.util.List;
 import java.util.Map;
-import static java.util.Map.entry;
+
 import lombok.Builder;
 import lombok.Singular;
+
+import static java.util.Map.entry;
 
 @Builder
 public class OutputSection {

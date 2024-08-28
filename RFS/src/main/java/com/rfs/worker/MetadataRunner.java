@@ -1,8 +1,9 @@
 package com.rfs.worker;
 
+import org.opensearch.migrations.metadata.GlobalMetadataCreator;
+
 import com.rfs.models.GlobalMetadata;
 import com.rfs.transformers.Transformer;
-import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
