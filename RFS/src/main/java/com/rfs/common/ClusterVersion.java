@@ -9,28 +9,29 @@ import com.beust.jcommander.ParameterException;
  * An enumerated type used to refer to the software versions of the source and target clusters.
  */
 public enum ClusterVersion {
-    ES_6_8("ES 6.8"),
-    ES_7_10("ES 7.10"),
-    OS_2_11("OS 2.11");
-
-    private Version richVersion;
-
-    private ClusterVersion(String versionString) {
-        richVersion = Version.fromString(versionString);
-    }
+    ES_6_8,
+    ES_7_10,
+    ES_7_17,
+    OS_1_3,
+    OS_2_11;
 
     public static class ArgsConverter implements IStringConverter<ClusterVersion> {
         @Override
         public ClusterVersion convert(String value) {
-            switch (value) {
+            String lowerCasedValue = value.toLowerCase();
+            switch (lowerCasedValue) {
                 case "es_6_8":
                     return ClusterVersion.ES_6_8;
                 case "es_7_10":
                     return ClusterVersion.ES_7_10;
+                case "es_7_17":
+                    return ClusterVersion.ES_7_17;
+                case "os_1_3":
+                    return ClusterVersion.OS_1_3;
                 case "os_2_11":
                     return ClusterVersion.OS_2_11;
                 default:
-                    throw new ParameterException("Invalid source version: " + value);
+                    throw new ParameterException("Invalid cluster version: " + value);
             }
         }
     }
@@ -51,8 +52,8 @@ public enum ClusterVersion {
     }
 
     public static ClusterVersion fromVersion(Version version) {
-        for (ClusterVersion clusterVersion : values()) {
-            if (clusterVersion.richVersion.equals(version)) {
+        for (var clusterVersion : values()) {
+            if (version.equals(Version.fromString(clusterVersion.name()))) {
                 return clusterVersion;
             }
         }
