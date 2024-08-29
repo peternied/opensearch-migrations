@@ -52,7 +52,7 @@ test {
 }
 
 task slowTest(type: Test) {
-    // include longTest
+    useJUnitPlatform {}
     jacoco {
         enabled = true
     }
