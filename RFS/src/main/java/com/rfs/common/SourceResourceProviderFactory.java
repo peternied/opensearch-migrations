@@ -5,6 +5,7 @@ import com.rfs.version_es_7_10.SourceResourceProvider_ES_7_10;
 
 public class SourceResourceProviderFactory {
     public static SourceResourceProvider getProvider(ClusterVersion version) {
+        /** TODO: Switch to 'version' data type instead of enum */
         switch (version) {
             case ES_6_8:
                 return new SourceResourceProvider_ES_6_8();

@@ -19,6 +19,7 @@ public class Version {
         return String.format("%s %d.%d.%d", flavor.name(), major, minor, patch);
     }
 
+    /** TODO: Do not merge this code, do something smarter */
     public boolean matches(Version that) {
         if (that == null) {
             return false;
