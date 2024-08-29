@@ -1,6 +1,6 @@
 package com.rfs.common;
 
-import java.util.List;
+import org.opensearch.migrations.Version;
 
 import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.ParameterException;
@@ -14,9 +14,6 @@ public enum ClusterVersion {
     ES_7_17,
     OS_1_3,
     OS_2_11;
-
-    public static final List<ClusterVersion> SOURCE_VERSIONS = List.of(ES_6_8, ES_7_10, ES_7_17);
-    public static final List<ClusterVersion> TARGET_VERSIONS = List.of(OS_2_11);
 
     public static class ArgsConverter implements IStringConverter<ClusterVersion> {
         @Override
@@ -52,5 +49,14 @@ public enum ClusterVersion {
         } else {
             throw new IllegalArgumentException("Invalid version: " + versionId);
         }
+    }
+
+    public static ClusterVersion fromVersion(Version version) {
+        for (var clusterVersion : values()) {
+            if (version.equals(Version.fromString(clusterVersion.name()))) {
+                return clusterVersion;
+            }
+        }
+        throw new IllegalArgumentException("Unable to map a ClusterVersion of version: " + version);
     }
 }

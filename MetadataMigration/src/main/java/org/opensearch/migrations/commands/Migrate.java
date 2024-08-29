@@ -1,29 +1,20 @@
 package org.opensearch.migrations.commands;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
+
+import java.util.ArrayList;
 
 import org.opensearch.migrations.MetadataArgs;
+import org.opensearch.migrations.cli.Clusters;
+import org.opensearch.migrations.cli.Items;
+import org.opensearch.migrations.clusters.RemoteCluster;
+import org.opensearch.migrations.clusters.SnapshotSource;
+import org.opensearch.migrations.clusters.SourceCluster;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.beust.jcommander.ParameterException;
 import com.rfs.common.ClusterVersion;
-import com.rfs.common.FileSystemRepo;
 import com.rfs.common.OpenSearchClient;
-import com.rfs.common.S3Repo;
-import com.rfs.common.S3Uri;
-import com.rfs.common.SnapshotRepo;
-import com.rfs.common.SourceRepo;
-import com.rfs.models.GlobalMetadata;
-import com.rfs.models.IndexMetadata;
 import com.rfs.transformers.TransformFunctions;
-import com.rfs.transformers.Transformer;
-import com.rfs.version_es_7_10.GlobalMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.IndexMetadataFactory_ES_7_10;
-import com.rfs.version_es_7_10.SnapshotRepoProvider_ES_7_10;
-import com.rfs.version_os_2_11.GlobalMetadataCreator_OS_2_11;
-import com.rfs.version_os_2_11.IndexCreator_OS_2_11;
 import com.rfs.worker.IndexRunner;
 import com.rfs.worker.MetadataRunner;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +31,7 @@ public class Migrate {
     }
 
     public MigrateResult execute(RootMetadataMigrationContext context) {
+        var migrateResult = MigrateResult.builder();
         log.atInfo().setMessage("Command line arguments {0}").addArgument(arguments::toString).log();
         try {
             if (arguments.fileSystemRepoPath == null && arguments.s3RepoUri == null) {
@@ -53,61 +45,77 @@ public class Migrate {
             } 
         } catch (Exception e) {
             log.atError().setMessage("Invalid parameter").setCause(e).log();
-            return new MigrateResult(INVALID_PARAMETER_CODE);
+            return migrateResult
+                .exitCode(INVALID_PARAMETER_CODE)
+                .errorMessage("Invalid parameter: " + e.getMessage())
+                .build();
         }
 
         final String snapshotName = arguments.snapshotName;
-        final Path fileSystemRepoPath = arguments.fileSystemRepoPath != null
-            ? Paths.get(arguments.fileSystemRepoPath)
-            : null;
-        final Path s3LocalDirPath = arguments.s3LocalDirPath != null ? Paths.get(arguments.s3LocalDirPath) : null;
-        final String s3RepoUri = arguments.s3RepoUri;
-        final String s3Region = arguments.s3Region;
-        final List<String> indexAllowlist = arguments.indexAllowlist;
-        final List<String> indexTemplateAllowlist = arguments.indexTemplateAllowlist;
-        final List<String> componentTemplateAllowlist = arguments.componentTemplateAllowlist;
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
+
+        SourceCluster sourceCluster = null;
+        if (arguments.fileSystemRepoPath != null) {
+            sourceCluster = new SnapshotSource(arguments.sourceVersion, arguments.fileSystemRepoPath);
+        } else if (arguments.s3LocalDirPath != null) {
+            sourceCluster = new SnapshotSource(arguments.sourceVersion, arguments.s3LocalDirPath, arguments.s3RepoUri, arguments.s3Region);
+        } else {
+            log.atError().setMessage("No valid source for migration").log();
+            return migrateResult
+                .exitCode(INVALID_PARAMETER_CODE)
+                .errorMessage("No valid source for migration")
+                .build();
+        }
+        var clusters = Clusters.builder();
+        clusters.source(sourceCluster);
+
+        var targetCluster = new RemoteCluster(arguments.targetVersion, arguments.targetArgs.toConnectionContext());
+        clusters.target(targetCluster);
 
         try {
             log.info("Running RfsWorker");
-            final OpenSearchClient targetClient = new OpenSearchClient(arguments.targetArgs.toConnectionContext());
+            var targetClient = new OpenSearchClient(arguments.targetArgs.toConnectionContext());
 
-            final SourceRepo sourceRepo = fileSystemRepoPath != null
-                ? new FileSystemRepo(fileSystemRepoPath)
-                : S3Repo.create(s3LocalDirPath, new S3Uri(s3RepoUri), s3Region);
-            final SnapshotRepo.Provider repoDataProvider = new SnapshotRepoProvider_ES_7_10(sourceRepo);
-            final GlobalMetadata.Factory metadataFactory = new GlobalMetadataFactory_ES_7_10(repoDataProvider);
-            final GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
-                targetClient,
-                List.of(),
-                componentTemplateAllowlist,
-                indexTemplateAllowlist,
+            
+            var metadataCreator = targetCluster.getGlobalMetadataCreator(
+                arguments.dataFilterArgs,
                 context.createMetadataMigrationContext()
             );
-            final Transformer transformer = TransformFunctions.getTransformer(
-                ClusterVersion.ES_7_10,
-                ClusterVersion.OS_2_11,
+            var transformer = TransformFunctions.getTransformer(
+                ClusterVersion.fromVersion(sourceCluster.getVersion()),
+                ClusterVersion.fromVersion(targetCluster.getVersion()),
                 awarenessDimensionality
             );
-            new MetadataRunner(snapshotName, metadataFactory, metadataCreator, transformer).migrateMetadata();
+            var metadataResults = new MetadataRunner(snapshotName, sourceCluster.getMetadata(), metadataCreator, transformer).migrateMetadata();
+            var items = Items.builder();
+            var indexTemplates = new ArrayList<String>();
+            indexTemplates.addAll(metadataResults.getLegacyTemplates());
+            indexTemplates.addAll(metadataResults.getIndexTemplates());
+            items.indexTemplates(indexTemplates);
+            items.componentTemplates(metadataResults.getComponentTemplates());
+
             log.info("Metadata copy complete.");
 
-            final IndexMetadata.Factory indexMetadataFactory = new IndexMetadataFactory_ES_7_10(repoDataProvider);
-            final IndexCreator_OS_2_11 indexCreator = new IndexCreator_OS_2_11(targetClient);
-            new IndexRunner(
+            var indexes = new IndexRunner(
                 snapshotName,
-                indexMetadataFactory,
-                indexCreator,
+                sourceCluster.getIndexMetadata(),
+                targetCluster.getIndexCreator(),
                 transformer,
-                indexAllowlist,
+                arguments.dataFilterArgs.indexAllowlist,
                 context.createIndexContext()
             ).migrateIndices();
+            items.indexes(indexes);
+            migrateResult.items(items.build());
             log.info("Index copy complete.");
         } catch (Throwable e) {
             log.atError().setMessage("Unexpected failure").setCause(e).log();
-            return new MigrateResult(UNEXPECTED_FAILURE_CODE);
+            migrateResult
+                .exitCode(UNEXPECTED_FAILURE_CODE)
+                .errorMessage("Unexpected failure: " + e.getMessage())
+                .build();
         }
 
-        return new MigrateResult(0);
+        migrateResult.clusters(clusters.build());
+        return migrateResult.build();
     }
 }

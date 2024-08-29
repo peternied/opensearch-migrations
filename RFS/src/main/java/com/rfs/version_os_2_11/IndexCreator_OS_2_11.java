@@ -5,6 +5,7 @@ import java.util.Optional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import org.opensearch.migrations.metadata.IndexCreator;
 import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts;
 
 import com.rfs.common.InvalidResponse;
@@ -13,7 +14,7 @@ import com.rfs.models.IndexMetadata;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class IndexCreator_OS_2_11 {
+public class IndexCreator_OS_2_11 implements IndexCreator {
     private static final ObjectMapper mapper = new ObjectMapper();
     protected final OpenSearchClient client;
 
@@ -23,11 +24,9 @@ public class IndexCreator_OS_2_11 {
 
     public Optional<ObjectNode> create(
         IndexMetadata index,
-        String indexName,
-        String indexId,
         IMetadataMigrationContexts.ICreateIndexContext context
     ) {
-        IndexMetadataData_OS_2_11 indexMetadata = new IndexMetadataData_OS_2_11(index.rawJson(), indexId, indexName);
+        IndexMetadataData_OS_2_11 indexMetadata = new IndexMetadataData_OS_2_11(index.rawJson(), index.getId(), index.getName());
 
         // Remove some settings which will cause errors if you try to pass them to the API
         ObjectNode settings = indexMetadata.getSettings();
@@ -45,7 +44,7 @@ public class IndexCreator_OS_2_11 {
 
         // Create the index; it's fine if it already exists
         try {
-            return client.createIndex(indexName, body, context);
+            return client.createIndex(index.getName(), body, context);
         } catch (InvalidResponse invalidResponse) {
             var illegalArguments = invalidResponse.getIllegalArguments();
 
@@ -64,8 +63,8 @@ public class IndexCreator_OS_2_11 {
                 removeFieldsByPath(settings, shortenedIllegalArgument);
             }
 
-            log.info("Reattempting creation of index '" + indexName + "' after removing illegal arguments; " + illegalArguments);
-            return client.createIndex(indexName, body, context);
+            log.info("Reattempting creation of index '" + index.getName() + "' after removing illegal arguments; " + illegalArguments);
+            return client.createIndex(index.getName(), body, context);
         }
     }
 

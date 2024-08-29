@@ -1,6 +1,6 @@
 package org.opensearch.migrations;
 
-import java.util.List;
+
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
@@ -32,19 +32,8 @@ public class MetadataArgs {
     @ParametersDelegate
     public ConnectionContext.TargetArgs targetArgs = new ConnectionContext.TargetArgs();
 
-    @Parameter(names = { "--index-allowlist" }, description = ("Optional.  List of index names to migrate"
-        + " (e.g. 'logs_2024_01, logs_2024_02').  Default: all non-system indices (e.g. those not starting with '.')"), required = false)
-    public List<String> indexAllowlist = List.of();
-
-    @Parameter(names = {
-        "--index-template-allowlist" }, description = ("Optional.  List of index template names to migrate"
-            + " (e.g. 'posts_index_template1, posts_index_template2').  Default: empty list"), required = false)
-    public List<String> indexTemplateAllowlist = List.of();
-
-    @Parameter(names = {
-        "--component-template-allowlist" }, description = ("Optional. List of component template names to migrate"
-            + " (e.g. 'posts_template1, posts_template2').  Default: empty list"), required = false)
-    public List<String> componentTemplateAllowlist = List.of();
+    @ParametersDelegate
+    public DataFiltersArgs dataFilterArgs = new DataFiltersArgs(); 
 
     // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
     @Parameter(names = {
@@ -56,4 +45,10 @@ public class MetadataArgs {
         "--otel-collector-endpoint" }, arity = 1, description = "Endpoint (host:port) for the OpenTelemetry Collector to which metrics logs should be"
             + "forwarded. If no value is provided, metrics will not be forwarded.")
     String otelCollectorEndpoint;
+
+    @Parameter(required = true, names = {"--source-version" }, description = "Version of the source cluster, for example: Elasticsearch 7.10 or OS 1.3", converter = VersionConverter.class)
+    public Version sourceVersion;
+
+    @Parameter(required = true, names = {"--target-version" }, description = "Version of the target cluster, for example: Elasticsearch 7.10 or OS 1.3", converter = VersionConverter.class)
+    public Version targetVersion;
 }

@@ -14,12 +14,13 @@ import org.opensearch.migrations.snapshot.creation.tracing.SnapshotTestContext;
 
 import com.rfs.common.FileSystemSnapshotCreator;
 import com.rfs.common.OpenSearchClient;
-import com.rfs.common.http.ConnectionContext.TargetArgs;
+import com.rfs.common.http.ConnectionContext;
 import com.rfs.common.http.ConnectionContextTestParams;
 import com.rfs.framework.SearchClusterContainer;
 import com.rfs.http.ClusterOperations;
 import com.rfs.worker.SnapshotRunner;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -28,6 +29,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * Tests focused on setting up whole source clusters, performing a migration, and validation on the target cluster
  */
 @Tag("longTest")
+@Slf4j
 class EndToEndTest {
 
     @TempDir
@@ -69,6 +71,7 @@ class EndToEndTest {
         // ACTION: Take a snapshot
         var snapshotContext = SnapshotTestContext.factory().noOtelTracking();
         var snapshotName = "my_snap";
+        log.info("Source cluster {}", sourceCluster.getUrl());
         var sourceClient = new OpenSearchClient(ConnectionContextTestParams.builder()
             .host(sourceCluster.getUrl())
             .insecure(true)
@@ -83,21 +86,28 @@ class EndToEndTest {
         SnapshotRunner.runAndWaitForCompletion(snapshotCreator);
         sourceCluster.copySnapshotData(localDirectory.toString());
 
-        var targetArgs = new TargetArgs();
+        var targetArgs = new ConnectionContext.TargetArgs();
         targetArgs.host = targetCluster.getUrl();
 
         var arguments = new MetadataArgs();
+        arguments.sourceVersion = Version.fromString("ES 7.10");
         arguments.fileSystemRepoPath = localDirectory.getAbsolutePath();
         arguments.snapshotName = snapshotName;
+
+        var dataFilterArgs = new DataFiltersArgs();
+        dataFilterArgs.indexAllowlist = List.of(indexName);
+        dataFilterArgs.componentTemplateAllowlist = List.of(compoTemplateName);
+        dataFilterArgs.indexTemplateAllowlist = List.of(indexTemplateName);
+        arguments.dataFilterArgs = dataFilterArgs;
+
         arguments.targetArgs = targetArgs;
-        arguments.indexAllowlist = List.of(indexName);
-        arguments.componentTemplateAllowlist = List.of(compoTemplateName);
-        arguments.indexTemplateAllowlist = List.of(indexTemplateName);
+        arguments.targetVersion = Version.fromString("OS 2.11");
 
         // ACTION: Migrate the templates
         var metadataContext = MetadataMigrationTestContext.factory().noOtelTracking();
         var result = new MetadataMigration(arguments).migrate().execute(metadataContext);
 
+        log.info(result.toString());
         assertThat(result.getExitCode(), equalTo(0));
 
         // Check that the templates were migrated
