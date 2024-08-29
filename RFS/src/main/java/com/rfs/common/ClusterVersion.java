@@ -11,7 +11,7 @@ import com.beust.jcommander.ParameterException;
 public enum ClusterVersion {
     ES_6_8("ES 6.8"),
     ES_7_10("ES 7.10"),
-    OS_2_11("OS 6.8");
+    OS_2_11("OS 2.11");
 
     private Version richVersion;
 

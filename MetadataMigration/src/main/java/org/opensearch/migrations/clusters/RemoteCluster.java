@@ -17,6 +17,7 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class RemoteCluster implements TargetCluster {
+    private final Version OS_2_X = Version.builder().flavor(Flavor.OpenSearch).major(2).build();
     private final Version version;
     private final ConnectionContext connection;
 
@@ -37,19 +38,19 @@ public class RemoteCluster implements TargetCluster {
         DataFiltersArgs dataFilters,
         IClusterMetadataContext context
     ) {
-        if (version.equals(Version.builder().flavor(Flavor.Elasticsearch).major(7).minor(10).build())) {
-            return new GlobalMetadataCreator_OS_2_11(new OpenSearchClient(connection), dataFilters.indexAllowlist, dataFilters.indexTemplateAllowlist, dataFilters.componentTemplateAllowlist, context);
+        if (version.matches(OS_2_X)) {
+            return new GlobalMetadataCreator_OS_2_11(new OpenSearchClient(connection), null, dataFilters.componentTemplateAllowlist, dataFilters.indexTemplateAllowlist, context);
         }
 
-        throw new UnsupportedOperationException("Unimplemented method 'getGlobalMetadataCreator'");
+        throw new UnsupportedOperationException("Unimplemented method 'getGlobalMetadataCreator'" + version);
     }
 
     @Override
     public IndexCreator getIndexCreator() {
-        if (version.equals(Version.builder().flavor(Flavor.Elasticsearch).major(7).minor(10).build())) {
+        if (version.equals(Version.builder().flavor(Flavor.OpenSearch).major(2).minor(11).build())) {
             return new IndexCreator_OS_2_11(new OpenSearchClient(connection));
         }
 
-        throw new UnsupportedOperationException("Unimplemented method 'getIndexCreator'");
+        throw new UnsupportedOperationException("Unimplemented method 'getIndexCreator'" + version);
     }
 }

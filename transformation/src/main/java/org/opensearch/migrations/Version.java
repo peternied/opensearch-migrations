@@ -19,6 +19,32 @@ public class Version {
         return String.format("%s %d.%d.%d", flavor.name(), major, minor, patch);
     }
 
+    public boolean matches(Version that) {
+        if (that == null) {
+            return false;
+        }
+        
+        if (this.flavor != that.flavor) {
+            return false;
+        }
+
+        if (this.major != that.major) {
+            return false;
+        }
+
+        if (this.flavor == Flavor.OpenSearch) {
+            // All major versions of OpenSearch are compatible with one another
+            return true;
+        }
+
+        if (this.minor != that.minor) {
+            return false;
+        }
+        
+        // All patch versions are considered compatible with one another
+        return true;
+    }
+
     public static Version fromString(final String raw) throws RuntimeException {
         var builder = Version.builder();
         var remainingString = raw.toLowerCase();
