@@ -12,8 +12,6 @@ import org.opensearch.migrations.clusters.SourceCluster;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.beust.jcommander.ParameterException;
-import com.rfs.common.ClusterVersion;
-import com.rfs.common.OpenSearchClient;
 import com.rfs.transformers.TransformFunctions;
 import com.rfs.worker.IndexRunner;
 import com.rfs.worker.MetadataRunner;

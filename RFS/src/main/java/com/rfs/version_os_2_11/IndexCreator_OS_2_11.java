@@ -6,13 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.opensearch.migrations.metadata.IndexCreator;
-import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.ICreateIndexContext;
 
 import com.rfs.common.InvalidResponse;
 import com.rfs.common.OpenSearchClient;
 import com.rfs.models.IndexMetadata;
-
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

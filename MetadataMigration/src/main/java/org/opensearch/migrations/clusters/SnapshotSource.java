@@ -2,7 +2,6 @@ package org.opensearch.migrations.clusters;
 
 import java.nio.file.Path;
 
-import org.opensearch.migrations.Flavor;
 import org.opensearch.migrations.Version;
 import org.opensearch.migrations.VersionMatchers;
 

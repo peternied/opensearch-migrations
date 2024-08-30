@@ -1,9 +1,6 @@
 package org.opensearch.migrations.clusters;
 
 
-import java.util.List;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 import org.opensearch.migrations.DataFiltersArgs;
 import org.opensearch.migrations.Flavor;
@@ -15,16 +12,14 @@ import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.rfs.common.OpenSearchClient;
 import com.rfs.common.http.ConnectionContext;
-import com.rfs.models.IndexMetadata;
 import com.rfs.models.GlobalMetadata;
+import com.rfs.models.IndexMetadata;
 import com.rfs.version_os_2_11.GlobalMetadataCreator_OS_2_11;
 import com.rfs.version_os_2_11.IndexCreator_OS_2_11;
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import com.rfs.version_remote.RemoteIndexMetadataFactory;
+import com.rfs.version_remote.RemoteMetadataFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
-import com.rfs.version_remote.RemoteMetadataFactory;
-import com.rfs.version_remote.RemoteIndexMetadataFactory;
 
 @RequiredArgsConstructor
 @ToString(onlyExplicitlyIncluded = true)
