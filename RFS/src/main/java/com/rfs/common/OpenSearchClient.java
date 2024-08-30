@@ -85,15 +85,15 @@ public class OpenSearchClient {
 
     public ObjectNode getClusterData() {
         var templates = client.getAsync("_index_template", null)
-            .flatMap(this::getJson)
+            .flatMap(this::getJsonForTemplateApis)
             .doOnError(e -> log.error(e.getMessage()))
             .retryWhen(checkIfItemExistsRetryStrategy);
         var componentTemplates = client.getAsync("_component_template", null)
-            .flatMap(this::getJson)
+            .flatMap(this::getJsonForTemplateApis)
             .doOnError(e -> log.error(e.getMessage()))
             .retryWhen(checkIfItemExistsRetryStrategy);
         var legacyTemplates = client.getAsync("_template", null)
-            .flatMap(this::getJson)
+            .flatMap(this::getJsonForTemplateApis)
             .doOnError(e -> log.error(e.getMessage()))
             .retryWhen(checkIfItemExistsRetryStrategy);
 
@@ -118,17 +118,17 @@ public class OpenSearchClient {
             .block();
 
         var settings = client.getAsync("_all/_settings?format=json", null)
-            .flatMap(this::getJson)
+            .flatMap(this::getJsonForIndexApis)
             .doOnError(e -> log.error(e.getMessage()))
             .retryWhen(checkIfItemExistsRetryStrategy);
 
         var mappings = client.getAsync("_all/_mappings?format=json", null)
-            .flatMap(this::getJson)
+            .flatMap(this::getJsonForIndexApis)
             .doOnError(e -> log.error(e.getMessage()))
             .retryWhen(checkIfItemExistsRetryStrategy);
 
         var aliases = client.getAsync("_all/_alias?format=json", null)
-            .flatMap(this::getJson)
+            .flatMap(this::getJsonForIndexApis)
             .doOnError(e -> log.error(e.getMessage()))
             .retryWhen(checkIfItemExistsRetryStrategy);
 
@@ -145,8 +145,20 @@ public class OpenSearchClient {
         return allIndexData;
     }
 
+    Mono<ObjectNode> getJsonForIndexApis(HttpResponse resp) {
+        if (resp.statusCode != 200) {
+            return Mono.error(new OperationFailed("Unexpected status code " + resp.statusCode, resp));
+        }
+        try {
+            var tree = (ObjectNode) objectMapper.readTree(resp.body);
+            return Mono.just(tree);
+        } catch (Exception e) {
+            log.error("Unable to get json repsonse: ", e);
+            return Mono.error(new OperationFailed("Unable to get json response: " + e.getMessage(), resp));
+        }
+    }
 
-    Mono<ObjectNode> getJson(HttpResponse resp) {
+    Mono<ObjectNode> getJsonForTemplateApis(HttpResponse resp) {
         if (resp.statusCode != 200) {
             return Mono.error(new OperationFailed("Unexpected status code " + resp.statusCode, resp));
         }

@@ -74,7 +74,7 @@ class OpenSearchClientTest {
         var openSearchClient = new OpenSearchClient(restClient, mock(FailedRequestsLogger.class));
         var response = new HttpResponse(200, "", null, sourceJson);
 
-        var result = openSearchClient.getJson(response).block();
+        var result = openSearchClient.getJsonForIndexApis(response).block();
         System.err.println(result.toPrettyString());
     }
 
