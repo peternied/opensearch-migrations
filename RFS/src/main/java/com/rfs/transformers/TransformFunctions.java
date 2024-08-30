@@ -15,11 +15,11 @@ public class TransformFunctions {
         Version targetVersion,
         int dimensionality
     ) {
-        if (VersionMatchers.isOpenSearch_2_X.apply(targetVersion)) {
-            if (VersionMatchers.isES_6_8.apply(sourceVersion)) {
+        if (VersionMatchers.isOpenSearch_2_X.test(targetVersion)) {
+            if (VersionMatchers.isES_6_8.test(sourceVersion)) {
                 return new Transformer_ES_6_8_to_OS_2_11(dimensionality);
             }
-            if (VersionMatchers.isES_7_X.apply(sourceVersion)) {
+            if (VersionMatchers.isES_7_X.test(sourceVersion)) {
                 return new Transformer_ES_7_10_OS_2_11(dimensionality);
             }
         }
