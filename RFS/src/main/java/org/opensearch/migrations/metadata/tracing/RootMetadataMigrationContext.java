@@ -9,6 +9,7 @@ import com.rfs.tracing.BaseRootRfsContext;
 public class RootMetadataMigrationContext extends BaseRootRfsContext {
     public static final String SCOPE_NAME = "metadataMigration";
 
+    public final MetadataMigrationContexts.CommandMigrateContext.MetricInstruments commandMigrateMetrics;
     public final MetadataMigrationContexts.ClusterMetadataContext.MetricInstruments metadataMetrics;
     public final MetadataMigrationContexts.MigrateTemplateContext.MetricInstruments indexTemplateInstruments;
     public final MetadataMigrationContexts.CreateIndexContext.MetricInstruments createIndexInstruments;
@@ -17,9 +18,14 @@ public class RootMetadataMigrationContext extends BaseRootRfsContext {
         super(SCOPE_NAME, sdk, contextTracker);
         var meter = this.getMeterProvider().get(SCOPE_NAME);
 
+        commandMigrateMetrics = MetadataMigrationContexts.CommandMigrateContext.makeMetrics(meter);
         metadataMetrics = MetadataMigrationContexts.ClusterMetadataContext.makeMetrics(meter);
         indexTemplateInstruments = MetadataMigrationContexts.MigrateTemplateContext.makeMetrics(meter);
         createIndexInstruments = MetadataMigrationContexts.CreateIndexContext.makeMetrics(meter);
+    }
+
+    public IMetadataMigrationContexts.ICommandMigrateContext createCommandMigrateContext() {
+        return new MetadataMigrationContexts.CommandMigrateContext(this);
     }
 
     public IMetadataMigrationContexts.IClusterMetadataContext createMetadataMigrationContext() {

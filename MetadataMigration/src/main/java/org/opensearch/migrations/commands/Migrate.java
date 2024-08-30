@@ -69,7 +69,7 @@ public class Migrate {
         var clusters = Clusters.builder();
         clusters.source(sourceCluster);
 
-        var targetCluster = new RemoteCluster(arguments.targetVersion, arguments.targetArgs.toConnectionContext());
+        var targetCluster = new RemoteCluster(arguments.targetArgs.toConnectionContext(), context);
         clusters.target(targetCluster);
 
         try {
@@ -78,12 +78,11 @@ public class Migrate {
 
             
             var metadataCreator = targetCluster.getGlobalMetadataCreator(
-                arguments.dataFilterArgs,
-                context.createMetadataMigrationContext()
+                arguments.dataFilterArgs
             );
             var transformer = TransformFunctions.getTransformer(
-                ClusterVersion.fromVersion(sourceCluster.getVersion()),
-                ClusterVersion.fromVersion(targetCluster.getVersion()),
+                sourceCluster.getVersion(),
+                targetCluster.getVersion(),
                 awarenessDimensionality
             );
             var metadataResults = new MetadataRunner(snapshotName, sourceCluster.getMetadata(), metadataCreator, transformer).migrateMetadata();
@@ -101,8 +100,7 @@ public class Migrate {
                 sourceCluster.getIndexMetadata(),
                 targetCluster.getIndexCreator(),
                 transformer,
-                arguments.dataFilterArgs.indexAllowlist,
-                context.createIndexContext()
+                arguments.dataFilterArgs.indexAllowlist
             ).migrateIndices();
             items.indexes(indexes);
             migrateResult.items(items.build());

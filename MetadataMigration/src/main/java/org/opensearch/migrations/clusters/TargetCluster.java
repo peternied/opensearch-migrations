@@ -6,6 +6,6 @@ import org.opensearch.migrations.metadata.IndexCreator;
 import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.IClusterMetadataContext;
 
 public interface TargetCluster {
-    public GlobalMetadataCreator getGlobalMetadataCreator(DataFiltersArgs dataFilters, IClusterMetadataContext context);
+    public GlobalMetadataCreator getGlobalMetadataCreator(DataFiltersArgs dataFilters);
     public IndexCreator getIndexCreator();
 }

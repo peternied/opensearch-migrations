@@ -1,26 +1,30 @@
 package com.rfs.transformers;
 
+import org.opensearch.migrations.Version;
+import org.opensearch.migrations.VersionMatchers;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import com.rfs.common.ClusterVersion;
 
 public class TransformFunctions {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     public static Transformer getTransformer(
-        ClusterVersion sourceVersion,
-        ClusterVersion targetVersion,
+        Version sourceVersion,
+        Version targetVersion,
         int dimensionality
     ) {
-        if (sourceVersion == ClusterVersion.ES_6_8 && targetVersion == ClusterVersion.OS_2_11) {
-            return new Transformer_ES_6_8_to_OS_2_11(dimensionality);
-        } else if (sourceVersion == ClusterVersion.ES_7_10 && targetVersion == ClusterVersion.OS_2_11) {
-            return new Transformer_ES_7_10_OS_2_11(dimensionality);
-        } else {
-            throw new IllegalArgumentException("Unsupported transformation requested");
+        if (VersionMatchers.isOpenSearch_2_X.apply(targetVersion)) {
+            if (VersionMatchers.isES_6_8.apply(sourceVersion)) {
+                return new Transformer_ES_6_8_to_OS_2_11(dimensionality);
+            }
+            if (VersionMatchers.isES_7_X.apply(sourceVersion)) {
+                return new Transformer_ES_7_10_OS_2_11(dimensionality);
+            }
         }
+
+        throw new IllegalArgumentException("Unsupported transformation requested");
     }
 
     /* Turn dotted index settings into a tree, will start like:

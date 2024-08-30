@@ -2,6 +2,7 @@ package org.opensearch.migrations.metadata.tracing;
 
 import io.opentelemetry.api.metrics.Meter;
 
+import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.ICommandMigrateContext;
 import org.opensearch.migrations.tracing.BaseNestedSpanContext;
 import org.opensearch.migrations.tracing.BaseSpanContext;
 import org.opensearch.migrations.tracing.CommonScopedMetricInstruments;
@@ -12,6 +13,39 @@ import com.rfs.tracing.RfsContexts;
 import lombok.NonNull;
 
 public class MetadataMigrationContexts {
+
+    public static class CommandMigrateContext extends BaseSpanContext<RootMetadataMigrationContext>
+        implements ICommandMigrateContext {
+        public CommandMigrateContext(RootMetadataMigrationContext rootScope) {
+            super(rootScope);
+            initializeSpan(rootScope);
+        }
+        @Override
+        public String getActivityName() {
+            return ACTIVITY_NAME;
+        }
+
+        @Override
+        public IScopedInstrumentationAttributes getEnclosingScope() {
+            return null;
+        }
+
+        public static class MetricInstruments extends CommonScopedMetricInstruments {
+            private MetricInstruments(Meter meter, String activityName) {
+                super(meter, activityName);
+            }
+        }
+
+        public static @NonNull MetricInstruments makeMetrics(Meter meter) {
+            return new MetricInstruments(meter, ACTIVITY_NAME);
+        }
+
+        @Override
+        public MetricInstruments getMetrics() {
+            return getRootInstrumentationScope().commandMigrateMetrics;
+        }
+    }
+
     public static class ClusterMetadataContext extends BaseSpanContext<RootMetadataMigrationContext>
         implements
             IMetadataMigrationContexts.IClusterMetadataContext {

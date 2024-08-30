@@ -14,6 +14,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import org.opensearch.migrations.Flavor;
+import org.opensearch.migrations.Version;
 import org.opensearch.migrations.parsing.BulkResponseParser;
 import org.opensearch.migrations.reindexer.FailedRequestsLogger;
 
@@ -21,6 +23,8 @@ import com.rfs.common.DocumentReindexer.BulkDocSection;
 import com.rfs.common.http.ConnectionContext;
 import com.rfs.common.http.HttpResponse;
 import com.rfs.tracing.IRfsContexts;
+import com.rfs.tracing.IRfsContexts.IRequestContext;
+
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -62,6 +66,48 @@ public class OpenSearchClient {
     OpenSearchClient(RestClient client, FailedRequestsLogger failedRequestsLogger) {
         this.client = client;
         this.failedRequestsLogger = failedRequestsLogger;
+    }
+
+    public Version getClusterVersion(IRequestContext context) {
+        return client.getAsync("/", context)
+            .flatMap(resp -> {
+                try {
+                    return Mono.just(versionFromResponse(resp));
+                } catch (Exception e) {
+                    return Mono.error(new OperationFailed(e.getMessage(), resp));
+                }
+            })
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy)
+            .block();
+    }
+
+    private Version versionFromResponse(HttpResponse resp) {
+        if (resp.statusCode != 200) {
+            throw new RuntimeException("Unexpected status code " + resp.statusCode);
+        }
+        try {
+            var body = objectMapper.readTree(resp.body);
+            var versionNode = body.get("version");
+
+            var versionNumberString = versionNode.get("number").asText();
+            var parts = versionNumberString.split("\\.");
+            var versionBuilder = Version.builder()
+                .major(Integer.parseInt(parts[0]))
+                .minor(Integer.parseInt(parts[1]))
+                .patch(parts.length > 2 ? Integer.parseInt(parts[2]) : 0);
+            
+            var distro = versionNode.get("distribution").asText();
+
+            if (distro.equalsIgnoreCase("opensearch")) {
+                versionBuilder.flavor(Flavor.OpenSearch);
+            } else { 
+                versionBuilder.flavor(Flavor.Elasticsearch);
+            }
+            return versionBuilder.build();
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to parse version from response: " + e.getMessage());
+        }
     }
 
     /*

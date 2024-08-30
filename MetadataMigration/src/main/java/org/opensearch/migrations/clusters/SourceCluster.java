@@ -9,5 +9,4 @@ public interface SourceCluster {
     Version getVersion();
     GlobalMetadata.Factory getMetadata();
     IndexMetadata.Factory getIndexMetadata();
-    
 }

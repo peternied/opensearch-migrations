@@ -6,25 +6,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.opensearch.migrations.metadata.IndexCreator;
-import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts;
+import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
+import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.ICreateIndexContext;
 
 import com.rfs.common.InvalidResponse;
 import com.rfs.common.OpenSearchClient;
 import com.rfs.models.IndexMetadata;
+
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@AllArgsConstructor
 public class IndexCreator_OS_2_11 implements IndexCreator {
     private static final ObjectMapper mapper = new ObjectMapper();
     protected final OpenSearchClient client;
-
-    public IndexCreator_OS_2_11(OpenSearchClient client) {
-        this.client = client;
-    }
+    private final ICreateIndexContext context;
 
     public Optional<ObjectNode> create(
-        IndexMetadata index,
-        IMetadataMigrationContexts.ICreateIndexContext context
+        IndexMetadata index
     ) {
         IndexMetadataData_OS_2_11 indexMetadata = new IndexMetadataData_OS_2_11(index.rawJson(), index.getId(), index.getName());
 

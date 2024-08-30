@@ -5,7 +5,6 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.opensearch.migrations.metadata.IndexCreator;
-import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts;
 
 import com.rfs.common.FilterScheme;
 import com.rfs.common.SnapshotRepo;
@@ -23,7 +22,6 @@ public class IndexRunner {
     private final IndexCreator indexCreator;
     private final Transformer transformer;
     private final List<String> indexAllowlist;
-    private final IMetadataMigrationContexts.ICreateIndexContext context;
 
     public List<String> migrateIndices() {
         SnapshotRepo.Provider repoDataProvider = metadataFactory.getRepoDataProvider();
@@ -40,7 +38,7 @@ public class IndexRunner {
             .map(index -> {
                 var indexMetadata = metadataFactory.fromRepo(snapshotName, index.getName());
                 var transformedRoot = transformer.transformIndexMetadata(indexMetadata);
-                var resultOp = indexCreator.create(transformedRoot, context);
+                var resultOp = indexCreator.create(transformedRoot);
                 resultOp.ifPresentOrElse(
                     value -> log.info("Index " + index.getName() + " created successfully"),
                     () -> log.info("Index " + index.getName() + " already existed; no work required")
