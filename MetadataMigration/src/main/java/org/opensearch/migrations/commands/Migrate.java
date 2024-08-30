@@ -33,29 +33,34 @@ public class Migrate {
     public MigrateResult execute(RootMetadataMigrationContext context) {
         var migrateResult = MigrateResult.builder();
         log.atInfo().setMessage("Command line arguments {0}").addArgument(arguments::toString).log();
-        try {
-            if (arguments.fileSystemRepoPath == null && arguments.s3RepoUri == null) {
-                throw new ParameterException("Either file-system-repo-path or s3-repo-uri must be set");
+
+        if (arguments.sourceArgs != null) {
+            try {
+                if (arguments.fileSystemRepoPath == null && arguments.s3RepoUri == null) {
+                    throw new ParameterException("Either file-system-repo-path or s3-repo-uri must be set");
+                }
+                if (arguments.fileSystemRepoPath != null && arguments.s3RepoUri != null) {
+                    throw new ParameterException("Only one of file-system-repo-path and s3-repo-uri can be set");
+                }
+                if ((arguments.s3RepoUri != null) && (arguments.s3Region == null || arguments.s3LocalDirPath == null)) {
+                    throw new ParameterException("If an s3 repo is being used, s3-region and s3-local-dir-path must be set");
+                } 
+            } catch (Exception e) {
+                log.atError().setMessage("Invalid parameter").setCause(e).log();
+                return migrateResult
+                    .exitCode(INVALID_PARAMETER_CODE)
+                    .errorMessage("Invalid parameter: " + e.getMessage())
+                    .build();
             }
-            if (arguments.fileSystemRepoPath != null && arguments.s3RepoUri != null) {
-                throw new ParameterException("Only one of file-system-repo-path and s3-repo-uri can be set");
-            }
-            if ((arguments.s3RepoUri != null) && (arguments.s3Region == null || arguments.s3LocalDirPath == null)) {
-                throw new ParameterException("If an s3 repo is being used, s3-region and s3-local-dir-path must be set");
-            } 
-        } catch (Exception e) {
-            log.atError().setMessage("Invalid parameter").setCause(e).log();
-            return migrateResult
-                .exitCode(INVALID_PARAMETER_CODE)
-                .errorMessage("Invalid parameter: " + e.getMessage())
-                .build();
         }
 
         final String snapshotName = arguments.snapshotName;
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
         SourceCluster sourceCluster = null;
-        if (arguments.fileSystemRepoPath != null) {
+        if (arguments.sourceArgs != null) {
+            sourceCluster = new RemoteCluster(arguments.sourceArgs.toConnectionContext(), context);
+        } else if (arguments.fileSystemRepoPath != null) {
             sourceCluster = new SnapshotSource(arguments.sourceVersion, arguments.fileSystemRepoPath);
         } else if (arguments.s3LocalDirPath != null) {
             sourceCluster = new SnapshotSource(arguments.sourceVersion, arguments.s3LocalDirPath, arguments.s3RepoUri, arguments.s3Region);
@@ -73,13 +78,9 @@ public class Migrate {
         clusters.target(targetCluster);
 
         try {
-            log.info("Running RfsWorker");
-            var targetClient = new OpenSearchClient(arguments.targetArgs.toConnectionContext());
-
+            log.info("Running Metadata worker");
             
-            var metadataCreator = targetCluster.getGlobalMetadataCreator(
-                arguments.dataFilterArgs
-            );
+            var metadataCreator = targetCluster.getGlobalMetadataCreator(arguments.dataFilterArgs);
             var transformer = TransformFunctions.getTransformer(
                 sourceCluster.getVersion(),
                 targetCluster.getVersion(),

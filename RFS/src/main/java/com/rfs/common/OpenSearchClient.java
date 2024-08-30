@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -68,8 +69,8 @@ public class OpenSearchClient {
         this.failedRequestsLogger = failedRequestsLogger;
     }
 
-    public Version getClusterVersion(IRequestContext context) {
-        return client.getAsync("/", context)
+    public Version getClusterVersion() {
+        return client.getAsync("/", null)
             .flatMap(resp -> {
                 try {
                     return Mono.just(versionFromResponse(resp));
@@ -82,9 +83,105 @@ public class OpenSearchClient {
             .block();
     }
 
+    public ObjectNode getClusterData() {
+        var templates = client.getAsync("_index_template", null)
+            .flatMap(this::getJson)
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy);
+        var componentTemplates = client.getAsync("_component_template", null)
+            .flatMap(this::getJson)
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy);
+        var legacyTemplates = client.getAsync("_template", null)
+            .flatMap(this::getJson)
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy);
+
+        var globalMetadata = Mono.zip(templates, componentTemplates, legacyTemplates)
+            .map(tuple -> {
+                var rootMetadataNode = objectMapper.createObjectNode();
+                rootMetadataNode.set("index_template", objectMapper.createObjectNode().set("index_template", tuple.getT1()));
+                rootMetadataNode.set("component_template", objectMapper.createObjectNode().set("component_template", tuple.getT2()));
+                rootMetadataNode.set("templates", objectMapper.createObjectNode().set("templates", tuple.getT3()));
+                return rootMetadataNode;
+            })
+            .block();
+
+
+        return globalMetadata;
+    }
+
+    public ObjectNode getIndexes() {
+        client.postAsync("_all/_refresh", "{}", null)
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy)
+            .block();
+
+        var settings = client.getAsync("_all/_settings?format=json", null)
+            .flatMap(this::getJson)
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy);
+
+        var mappings = client.getAsync("_all/_mappings?format=json", null)
+            .flatMap(this::getJson)
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy);
+
+        var aliases = client.getAsync("_all/_alias?format=json", null)
+            .flatMap(this::getJson)
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy);
+
+        var allIndexData = Mono.zip(settings, mappings, aliases)
+            .map(tuple -> {
+                log.info("Index data:\n" +
+                tuple.getT1().toPrettyString() + "\n" + 
+                tuple.getT2().toPrettyString() + "\n" + 
+                tuple.getT3().toPrettyString() + "\n");
+                return tuple.getT1();
+            })
+            .block();
+
+        return allIndexData;
+    }
+
+
+    Mono<ObjectNode> getJson(HttpResponse resp) {
+        if (resp.statusCode != 200) {
+            return Mono.error(new OperationFailed("Unexpected status code " + resp.statusCode, resp));
+        }
+        try {
+            var tree = (ObjectNode) objectMapper.readTree(resp.body);
+            if (tree.size() == 1) {
+                var addedItems = 0;
+                var dearrayed = objectMapper.createObjectNode();
+                // This is OK because there is only a single item in this collection
+                var fieldName = tree.fieldNames().next();
+                var arrayOfItems = tree.get(fieldName);
+                for (var child : arrayOfItems) {
+                    var node = (ObjectNode)child;
+                    if (node.size() == 2) {
+                        var fields = node.fieldNames();
+                        var f1 = fields.next();
+                        var f2 = fields.next();
+                        var itemName = node.get(f1).isTextual() ? node.get(f1).asText() : node.get(f2).asText();
+                        var detailsNode = !node.get(f1).isTextual() ? node.get(f1) : node.get(f2);
+                        addedItems++;
+                        dearrayed.set(itemName, detailsNode);
+                    }
+                }
+                return Mono.just(addedItems != 0 ? dearrayed : tree);
+            }
+            return Mono.just(tree);
+        } catch (Exception e) {
+            log.error("Unable to get json repsonse: ", e);
+            return Mono.error(new OperationFailed("Unable to get json response: " + e.getMessage(), resp));
+        }
+    }
+
     private Version versionFromResponse(HttpResponse resp) {
         if (resp.statusCode != 200) {
-            throw new RuntimeException("Unexpected status code " + resp.statusCode);
+            throw new OperationFailed("Unexpected status code " + resp.statusCode, resp);
         }
         try {
             var body = objectMapper.readTree(resp.body);
@@ -97,16 +194,16 @@ public class OpenSearchClient {
                 .minor(Integer.parseInt(parts[1]))
                 .patch(parts.length > 2 ? Integer.parseInt(parts[2]) : 0);
             
-            var distro = versionNode.get("distribution").asText();
-
-            if (distro.equalsIgnoreCase("opensearch")) {
+            var distroNode = versionNode.get("distribution");
+            if (distroNode != null && distroNode.asText().equalsIgnoreCase("opensearch")) {
                 versionBuilder.flavor(Flavor.OpenSearch);
             } else { 
                 versionBuilder.flavor(Flavor.Elasticsearch);
             }
             return versionBuilder.build();
         } catch (Exception e) {
-            throw new RuntimeException("Unable to parse version from response: " + e.getMessage());
+            log.error("Unable to parse version from response", e);
+            throw new OperationFailed("Unable to parse version from response: " + e.getMessage(), resp);
         }
     }
 
@@ -426,7 +523,7 @@ public class OpenSearchClient {
         public final HttpResponse response;
 
         public OperationFailed(String message, HttpResponse response) {
-            super(message);
+            super(message +"\nBody:\n" + response);
 
             this.response = response;
         }

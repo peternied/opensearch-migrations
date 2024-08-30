@@ -30,7 +30,10 @@ public class MetadataArgs {
     public String s3Region;
 
     @ParametersDelegate
-    public ConnectionContext.TargetArgs targetArgs = new ConnectionContext.TargetArgs();
+    public ConnectionContext.SourceArgs sourceArgs;
+
+    @ParametersDelegate
+    public ConnectionContext.TargetArgs targetArgs;
 
     @ParametersDelegate
     public DataFiltersArgs dataFilterArgs = new DataFiltersArgs(); 

@@ -44,6 +44,40 @@ class OpenSearchClientTest {
         .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
         .build();
 
+
+    @Test
+    void testGetJson() {
+        var sourceJson = "{\r\n" + //
+                        "  \"component_templates\" : [ {\r\n" + //
+                        "    \"name\" : \"simple_component_template\",\r\n" + //
+                        "    \"component_template\" : {\r\n" + //
+                        "      \"template\" : {\r\n" + //
+                        "        \"settings\" : {\r\n" + //
+                        "          \"index\" : {\r\n" + //
+                        "            \"number_of_shards\" : \"1\",\r\n" + //
+                        "            \"number_of_replicas\" : \"1\"\r\n" + //
+                        "          }\r\n" + //
+                        "        },\r\n" + //
+                        "        \"mappings\" : {\r\n" + //
+                        "          \"properties\" : {\r\n" + //
+                        "            \"author\" : {\r\n" + //
+                        "              \"type\" : \"text\"\r\n" + //
+                        "            }\r\n" + //
+                        "          }\r\n" + //
+                        "        }\r\n" + //
+                        "      },\r\n" + //
+                        "      \"version\" : 1\r\n" + //
+                        "    }\r\n" + //
+                        "  } ]\r\n" + //
+                        "}";
+        var restClient = mock(RestClient.class);
+        var openSearchClient = new OpenSearchClient(restClient, mock(FailedRequestsLogger.class));
+        var response = new HttpResponse(200, "", null, sourceJson);
+
+        var result = openSearchClient.getJson(response).block();
+        System.err.println(result.toPrettyString());
+    }
+
     @Test
     void testCreateIndex() {
         // Setup

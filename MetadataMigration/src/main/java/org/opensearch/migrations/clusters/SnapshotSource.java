@@ -4,6 +4,7 @@ import java.nio.file.Path;
 
 import org.opensearch.migrations.Flavor;
 import org.opensearch.migrations.Version;
+import org.opensearch.migrations.VersionMatchers;
 
 import com.rfs.common.FileSystemRepo;
 import com.rfs.common.S3Repo;
@@ -44,7 +45,7 @@ public class SnapshotSource implements SourceCluster {
     }
 
     private SnapshotRepo.Provider getProvider() {
-        if (version.equals(Version.builder().flavor(Flavor.Elasticsearch).major(7).minor(10).build())) {
+        if (VersionMatchers.isES_7_X.test(getVersion())) {
             return new SnapshotRepoProvider_ES_7_10(this.repo);
         }
 
@@ -53,7 +54,7 @@ public class SnapshotSource implements SourceCluster {
 
     @Override
     public GlobalMetadata.Factory getMetadata() {
-        if (version.equals(Version.builder().flavor(Flavor.Elasticsearch).major(7).minor(10).build())) {
+        if (VersionMatchers.isES_7_X.test(getVersion())) {
             return new GlobalMetadataFactory_ES_7_10(getProvider());
         }
 
@@ -62,7 +63,7 @@ public class SnapshotSource implements SourceCluster {
 
     @Override
     public IndexMetadata.Factory getIndexMetadata() {
-        if (version.equals(Version.builder().flavor(Flavor.Elasticsearch).major(7).minor(10).build())) {
+        if (VersionMatchers.isES_7_X.test(getVersion())) {
             return new IndexMetadataFactory_ES_7_10(getProvider());
         }
 

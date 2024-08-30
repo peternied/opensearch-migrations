@@ -86,6 +86,9 @@ class EndToEndTest {
         SnapshotRunner.runAndWaitForCompletion(snapshotCreator);
         sourceCluster.copySnapshotData(localDirectory.toString());
 
+        var sourceArgs = new ConnectionContext.SourceArgs();
+        sourceArgs.host = sourceCluster.getUrl();
+
         var targetArgs = new ConnectionContext.TargetArgs();
         targetArgs.host = targetCluster.getUrl();
 
@@ -100,6 +103,7 @@ class EndToEndTest {
         dataFilterArgs.indexTemplateAllowlist = List.of(indexTemplateName);
         arguments.dataFilterArgs = dataFilterArgs;
 
+        arguments.sourceArgs = sourceArgs;
         arguments.targetArgs = targetArgs;
         arguments.targetVersion = Version.fromString("OS 2.11");
 

@@ -21,6 +21,8 @@ public class Transformer_ES_7_10_OS_2_11 implements Transformer {
     @Override
     public GlobalMetadata transformGlobalMetadata(GlobalMetadata metaData) {
         ObjectNode root = metaData.toObjectNode().deepCopy();
+        logger.info("Global Metadata:\n" + root.toPrettyString());
+
 
         // Transform the legacy templates
         if (root.get("templates") != null) {

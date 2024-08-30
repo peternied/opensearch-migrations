@@ -15,13 +15,16 @@ import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.rfs.common.OpenSearchClient;
 import com.rfs.common.http.ConnectionContext;
-import com.rfs.models.GlobalMetadata.Factory;
+import com.rfs.models.IndexMetadata;
+import com.rfs.models.GlobalMetadata;
 import com.rfs.version_os_2_11.GlobalMetadataCreator_OS_2_11;
 import com.rfs.version_os_2_11.IndexCreator_OS_2_11;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+import com.rfs.version_remote.RemoteMetadataFactory;
+import com.rfs.version_remote.RemoteIndexMetadataFactory;
 
 @RequiredArgsConstructor
 @ToString(onlyExplicitlyIncluded = true)
@@ -32,9 +35,10 @@ public class RemoteCluster implements TargetCluster, SourceCluster {
     private final RootMetadataMigrationContext metadataContext;
     private Version version = null;
 
+    @ToString.Include
     public Version getVersion() {
         if (version == null) {
-            version = new OpenSearchClient(connection).getClusterVersion(null);
+            version = new OpenSearchClient(connection).getClusterVersion();
         }
         return version;
     }
@@ -43,8 +47,8 @@ public class RemoteCluster implements TargetCluster, SourceCluster {
     public GlobalMetadataCreator getGlobalMetadataCreator(
         DataFiltersArgs dataFilters
     ) {
-        if (VersionMatchers.isOpenSearch_2_X.apply(getVersion())) {
-            return new GlobalMetadataCreator_OS_2_11(new OpenSearchClient(connection), null, dataFilters.componentTemplateAllowlist, dataFilters.indexTemplateAllowlist, metadataContext.createMetadataMigrationContext());
+        if (VersionMatchers.isOpenSearch_2_X.test(getVersion())) {
+            return new GlobalMetadataCreator_OS_2_11(new OpenSearchClient(connection), dataFilters.indexTemplateAllowlist, dataFilters.componentTemplateAllowlist, dataFilters.indexTemplateAllowlist, metadataContext.createMetadataMigrationContext());
         }
 
         throw new UnsupportedOperationException("Unimplemented method 'getGlobalMetadataCreator'" + getVersion());
@@ -52,7 +56,7 @@ public class RemoteCluster implements TargetCluster, SourceCluster {
 
     @Override
     public IndexCreator getIndexCreator() {
-        if (VersionMatchers.isOpenSearch_2_X.apply(getVersion())) {
+        if (VersionMatchers.isOpenSearch_2_X.test(getVersion())) {
             return new IndexCreator_OS_2_11(new OpenSearchClient(connection), metadataContext.createIndexContext());
         }
 
@@ -60,12 +64,12 @@ public class RemoteCluster implements TargetCluster, SourceCluster {
     }
 
     @Override
-    public Factory getMetadata() {
-        throw new UnsupportedOperationException("Unimplemented method 'getMetadata'");
+    public GlobalMetadata.Factory getMetadata() {
+        return new RemoteMetadataFactory(new OpenSearchClient(connection));
     }
 
     @Override
-    public com.rfs.models.IndexMetadata.Factory getIndexMetadata() {
-        throw new UnsupportedOperationException("Unimplemented method 'getIndexMetadata'");
+    public IndexMetadata.Factory getIndexMetadata() {
+        return new RemoteIndexMetadataFactory(new OpenSearchClient(connection));
     }
 }
