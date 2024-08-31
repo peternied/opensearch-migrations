@@ -109,11 +109,6 @@ public class OpenSearchClient {
     }
 
     public ObjectNode getIndexes() {
-        client.postAsync("_all/_refresh", "{}", null)
-            .doOnError(e -> log.error(e.getMessage()))
-            .retryWhen(checkIfItemExistsRetryStrategy)
-            .block();
-
         var settings = client.getAsync("_all/_settings?format=json", null)
             .flatMap(this::getJsonForIndexApis)
             .doOnError(e -> log.error(e.getMessage()))
@@ -131,15 +126,28 @@ public class OpenSearchClient {
 
         var allIndexData = Mono.zip(settings, mappings, aliases)
             .map(tuple -> {
-                log.info("Index data:\n" +
-                tuple.getT1().toPrettyString() + "\n" + 
-                tuple.getT2().toPrettyString() + "\n" + 
-                tuple.getT3().toPrettyString() + "\n");
-                return tuple.getT1();
+                var detailResponses = List.of(tuple.getT1(), tuple.getT2(), tuple.getT3());
+                return combineIndexDetails(detailResponses);
             })
             .block();
+        log.info("Combined response:\n" + allIndexData.toPrettyString());
 
         return allIndexData;
+    }
+
+    private ObjectNode combineIndexDetails(List<ObjectNode> indexDetailsResponse) {
+        var combinedDetails = objectMapper.createObjectNode();
+        indexDetailsResponse.stream().forEach(detailsResponse -> {
+            detailsResponse.fields().forEachRemaining(indexDetails -> {
+                var indexName = indexDetails.getKey();
+                combinedDetails.putIfAbsent(indexName, objectMapper.createObjectNode());
+                var existingIndexDetails = (ObjectNode)combinedDetails.get(indexName);
+                indexDetails.getValue().fields().forEachRemaining(details -> {
+                    existingIndexDetails.set(details.getKey(), details.getValue());
+                });
+            });
+        });
+        return combinedDetails;
     }
 
     Mono<ObjectNode> getJsonForIndexApis(HttpResponse resp) {

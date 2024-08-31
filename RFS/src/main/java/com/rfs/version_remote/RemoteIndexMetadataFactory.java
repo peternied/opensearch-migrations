@@ -64,16 +64,17 @@ public class RemoteIndexMetadataFactory implements IndexMetadata.Factory {
             @Override
             public List<Index> getIndicesInSnapshot(String snapshotName) {
                 var indexes = new ArrayList<Index>();
-                getIndexData().forEach(index -> {
+                getIndexData().fields().forEachRemaining(index -> {
                     indexes.add(new Index() {
                         @Override
                         public String getName() {
-                            return index.fieldNames().next();
+                            log.info("Index in snapshot: " + index.getKey());
+                            return index.getKey();
                         }
 
                         @Override
                         public String getId() {
-                            return index.get(getName()).get("id").asText();
+                            return "<Not sure>";
                         }
 
                         @Override
