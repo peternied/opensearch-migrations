@@ -3,7 +3,6 @@ package org.opensearch.migrations.clusters;
 
 
 import org.opensearch.migrations.DataFiltersArgs;
-import org.opensearch.migrations.Flavor;
 import org.opensearch.migrations.Version;
 import org.opensearch.migrations.VersionMatchers;
 import org.opensearch.migrations.metadata.GlobalMetadataCreator;
@@ -24,7 +23,6 @@ import lombok.ToString;
 @RequiredArgsConstructor
 @ToString(onlyExplicitlyIncluded = true)
 public class RemoteCluster implements TargetCluster, SourceCluster {
-    private final Version OS_2_X = Version.builder().flavor(Flavor.OpenSearch).major(2).build();
     @ToString.Include
     private final ConnectionContext connection;
     private final RootMetadataMigrationContext metadataContext;

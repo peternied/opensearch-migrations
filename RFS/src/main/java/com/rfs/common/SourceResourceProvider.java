@@ -13,5 +13,4 @@ public interface SourceResourceProvider {
     int getBufferSizeInBytes();
     boolean getSoftDeletesPossible();
     String getSoftDeletesFieldData();
-    ClusterVersion getVersion();
 }

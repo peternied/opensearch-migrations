@@ -1,22 +1,24 @@
 package com.rfs.common;
 
+import org.opensearch.migrations.Version;
+import org.opensearch.migrations.VersionMatchers;
+
 import com.rfs.version_es_6_8.SourceResourceProvider_ES_6_8;
 import com.rfs.version_es_7_10.SourceResourceProvider_ES_7_10;
+import lombok.experimental.UtilityClass;
 
+@UtilityClass
 public class SourceResourceProviderFactory {
-    public static SourceResourceProvider getProvider(ClusterVersion version) {
-        /** TODO: Switch to 'version' data type instead of enum */
-        switch (version) {
-            case ES_6_8:
-                return new SourceResourceProvider_ES_6_8();
-            case ES_7_10:
-                return new SourceResourceProvider_ES_7_10();
-            case ES_7_17:
-                // We don't currently distinguish between 7.10 and 7.17
-                return new SourceResourceProvider_ES_7_10();
-            default:
-                throw new IllegalArgumentException("Invalid version: " + version);
+    public static SourceResourceProvider getProvider(Version version) {
+        if (VersionMatchers.isES_6_8.test(version)) {
+            return new SourceResourceProvider_ES_6_8();
         }
+
+        if (VersionMatchers.isES_7_X.test(version)) {
+                return new SourceResourceProvider_ES_7_10();
+        }
+
+        throw new IllegalArgumentException("Invalid version: " + version);
     }
 
 }

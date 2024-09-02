@@ -1,6 +1,5 @@
 package com.rfs.version_es_6_8;
 
-import com.rfs.common.ClusterVersion;
 import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SourceRepo;
 import com.rfs.common.SourceResourceProvider;
@@ -44,10 +43,4 @@ public class SourceResourceProvider_ES_6_8 implements SourceResourceProvider {
     public String getSoftDeletesFieldData() {
         return ElasticsearchConstants_ES_6_8.SOFT_DELETES_FIELD;
     }
-
-    @Override
-    public ClusterVersion getVersion() {
-        return ClusterVersion.ES_6_8;
-    }
-
 }

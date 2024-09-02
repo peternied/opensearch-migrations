@@ -20,13 +20,13 @@ import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 
+import org.opensearch.migrations.Version;
 import org.opensearch.migrations.metadata.tracing.MetadataMigrationTestContext;
 import org.opensearch.migrations.reindexer.tracing.DocumentMigrationTestContext;
 
 import com.rfs.cms.CoordinateWorkHttpClient;
 import com.rfs.cms.LeaseExpireTrigger;
 import com.rfs.cms.OpenSearchWorkCoordinator;
-import com.rfs.common.ClusterVersion;
 import com.rfs.common.DefaultSourceRepoAccessor;
 import com.rfs.common.DocumentReindexer;
 import com.rfs.common.FileSystemRepo;
@@ -64,7 +64,7 @@ public class SourceTestBase {
     public static final String SOURCE_SERVER_ALIAS = "source";
     public final static long TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS = 3600;
 
-    protected static Object[] makeParamsForBase(SearchClusterContainer.Version baseSourceImage) {
+    protected static Object[] makeParamsForBase(SearchClusterContainer.ContainerVersion baseSourceImage) {
         return new Object[] {
             baseSourceImage,
             GENERATOR_BASE_IMAGE,
@@ -80,11 +80,12 @@ public class SourceTestBase {
         List<String> indexTemplateAllowlist,
         List<String> indexAllowlist,
         MetadataMigrationTestContext context,
-        ClusterVersion sourceVersion
+        Version sourceVersion
     ) {
         SourceResourceProvider sourceResourceProvider = SourceResourceProviderFactory.getProvider(sourceVersion);
         SnapshotRepo.Provider repoDataProvider = sourceResourceProvider.getSnapshotRepoProvider(sourceRepo);
         GlobalMetadata.Factory metadataFactory = sourceResourceProvider.getGlobalMetadataFactory(repoDataProvider);
+        var targetVersion = Version.fromString("OS 2.11");
         GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
             targetClient,
             legacyTemplateAllowlist,
@@ -92,18 +93,17 @@ public class SourceTestBase {
             indexTemplateAllowlist,
             context.createMetadataMigrationContext()
         );
-        Transformer transformer = TransformFunctions.getTransformer(sourceResourceProvider.getVersion(), ClusterVersion.OS_2_11, 1);
+        Transformer transformer = TransformFunctions.getTransformer(sourceVersion, targetVersion, 1);
         new MetadataRunner(snapshotName, metadataFactory, metadataCreator, transformer).migrateMetadata();
 
         IndexMetadata.Factory indexMetadataFactory = sourceResourceProvider.getIndexMetadataFactory(repoDataProvider);
-        IndexCreator_OS_2_11 indexCreator = new IndexCreator_OS_2_11(targetClient);
+        IndexCreator_OS_2_11 indexCreator = new IndexCreator_OS_2_11(targetClient, context.createIndexContext());
         new IndexRunner(
             snapshotName,
             indexMetadataFactory,
             indexCreator,
             transformer,
-            indexAllowlist,
-            context.createIndexContext()
+            indexAllowlist
         ).migrateIndices();
     }
 
@@ -146,7 +146,7 @@ public class SourceTestBase {
         AtomicInteger runCounter,
         Random clockJitter,
         DocumentMigrationTestContext testContext,
-        ClusterVersion parserVersion
+        Version version
     ) {
         for (int runNumber = 1;; ++runNumber) {
             try {
@@ -157,7 +157,7 @@ public class SourceTestBase {
                     targetAddress,
                     clockJitter,
                     testContext,
-                    parserVersion
+                    version
                 );
                 if (workResult == DocumentsRunner.CompletionStatus.NOTHING_DONE) {
                     return runNumber;
@@ -206,7 +206,7 @@ public class SourceTestBase {
         String targetAddress,
         Random clockJitter,
         DocumentMigrationTestContext context,
-        ClusterVersion parserVersion
+        Version version
     ) throws RfsMigrateDocuments.NoWorkLeftException {
         var tempDir = Files.createTempDirectory("opensearchMigrationReindexFromSnapshot_test_lucene");
         var shouldThrow = new AtomicBoolean();
@@ -221,7 +221,7 @@ public class SourceTestBase {
                 return d;
             };
 
-            SourceResourceProvider sourceResourceProvider = SourceResourceProviderFactory.getProvider(parserVersion);
+            SourceResourceProvider sourceResourceProvider = SourceResourceProviderFactory.getProvider(version);
 
             DefaultSourceRepoAccessor repoAccessor = new DefaultSourceRepoAccessor(sourceRepo);
             SnapshotShardUnpacker.Factory unpackerFactory = new SnapshotShardUnpacker.Factory(

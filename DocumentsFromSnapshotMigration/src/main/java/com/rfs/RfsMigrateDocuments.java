@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
+import org.opensearch.migrations.Version;
+import org.opensearch.migrations.VersionConverter;
 import org.opensearch.migrations.reindexer.tracing.RootDocumentMigrationContext;
 import org.opensearch.migrations.tracing.ActiveContextTracker;
 import org.opensearch.migrations.tracing.ActiveContextTrackerByActivityType;
@@ -25,7 +27,6 @@ import com.rfs.cms.IWorkCoordinator;
 import com.rfs.cms.LeaseExpireTrigger;
 import com.rfs.cms.OpenSearchWorkCoordinator;
 import com.rfs.cms.ScopedWorkCoordinator;
-import com.rfs.common.ClusterVersion;
 import com.rfs.common.DefaultSourceRepoAccessor;
 import com.rfs.common.DocumentReindexer;
 import com.rfs.common.FileSystemRepo;
@@ -132,10 +133,9 @@ public class RfsMigrateDocuments {
                 "used to communicate to the target, default 10")
         int maxConnections = 10;
 
-        @Parameter(names = { "--source-version" }, description = ("Optional. Version of the source cluster.  Possible "
-            + "values include: ES_6_8, ES_7_10, ES_7_17.  Default: ES_7_10"), required = false,
-            converter = ClusterVersion.ArgsConverter.class)
-        public ClusterVersion sourceVersion = ClusterVersion.ES_7_10;
+        @Parameter(names = { "--source-version" }, description = ("Optional. Version of the source cluster.  Default: ES_7.10"), required = false,
+            converter = VersionConverter.class)
+        public Version sourceVersion = Version.fromString("ES 7.10");
     }
 
     public static class NoWorkLeftException extends Exception {

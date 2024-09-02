@@ -125,7 +125,7 @@ class EndToEndTest {
         assertThat(res.getValue(), res.getKey(), equalTo(200));
 
         // PSEUDO: Additional validation:
-        if (SearchClusterContainer.OS_V2_14_0.equals(targetCluster.getVersion())) {
+        if (SearchClusterContainer.OS_V2_14_0.equals(targetCluster.getContainerVersion())) {
             // - Mapping type parameter is removed
             // https://opensearch.org/docs/latest/breaking-changes/#remove-mapping-types-parameter
         }
