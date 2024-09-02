@@ -30,13 +30,13 @@ public class MetadataArgs {
     public String s3Region;
 
     @ParametersDelegate
-    public ConnectionContext.SourceArgs sourceArgs;
+    public ConnectionContext.SourceArgs sourceArgs = new ConnectionContext.SourceArgs();
 
     @ParametersDelegate
-    public ConnectionContext.TargetArgs targetArgs;
+    public ConnectionContext.TargetArgs targetArgs = new ConnectionContext.TargetArgs();
 
     @ParametersDelegate
-    public DataFiltersArgs dataFilterArgs; 
+    public DataFiltersArgs dataFilterArgs = new DataFiltersArgs(); 
 
     // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
     @Parameter(names = {"--min-replicas" }, description = "Optional.  The minimum number of replicas configured for migrated indices on the target."

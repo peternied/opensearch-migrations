@@ -97,9 +97,15 @@ public class OpenSearchClient {
         var globalMetadata = Mono.zip(templates, componentTemplates, legacyTemplates)
             .map(tuple -> {
                 var rootMetadataNode = objectMapper.createObjectNode();
-                rootMetadataNode.set("index_template", objectMapper.createObjectNode().set("index_template", tuple.getT1()));
-                rootMetadataNode.set("component_template", objectMapper.createObjectNode().set("component_template", tuple.getT2()));
-                rootMetadataNode.set("templates", objectMapper.createObjectNode().set("templates", tuple.getT3()));
+                if (tuple.getT1().size() != 0) {
+                    rootMetadataNode.set("index_template", objectMapper.createObjectNode().set("index_template", tuple.getT1()));
+                }
+                if (tuple.getT2().size() != 0) {
+                    rootMetadataNode.set("component_template", objectMapper.createObjectNode().set("component_template", tuple.getT2()));
+                }
+                if (tuple.getT3().size() != 0) {
+                    rootMetadataNode.set("templates", objectMapper.createObjectNode().set("templates", tuple.getT3()));
+                }
                 return rootMetadataNode;
             })
             .block();
@@ -170,7 +176,6 @@ public class OpenSearchClient {
         try {
             var tree = (ObjectNode) objectMapper.readTree(resp.body);
             if (tree.size() == 1) {
-                var addedItems = 0;
                 var dearrayed = objectMapper.createObjectNode();
                 // This is OK because there is only a single item in this collection
                 var fieldName = tree.fieldNames().next();
@@ -183,15 +188,14 @@ public class OpenSearchClient {
                         var f2 = fields.next();
                         var itemName = node.get(f1).isTextual() ? node.get(f1).asText() : node.get(f2).asText();
                         var detailsNode = !node.get(f1).isTextual() ? node.get(f1) : node.get(f2);
-                        addedItems++;
                         dearrayed.set(itemName, detailsNode);
                     }
                 }
-                return Mono.just(addedItems != 0 ? dearrayed : tree);
+                return Mono.just(dearrayed);
             }
             return Mono.just(tree);
         } catch (Exception e) {
-            log.error("Unable to get json repsonse: ", e);
+            log.error("Unable to get json response: ", e);
             return Mono.error(new OperationFailed("Unable to get json response: " + e.getMessage(), resp));
         }
     }

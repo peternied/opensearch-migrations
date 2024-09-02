@@ -32,7 +32,7 @@ public class Migrate {
         var migrateResult = MigrateResult.builder();
         log.atInfo().setMessage("Command line arguments {0}").addArgument(arguments::toString).log();
 
-        if (arguments.sourceArgs != null) {
+        if (arguments.sourceArgs == null || arguments.sourceArgs.host == null) {
             try {
                 if (arguments.fileSystemRepoPath == null && arguments.s3RepoUri == null) {
                     throw new ParameterException("Either file-system-repo-path or s3-repo-uri must be set");
@@ -56,7 +56,7 @@ public class Migrate {
         final int awarenessDimensionality = arguments.minNumberOfReplicas + 1;
 
         SourceCluster sourceCluster = null;
-        if (arguments.sourceArgs != null) {
+        if (arguments.sourceArgs != null && arguments.sourceArgs.host != null) {
             sourceCluster = new RemoteCluster(arguments.sourceArgs.toConnectionContext(), context);
         } else if (arguments.fileSystemRepoPath != null) {
             sourceCluster = new SnapshotSource(arguments.sourceVersion, arguments.fileSystemRepoPath);

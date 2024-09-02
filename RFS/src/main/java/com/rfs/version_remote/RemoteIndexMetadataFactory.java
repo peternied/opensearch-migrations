@@ -68,7 +68,6 @@ public class RemoteIndexMetadataFactory implements IndexMetadata.Factory {
                     indexes.add(new Index() {
                         @Override
                         public String getName() {
-                            log.info("Index in snapshot: " + index.getKey());
                             return index.getKey();
                         }
 
