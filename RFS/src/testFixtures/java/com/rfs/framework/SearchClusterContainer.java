@@ -41,7 +41,11 @@ public class SearchClusterContainer extends GenericContainer<SearchClusterContai
     public static final Version OS_V2_14_0 = new OpenSearchVersion("opensearchproject/opensearch:2.14.0", ClusterVersion.OS_2_11, "OS 2.14.0");
 
     private enum INITIALIZATION_FLAVOR {
-        ELASTICSEARCH(Map.of("discovery.type", "single-node", "path.repo", CLUSTER_SNAPSHOT_DIR)),
+        ELASTICSEARCH(Map.of(
+            "discovery.type", "single-node",
+            "path.repo", CLUSTER_SNAPSHOT_DIR,
+            "ES_JAVA_OPTS", "-Xms512m -Xmx512m"
+        )),
         OPENSEARCH(
             new ImmutableMap.Builder<String, String>().putAll(ELASTICSEARCH.getEnvVariables())
                 .put("plugins.security.disabled", "true")
