@@ -6,10 +6,6 @@ import com.rfs.tracing.IRfsContexts;
 
 public abstract class IMetadataMigrationContexts {
 
-    public interface ICommandMigrateContext extends IScopedInstrumentationAttributes {
-        String ACTIVITY_NAME = ActivityNames.COMMAND_MIGRATE;
-    }
-
     public interface ITemplateContext extends IRfsContexts.ICheckedIdempotentPutRequestContext {
         String ACTIVITY_NAME = ActivityNames.MIGRATE_INDEX_TEMPLATE;
     }
@@ -29,7 +25,6 @@ public abstract class IMetadataMigrationContexts {
     }
 
     public static class ActivityNames {
-        public static final String COMMAND_MIGRATE = "commandMigrate";
         public static final String CREATE_SNAPSHOT = "createSnapshot";
         public static final String CREATE_INDEX = "createIndex";
         public static final String MIGRATE_METADATA = "migrateMetadata";
