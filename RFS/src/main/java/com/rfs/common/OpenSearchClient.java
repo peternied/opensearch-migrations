@@ -23,10 +23,13 @@ import com.rfs.common.DocumentReindexer.BulkDocSection;
 import com.rfs.common.http.ConnectionContext;
 import com.rfs.common.http.HttpResponse;
 import com.rfs.tracing.IRfsContexts;
+
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
+@ToString(onlyExplicitlyIncluded = true)
 @Slf4j
 public class OpenSearchClient {
 
@@ -54,6 +57,7 @@ public class OpenSearchClient {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
+    @ToString.Include
     private final RestClient client;
     private final FailedRequestsLogger failedRequestsLogger;
 

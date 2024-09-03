@@ -19,10 +19,10 @@ import lombok.extern.slf4j.Slf4j;
 public class IndexCreator_OS_2_11 implements IndexCreator {
     private static final ObjectMapper mapper = new ObjectMapper();
     protected final OpenSearchClient client;
-    private final ICreateIndexContext context;
 
     public Optional<ObjectNode> create(
-        IndexMetadata index
+        IndexMetadata index,
+        ICreateIndexContext context
     ) {
         IndexMetadataData_OS_2_11 indexMetadata = new IndexMetadataData_OS_2_11(index.rawJson(), index.getId(), index.getName());
 

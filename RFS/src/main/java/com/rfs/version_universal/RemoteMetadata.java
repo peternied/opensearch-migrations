@@ -1,4 +1,4 @@
-package com.rfs.version_remote;
+package com.rfs.version_universal;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 

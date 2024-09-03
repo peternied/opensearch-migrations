@@ -18,6 +18,7 @@ import com.rfs.common.http.ConnectionContext;
 import com.rfs.common.http.ConnectionContextTestParams;
 import com.rfs.framework.SearchClusterContainer;
 import com.rfs.http.ClusterOperations;
+import com.rfs.models.DataFilterArgs;
 import com.rfs.worker.SnapshotRunner;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,29 @@ class EndToEndTest {
 
     @TempDir
     private File localDirectory;
+
+    // @Test
+    // void metadataMigrateFrom_ES_v6_8_to_OS_v2_14() throws Exception {
+    //     final var targetVersion = SearchClusterContainer.OS_V2_14_0;
+    //     try (
+    //         final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.ES_V6_8_23);
+    //         final var targetCluster = new SearchClusterContainer(targetVersion)
+    //     ) {
+    //         migrateFrom_ES_v7_X(sourceCluster, targetCluster);
+    //     }
+    // }
+
+    // @Test
+    // void metadataMigrateFrom_ES_v7_17_to_OS_v2_14() throws Exception {
+    //     final var targetVersion = SearchClusterContainer.OS_V2_14_0;
+    //     try (
+    //         final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.ES_V7_17);
+    //         final var targetCluster = new SearchClusterContainer(targetVersion)
+    //     ) {
+    //         migrateFrom_ES_v7_X(sourceCluster, targetCluster);
+    //     }
+    // }
+
 
     @Test
     void metadataMigrateFrom_ES_v7_10_to_OS_v2_14() throws Exception {
@@ -97,7 +121,7 @@ class EndToEndTest {
         arguments.fileSystemRepoPath = localDirectory.getAbsolutePath();
         arguments.snapshotName = snapshotName;
 
-        var dataFilterArgs = new DataFiltersArgs();
+        var dataFilterArgs = new DataFilterArgs();
         dataFilterArgs.indexAllowlist = List.of(indexName);
         dataFilterArgs.componentTemplateAllowlist = List.of(compoTemplateName);
         dataFilterArgs.indexTemplateAllowlist = List.of(indexTemplateName);

@@ -1,4 +1,4 @@
-package com.rfs.version_remote;
+package com.rfs.version_universal;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -39,7 +39,7 @@ public class RemoteIndexMetadata implements IndexMetadata {
 
     @Override
     public int getNumberOfShards() {
-        return 1;
+        throw new UnsupportedOperationException("Unimplemented method 'getNumberOfShards'");
     }
 
     @Override

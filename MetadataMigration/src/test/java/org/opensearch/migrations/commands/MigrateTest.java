@@ -4,9 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.MetadataMigration;
+import org.opensearch.migrations.Version;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
-
-import com.rfs.common.http.ConnectionContext.TargetArgs;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -28,9 +27,8 @@ class MigrateTest {
     @Test
     void migrate_failsUnexpectedException() {
         var args = new MetadataArgs();
+        args.sourceVersion = Version.fromString("ES 7.10");
         args.fileSystemRepoPath = "";
-        args.targetArgs = new TargetArgs();
-        args.targetArgs.host = "http://foo.com";
         var context = mock(RootMetadataMigrationContext.class);
         var meta = new MetadataMigration(args);
 

@@ -1,7 +1,7 @@
 package org.opensearch.migrations.cli;
 
-import org.opensearch.migrations.clusters.SourceCluster;
-import org.opensearch.migrations.clusters.TargetCluster;
+import org.opensearch.migrations.cluster.ClusterReader;
+import org.opensearch.migrations.cluster.ClusterWriter;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -11,8 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Builder
 public class Clusters {
-    private SourceCluster source;
-    private TargetCluster target;
+    private ClusterReader source;
+    private ClusterWriter target;
 
     public String toString() {
         var sb = new StringBuilder();

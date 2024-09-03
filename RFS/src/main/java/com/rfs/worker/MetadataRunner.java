@@ -2,6 +2,7 @@ package com.rfs.worker;
 
 import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 import org.opensearch.migrations.metadata.GlobalMetadataCreatorResults;
+import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.IClusterMetadataContext;
 
 import com.rfs.models.GlobalMetadata;
 import com.rfs.transformers.Transformer;
@@ -17,11 +18,11 @@ public class MetadataRunner {
     private final GlobalMetadataCreator metadataCreator;
     private final Transformer transformer;
 
-    public GlobalMetadataCreatorResults migrateMetadata() {
+    public GlobalMetadataCreatorResults migrateMetadata(IClusterMetadataContext context) {
         log.info("Migrating the Templates...");
         var globalMetadata = metadataFactory.fromRepo(snapshotName);
         var transformedRoot = transformer.transformGlobalMetadata(globalMetadata);
-        var results = metadataCreator.create(transformedRoot);
+        var results = metadataCreator.create(transformedRoot, context);
         log.info("Templates migration complete");
         return results;
     }

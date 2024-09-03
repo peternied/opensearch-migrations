@@ -1,10 +1,10 @@
-package org.opensearch.migrations;
+package com.rfs.models;
 
 import java.util.List;
 
 import com.beust.jcommander.Parameter;
 
-public class DataFiltersArgs {
+public class DataFilterArgs {
     @Parameter(names = { "--index-allowlist" }, description = ("Optional.  List of index names to migrate"
         + " (e.g. 'logs_2024_01, logs_2024_02').  Default: all non-system indices (e.g. those not starting with '.')"), required = false)
     public List<String> indexAllowlist = List.of();

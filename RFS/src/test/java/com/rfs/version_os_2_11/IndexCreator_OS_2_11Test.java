@@ -131,7 +131,7 @@ class IndexCreator_OS_2_11Test {
         var node = (ObjectNode) OBJECT_MAPPER.readTree(rawJson);
         var indexId = "indexId";
         var indexData = new IndexMetadataData_OS_2_11(node, indexName, indexId);
-        var indexCreator = new IndexCreator_OS_2_11(client, mock(ICreateIndexContext.class));
-        return indexCreator.create(indexData);
+        var indexCreator = new IndexCreator_OS_2_11(client);
+        return indexCreator.create(indexData, mock(ICreateIndexContext.class));
     }
 }

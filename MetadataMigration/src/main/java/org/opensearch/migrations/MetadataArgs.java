@@ -5,6 +5,7 @@ package org.opensearch.migrations;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
 import com.rfs.common.http.ConnectionContext;
+import com.rfs.models.DataFilterArgs;
 
 public class MetadataArgs {
     @Parameter(names = {"--help", "-h"}, help = true, description = "Displays information about how to use this tool")
@@ -36,7 +37,7 @@ public class MetadataArgs {
     public ConnectionContext.TargetArgs targetArgs = new ConnectionContext.TargetArgs();
 
     @ParametersDelegate
-    public DataFiltersArgs dataFilterArgs = new DataFiltersArgs(); 
+    public DataFilterArgs dataFilterArgs = new DataFilterArgs(); 
 
     // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
     @Parameter(names = {"--min-replicas" }, description = "Optional.  The minimum number of replicas configured for migrated indices on the target."

@@ -21,6 +21,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 
 import org.opensearch.migrations.Version;
+import org.opensearch.migrations.cluster.ClusterProviderRegistry;
 import org.opensearch.migrations.metadata.tracing.MetadataMigrationTestContext;
 import org.opensearch.migrations.reindexer.tracing.DocumentMigrationTestContext;
 
@@ -33,17 +34,11 @@ import com.rfs.common.FileSystemRepo;
 import com.rfs.common.LuceneDocumentsReader;
 import com.rfs.common.OpenSearchClient;
 import com.rfs.common.RestClient;
-import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SnapshotShardUnpacker;
 import com.rfs.common.SourceRepo;
-import com.rfs.common.SourceResourceProvider;
-import com.rfs.common.SourceResourceProviderFactory;
 import com.rfs.common.http.ConnectionContextTestParams;
 import com.rfs.framework.SearchClusterContainer;
 import com.rfs.http.SearchClusterRequests;
-import com.rfs.models.GlobalMetadata;
-import com.rfs.models.IndexMetadata;
-import com.rfs.models.ShardMetadata;
 import com.rfs.transformers.TransformFunctions;
 import com.rfs.transformers.Transformer;
 import com.rfs.version_os_2_11.GlobalMetadataCreator_OS_2_11;
@@ -82,29 +77,30 @@ public class SourceTestBase {
         MetadataMigrationTestContext context,
         Version sourceVersion
     ) {
-        SourceResourceProvider sourceResourceProvider = SourceResourceProviderFactory.getProvider(sourceVersion);
-        SnapshotRepo.Provider repoDataProvider = sourceResourceProvider.getSnapshotRepoProvider(sourceRepo);
-        GlobalMetadata.Factory metadataFactory = sourceResourceProvider.getGlobalMetadataFactory(repoDataProvider);
+        var sourceResourceProvider = ClusterProviderRegistry.getSnapshotReader(sourceVersion, sourceRepo);
         var targetVersion = Version.fromString("OS 2.11");
         GlobalMetadataCreator_OS_2_11 metadataCreator = new GlobalMetadataCreator_OS_2_11(
             targetClient,
             legacyTemplateAllowlist,
             componentTemplateAllowlist,
-            indexTemplateAllowlist,
-            context.createMetadataMigrationContext()
+            indexTemplateAllowlist
         );
         Transformer transformer = TransformFunctions.getTransformer(sourceVersion, targetVersion, 1);
-        new MetadataRunner(snapshotName, metadataFactory, metadataCreator, transformer).migrateMetadata();
+        new MetadataRunner(
+            snapshotName,
+            sourceResourceProvider.getGlobalMetadata(),
+            metadataCreator,
+            transformer
+        ).migrateMetadata(context.createMetadataMigrationContext());
 
-        IndexMetadata.Factory indexMetadataFactory = sourceResourceProvider.getIndexMetadataFactory(repoDataProvider);
-        IndexCreator_OS_2_11 indexCreator = new IndexCreator_OS_2_11(targetClient, context.createIndexContext());
+        IndexCreator_OS_2_11 indexCreator = new IndexCreator_OS_2_11(targetClient);
         new IndexRunner(
             snapshotName,
-            indexMetadataFactory,
+            sourceResourceProvider.getIndexMetadata(),
             indexCreator,
             transformer,
             indexAllowlist
-        ).migrateIndices();
+        ).migrateIndices(context.createIndexContext());
     }
 
     @AllArgsConstructor
@@ -221,7 +217,7 @@ public class SourceTestBase {
                 return d;
             };
 
-            SourceResourceProvider sourceResourceProvider = SourceResourceProviderFactory.getProvider(version);
+            var sourceResourceProvider = ClusterProviderRegistry.getSnapshotReader(version, sourceRepo);
 
             DefaultSourceRepoAccessor repoAccessor = new DefaultSourceRepoAccessor(sourceRepo);
             SnapshotShardUnpacker.Factory unpackerFactory = new SnapshotShardUnpacker.Factory(
@@ -230,9 +226,6 @@ public class SourceTestBase {
                 sourceResourceProvider.getBufferSizeInBytes()
             );
 
-            SnapshotRepo.Provider repoDataProvider = sourceResourceProvider.getSnapshotRepoProvider(sourceRepo);
-            IndexMetadata.Factory indexMetadataFactory = sourceResourceProvider.getIndexMetadataFactory(repoDataProvider);
-            ShardMetadata.Factory shardMetadataFactory = sourceResourceProvider.getShardMetadataFactory(repoDataProvider);
             final int ms_window = 1000;
             final var nextClockShift = (int) (clockJitter.nextDouble() * ms_window) - (ms_window / 2);
             log.info("nextClockShift=" + nextClockShift);
@@ -258,10 +251,10 @@ public class SourceTestBase {
                 ),
                 Duration.ofMinutes(10),
                 processManager,
-                indexMetadataFactory,
+                sourceResourceProvider.getIndexMetadata(),
                 snapshotName,
                 indexAllowlist,
-                shardMetadataFactory,
+                sourceResourceProvider.getShardMetadata(),
                 unpackerFactory,
                 MAX_SHARD_SIZE_BYTES,
                 context

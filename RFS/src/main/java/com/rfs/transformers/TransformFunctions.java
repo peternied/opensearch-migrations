@@ -15,7 +15,7 @@ public class TransformFunctions {
         Version targetVersion,
         int dimensionality
     ) {
-        if (VersionMatchers.isOpenSearch_2_X.test(targetVersion)) {
+        if (VersionMatchers.isOS_2_X.test(targetVersion)) {
             if (VersionMatchers.isES_6_8.test(sourceVersion)) {
                 return new Transformer_ES_6_8_to_OS_2_11(dimensionality);
             }
@@ -112,6 +112,8 @@ public class TransformFunctions {
         if (root.has("settings")) {
             ObjectNode settingsRoot = (ObjectNode) root.get("settings");
             if (settingsRoot.has("number_of_replicas")) {
+                // dimensionality must be at least 1
+                dimensionality = Math.max(dimensionality, 1);
                 // If the total number of copies requested in the original settings is not a multiple of the
                 // dimensionality, then up it to the next largest multiple of the dimensionality.
                 int numberOfCopies = settingsRoot.get("number_of_replicas").asInt() + 1;

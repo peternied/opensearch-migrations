@@ -11,6 +11,7 @@ import java.util.function.Function;
 
 import org.opensearch.migrations.Version;
 import org.opensearch.migrations.VersionConverter;
+import org.opensearch.migrations.cluster.ClusterProviderRegistry;
 import org.opensearch.migrations.reindexer.tracing.RootDocumentMigrationContext;
 import org.opensearch.migrations.tracing.ActiveContextTracker;
 import org.opensearch.migrations.tracing.ActiveContextTrackerByActivityType;
@@ -34,11 +35,8 @@ import com.rfs.common.LuceneDocumentsReader;
 import com.rfs.common.OpenSearchClient;
 import com.rfs.common.S3Repo;
 import com.rfs.common.S3Uri;
-import com.rfs.common.SnapshotRepo;
 import com.rfs.common.SnapshotShardUnpacker;
 import com.rfs.common.SourceRepo;
-import com.rfs.common.SourceResourceProvider;
-import com.rfs.common.SourceResourceProviderFactory;
 import com.rfs.common.TryHandlePhaseFailure;
 import com.rfs.common.http.ConnectionContext;
 import com.rfs.models.IndexMetadata;
@@ -218,11 +216,8 @@ public class RfsMigrateDocuments {
                 }
                 DefaultSourceRepoAccessor repoAccessor = new DefaultSourceRepoAccessor(sourceRepo);
 
-                SourceResourceProvider sourceResourceProvider = SourceResourceProviderFactory.getProvider(arguments.sourceVersion);
+                var sourceResourceProvider = ClusterProviderRegistry.getSnapshotReader(arguments.sourceVersion, sourceRepo);
 
-                SnapshotRepo.Provider repoDataProvider = sourceResourceProvider.getSnapshotRepoProvider(sourceRepo);
-                IndexMetadata.Factory indexMetadataFactory = sourceResourceProvider.getIndexMetadataFactory(repoDataProvider);
-                ShardMetadata.Factory shardMetadataFactory = sourceResourceProvider.getShardMetadataFactory(repoDataProvider);
                 SnapshotShardUnpacker.Factory unpackerFactory = new SnapshotShardUnpacker.Factory(
                     repoAccessor,
                     luceneDirPath,
@@ -236,10 +231,10 @@ public class RfsMigrateDocuments {
                     workCoordinator,
                     arguments.initialLeaseDuration,
                     processManager,
-                    indexMetadataFactory,
+                    sourceResourceProvider.getIndexMetadata(),
                     arguments.snapshotName,
                     arguments.indexAllowlist,
-                    shardMetadataFactory,
+                    sourceResourceProvider.getShardMetadata(),
                     unpackerFactory,
                     arguments.maxShardSizeBytes,
                     rootDocumentContext

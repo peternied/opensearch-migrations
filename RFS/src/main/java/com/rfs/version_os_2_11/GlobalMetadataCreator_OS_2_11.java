@@ -9,7 +9,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 import org.opensearch.migrations.metadata.GlobalMetadataCreatorResults;
-import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts;
+import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.IClusterMetadataContext;
 
 import com.rfs.common.OpenSearchClient;
 import com.rfs.models.GlobalMetadata;
@@ -23,23 +23,23 @@ public class GlobalMetadataCreator_OS_2_11 implements GlobalMetadataCreator {
     private final List<String> legacyTemplateAllowlist;
     private final List<String> componentTemplateAllowlist;
     private final List<String> indexTemplateAllowlist;
-    private final IMetadataMigrationContexts.IClusterMetadataContext context;
 
-    public GlobalMetadataCreatorResults create(GlobalMetadata root) {
+    public GlobalMetadataCreatorResults create(GlobalMetadata root, IClusterMetadataContext context) {
         logger.info("Setting Global Metadata");
 
         var results = GlobalMetadataCreatorResults.builder();
         GlobalMetadataData_OS_2_11 globalMetadata = new GlobalMetadataData_OS_2_11(root.toObjectNode());
-        results.legacyTemplates(createLegacyTemplates(globalMetadata, client, legacyTemplateAllowlist));
-        results.componentTemplates(createComponentTemplates(globalMetadata, client, componentTemplateAllowlist));
-        results.indexTemplates(createIndexTemplates(globalMetadata, client, indexTemplateAllowlist));
+        results.legacyTemplates(createLegacyTemplates(globalMetadata, client, legacyTemplateAllowlist, context));
+        results.componentTemplates(createComponentTemplates(globalMetadata, client, componentTemplateAllowlist, context));
+        results.indexTemplates(createIndexTemplates(globalMetadata, client, indexTemplateAllowlist, context));
         return results.build();
     }
 
     protected List<String> createLegacyTemplates(
         GlobalMetadataData_OS_2_11 globalMetadata,
         OpenSearchClient client,
-        List<String> templateAllowlist
+        List<String> templateAllowlist,
+        IClusterMetadataContext context
     ) {
         var legacyTemplates = new ArrayList<String>();
         logger.info("Setting Legacy Templates...");
@@ -83,7 +83,8 @@ public class GlobalMetadataCreator_OS_2_11 implements GlobalMetadataCreator {
     protected List<String> createComponentTemplates(
         GlobalMetadataData_OS_2_11 globalMetadata,
         OpenSearchClient client,
-        List<String> templateAllowlist
+        List<String> templateAllowlist,
+        IClusterMetadataContext context
     ) {
         var componentTemplates = new ArrayList<String>();
         logger.info("Setting Component Templates...");
@@ -128,7 +129,8 @@ public class GlobalMetadataCreator_OS_2_11 implements GlobalMetadataCreator {
     protected List<String> createIndexTemplates(
         GlobalMetadataData_OS_2_11 globalMetadata,
         OpenSearchClient client,
-        List<String> templateAllowlist
+        List<String> templateAllowlist,
+        IClusterMetadataContext context
     ) {
         var indexTemplates = new ArrayList<String>();
         logger.info("Setting Index Templates...");
