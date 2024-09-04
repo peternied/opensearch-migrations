@@ -1,7 +1,5 @@
 package org.opensearch.migrations;
 
-
-
 import org.opensearch.migrations.commands.Configure;
 import org.opensearch.migrations.commands.Evaluate;
 import org.opensearch.migrations.commands.Migrate;
@@ -33,8 +31,12 @@ public class MetadataMigration {
         );
 
         var meta = new MetadataMigration(arguments);
+
+        log.info("Starting Metadata Migration");
+
         var result = meta.migrate().execute(context);
-        System.err.println(result.toString());
+
+        log.info(result.toString());
         System.exit(result.getExitCode());
     }
 

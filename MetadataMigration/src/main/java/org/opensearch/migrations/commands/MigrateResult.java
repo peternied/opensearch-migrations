@@ -18,7 +18,6 @@ public class MigrateResult implements Result {
 
     public String toString() {
         var sb = new StringBuilder();
-        sb.append("Metadata Migration" + System.lineSeparator());
         if (getClusters() != null) {
             sb.append(getClusters() + System.lineSeparator());
         }

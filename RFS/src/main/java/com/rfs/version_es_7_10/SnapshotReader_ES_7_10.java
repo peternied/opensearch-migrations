@@ -17,7 +17,7 @@ public class SnapshotReader_ES_7_10 implements ClusterSnapshotReader {
 
     @Override
     public boolean compatibleWith(Version version) {
-        return VersionMatchers.isES_7_X.test(version);
+        return VersionMatchers.equalOrGreaterThanES_7_10.test(version);
     }
 
     @Override
@@ -63,6 +63,11 @@ public class SnapshotReader_ES_7_10 implements ClusterSnapshotReader {
     @Override
     public void initialize(Version version) {
         this.version = version;
+    }
+
+    public String toString() {
+        // These values could be null, don't want to crash during toString
+        return String.format("Snapshot: %s %s", version, sourceRepo);
     }
 
     private SnapshotRepo.Provider getSnapshotRepo() {

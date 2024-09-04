@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.netty.Connection;
@@ -36,10 +35,8 @@ import reactor.netty.resources.ConnectionProvider;
 import reactor.netty.tcp.SslProvider;
 import reactor.util.annotation.Nullable;
 
-@ToString(onlyExplicitlyIncluded = true)
 @Slf4j
 public class RestClient {
-    @ToString.Include
     private final ConnectionContext connectionContext;
     private final HttpClient client;
 

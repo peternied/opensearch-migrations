@@ -8,15 +8,13 @@ import org.opensearch.migrations.metadata.GlobalMetadataCreator;
 import org.opensearch.migrations.metadata.IndexCreator;
 
 import com.rfs.common.OpenSearchClient;
+import com.rfs.common.http.ConnectionContext;
 import com.rfs.models.DataFilterArgs;
 
-import lombok.ToString;
-
-@ToString(onlyExplicitlyIncluded = true)
 public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
     private Version version;
-    @ToString.Include
     private OpenSearchClient client;
+    private ConnectionContext connection;
     private DataFilterArgs dataFilterArgs;
 
     @Override
@@ -30,8 +28,8 @@ public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
     }
 
     @Override
-    public void initialize(OpenSearchClient client) {
-        this.client = client;
+    public void initialize(ConnectionContext connection) {
+        this.connection = connection;
     }
 
     @Override
@@ -48,7 +46,6 @@ public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
         return new IndexCreator_OS_2_11(getClient());
     }
 
-    @ToString.Include
     @Override
     public Version getVersion() {
         if (version == null) {
@@ -57,11 +54,23 @@ public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
         return version;
     }
 
+    public String toString() {
+        // These values could be null, don't want to crash during toString
+        return String.format("Remote Cluster: %s %s", version, connection);
+    }
+
     private OpenSearchClient getClient() {
         if (client == null) {
-            throw new UnsupportedOperationException("initialize(...) must be called");
+            client = new OpenSearchClient(getConnection());
         }
         return client;
+    }
+
+    private ConnectionContext getConnection() {
+        if (connection == null) {
+            throw new UnsupportedOperationException("initialize(...) must be called");
+        }
+        return connection;
     }
 
     private DataFilterArgs getDataFilterArgs() {

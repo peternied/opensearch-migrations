@@ -1,4 +1,4 @@
-package org.opensearch.migrations.commands;
+package org.opensearch.migrations.cli;
 
 import java.nio.file.Path;
 
@@ -14,10 +14,10 @@ import com.rfs.common.SourceRepo;
 import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
-public class SourceProviderExtractor {
+public class ClusterReaderExtractor {
     final MetadataArgs arguments;
 
-    public ClusterReader getSourceClusterReader() { 
+    public ClusterReader extractClusterReader() { 
         if (arguments.fileSystemRepoPath != null && arguments.s3RepoUri != null && arguments.sourceArgs.host != null) {
             throw new ParameterException("No details on the source cluster found, please supply a connection details or a snapshot");
         }

@@ -5,16 +5,13 @@ import org.opensearch.migrations.VersionMatchers;
 import org.opensearch.migrations.cluster.ClusterReader;
 import org.opensearch.migrations.cluster.RemoteCluster;
 
-import com.rfs.common.OpenSearchClient;
+import com.rfs.common.http.ConnectionContext;
 import com.rfs.models.GlobalMetadata.Factory;
 
-import lombok.ToString;
-
-@ToString(onlyExplicitlyIncluded = true)
 public class RemoteReader implements RemoteCluster, ClusterReader {
     private Version version;
-    @ToString.Include
-    private OpenSearchClient client;
+    private RemoteReaderClient client;
+    private ConnectionContext connection;
 
     @Override
     public boolean compatibleWith(Version version) {
@@ -25,8 +22,8 @@ public class RemoteReader implements RemoteCluster, ClusterReader {
     }
 
     @Override
-    public void initialize(OpenSearchClient client) {
-        this.client = client;
+    public void initialize(ConnectionContext connection) {
+        this.connection = connection;
     }
 
     @Override
@@ -39,7 +36,6 @@ public class RemoteReader implements RemoteCluster, ClusterReader {
         return new RemoteIndexMetadataFactory(getClient());
     }
 
-    @ToString.Include
     @Override
     public Version getVersion() {
         if (version == null) {
@@ -48,10 +44,22 @@ public class RemoteReader implements RemoteCluster, ClusterReader {
         return version;
     }
 
-    private OpenSearchClient getClient() {
+    public String toString() {
+        // These values could be null, don't want to crash during toString
+        return String.format("Remote Cluster: %s %s", version, connection);
+    }
+
+    private RemoteReaderClient getClient() {
         if (client == null) {
-            throw new UnsupportedOperationException("initialize(...) must be called");
+            client = new RemoteReaderClient(getConnection());
         }
         return client;
+    }
+
+    private ConnectionContext getConnection() {
+        if (connection == null) {
+            throw new UnsupportedOperationException("initialize(...) must be called");
+        }
+        return connection;
     }
 }

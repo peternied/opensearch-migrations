@@ -23,24 +23,21 @@ import com.rfs.common.DocumentReindexer.BulkDocSection;
 import com.rfs.common.http.ConnectionContext;
 import com.rfs.common.http.HttpResponse;
 import com.rfs.tracing.IRfsContexts;
-
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
-@ToString(onlyExplicitlyIncluded = true)
 @Slf4j
 public class OpenSearchClient {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    protected static final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final int defaultMaxRetryAttempts = 3;
     private static final Duration defaultBackoff = Duration.ofSeconds(1);
     private static final Duration defaultMaxBackoff = Duration.ofSeconds(10);
     private static final Retry snapshotRetryStrategy = Retry.backoff(defaultMaxRetryAttempts, defaultBackoff)
         .maxBackoff(defaultMaxBackoff);
-    private static final Retry checkIfItemExistsRetryStrategy = Retry.backoff(defaultMaxRetryAttempts, defaultBackoff)
+    protected static final Retry checkIfItemExistsRetryStrategy = Retry.backoff(defaultMaxRetryAttempts, defaultBackoff)
         .maxBackoff(defaultMaxBackoff);
     private static final Retry createItemExistsRetryStrategy = Retry.backoff(defaultMaxRetryAttempts, defaultBackoff)
         .maxBackoff(defaultMaxBackoff)
@@ -57,15 +54,14 @@ public class OpenSearchClient {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    @ToString.Include
-    private final RestClient client;
-    private final FailedRequestsLogger failedRequestsLogger;
+    protected final RestClient client;
+    protected final FailedRequestsLogger failedRequestsLogger;
 
     public OpenSearchClient(ConnectionContext connectionContext) {
         this(new RestClient(connectionContext), new FailedRequestsLogger());
     }
 
-    OpenSearchClient(RestClient client, FailedRequestsLogger failedRequestsLogger) {
+    protected OpenSearchClient(RestClient client, FailedRequestsLogger failedRequestsLogger) {
         this.client = client;
         this.failedRequestsLogger = failedRequestsLogger;
     }
@@ -82,126 +78,6 @@ public class OpenSearchClient {
             .doOnError(e -> log.error(e.getMessage()))
             .retryWhen(checkIfItemExistsRetryStrategy)
             .block();
-    }
-
-    public ObjectNode getClusterData() {
-        var templates = client.getAsync("_index_template", null)
-            .flatMap(this::getJsonForTemplateApis)
-            .doOnError(e -> log.error(e.getMessage()))
-            .retryWhen(checkIfItemExistsRetryStrategy);
-        var componentTemplates = client.getAsync("_component_template", null)
-            .flatMap(this::getJsonForTemplateApis)
-            .doOnError(e -> log.error(e.getMessage()))
-            .retryWhen(checkIfItemExistsRetryStrategy);
-        var legacyTemplates = client.getAsync("_template", null)
-            .flatMap(this::getJsonForTemplateApis)
-            .doOnError(e -> log.error(e.getMessage()))
-            .retryWhen(checkIfItemExistsRetryStrategy);
-
-        var globalMetadata = Mono.zip(templates, componentTemplates, legacyTemplates)
-            .map(tuple -> {
-                var rootMetadataNode = objectMapper.createObjectNode();
-                if (tuple.getT1().size() != 0) {
-                    rootMetadataNode.set("index_template", objectMapper.createObjectNode().set("index_template", tuple.getT1()));
-                }
-                if (tuple.getT2().size() != 0) {
-                    rootMetadataNode.set("component_template", objectMapper.createObjectNode().set("component_template", tuple.getT2()));
-                }
-                if (tuple.getT3().size() != 0) {
-                    rootMetadataNode.set("templates", objectMapper.createObjectNode().set("templates", tuple.getT3()));
-                }
-                return rootMetadataNode;
-            })
-            .block();
-
-
-        return globalMetadata;
-    }
-
-    public ObjectNode getIndexes() {
-        var settings = client.getAsync("_all/_settings?format=json", null)
-            .flatMap(this::getJsonForIndexApis)
-            .doOnError(e -> log.error(e.getMessage()))
-            .retryWhen(checkIfItemExistsRetryStrategy);
-
-        var mappings = client.getAsync("_all/_mappings?format=json", null)
-            .flatMap(this::getJsonForIndexApis)
-            .doOnError(e -> log.error(e.getMessage()))
-            .retryWhen(checkIfItemExistsRetryStrategy);
-
-        var aliases = client.getAsync("_all/_alias?format=json", null)
-            .flatMap(this::getJsonForIndexApis)
-            .doOnError(e -> log.error(e.getMessage()))
-            .retryWhen(checkIfItemExistsRetryStrategy);
-
-        var allIndexData = Mono.zip(settings, mappings, aliases)
-            .map(tuple -> {
-                var detailResponses = List.of(tuple.getT1(), tuple.getT2(), tuple.getT3());
-                return combineIndexDetails(detailResponses);
-            })
-            .block();
-        log.info("Combined response:\n" + allIndexData.toPrettyString());
-
-        return allIndexData;
-    }
-
-    private ObjectNode combineIndexDetails(List<ObjectNode> indexDetailsResponse) {
-        var combinedDetails = objectMapper.createObjectNode();
-        indexDetailsResponse.stream().forEach(detailsResponse -> {
-            detailsResponse.fields().forEachRemaining(indexDetails -> {
-                var indexName = indexDetails.getKey();
-                combinedDetails.putIfAbsent(indexName, objectMapper.createObjectNode());
-                var existingIndexDetails = (ObjectNode)combinedDetails.get(indexName);
-                indexDetails.getValue().fields().forEachRemaining(details -> {
-                    existingIndexDetails.set(details.getKey(), details.getValue());
-                });
-            });
-        });
-        return combinedDetails;
-    }
-
-    Mono<ObjectNode> getJsonForIndexApis(HttpResponse resp) {
-        if (resp.statusCode != 200) {
-            return Mono.error(new OperationFailed("Unexpected status code " + resp.statusCode, resp));
-        }
-        try {
-            var tree = (ObjectNode) objectMapper.readTree(resp.body);
-            return Mono.just(tree);
-        } catch (Exception e) {
-            log.error("Unable to get json repsonse: ", e);
-            return Mono.error(new OperationFailed("Unable to get json response: " + e.getMessage(), resp));
-        }
-    }
-
-    Mono<ObjectNode> getJsonForTemplateApis(HttpResponse resp) {
-        if (resp.statusCode != 200) {
-            return Mono.error(new OperationFailed("Unexpected status code " + resp.statusCode, resp));
-        }
-        try {
-            var tree = (ObjectNode) objectMapper.readTree(resp.body);
-            if (tree.size() == 1) {
-                var dearrayed = objectMapper.createObjectNode();
-                // This is OK because there is only a single item in this collection
-                var fieldName = tree.fieldNames().next();
-                var arrayOfItems = tree.get(fieldName);
-                for (var child : arrayOfItems) {
-                    var node = (ObjectNode)child;
-                    if (node.size() == 2) {
-                        var fields = node.fieldNames();
-                        var f1 = fields.next();
-                        var f2 = fields.next();
-                        var itemName = node.get(f1).isTextual() ? node.get(f1).asText() : node.get(f2).asText();
-                        var detailsNode = !node.get(f1).isTextual() ? node.get(f1) : node.get(f2);
-                        dearrayed.set(itemName, detailsNode);
-                    }
-                }
-                return Mono.just(dearrayed);
-            }
-            return Mono.just(tree);
-        } catch (Exception e) {
-            log.error("Unable to get json response: ", e);
-            return Mono.error(new OperationFailed("Unable to get json response: " + e.getMessage(), resp));
-        }
     }
 
     private Version versionFromResponse(HttpResponse resp) {

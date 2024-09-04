@@ -60,7 +60,7 @@ public class ClusterProviderRegistry {
         var client = new OpenSearchClient(connection);
         var version = client.getClusterVersion();
 
-        var remoteProvider = getRemoteProviders(client)
+        var remoteProvider = getRemoteProviders(connection)
             .filter(p -> p.compatibleWith(version))
             .filter(ClusterReader.class::isInstance)
             .map(ClusterReader.class::cast)
@@ -80,7 +80,7 @@ public class ClusterProviderRegistry {
         var client = new OpenSearchClient(connection);
         var version = client.getClusterVersion();
 
-        var remoteProvider = getRemoteProviders(client)
+        var remoteProvider = getRemoteProviders(connection)
             .filter(p -> p.compatibleWith(version))
             .filter(ClusterWriter.class::isInstance)
             .map(ClusterWriter.class::cast)
@@ -92,12 +92,12 @@ public class ClusterProviderRegistry {
         return remoteProvider;
     }
 
-    private Stream<RemoteCluster> getRemoteProviders(OpenSearchClient client) {
+    private Stream<RemoteCluster> getRemoteProviders(ConnectionContext connection) {
         return getProviders()
             .stream()
             .filter(RemoteCluster.class::isInstance)
             .map(RemoteCluster.class::cast)
-            .peek(p -> p.initialize(client));
+            .peek(p -> p.initialize(connection));
     }
 
     static class UnsupportedVersionException extends RuntimeException {

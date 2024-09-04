@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
-import com.rfs.common.OpenSearchClient;
 import com.rfs.common.SnapshotRepo.Provider;
 import com.rfs.models.IndexMetadata;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RemoteIndexMetadataFactory implements IndexMetadata.Factory {
 
-    private final OpenSearchClient client;
+    private final RemoteReaderClient client;
 
     private ObjectNode indexData;
 
