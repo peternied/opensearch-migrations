@@ -25,7 +25,7 @@ public class VersionMatchersTest {
         testPredicate(
             VersionMatchers.isES_6_8,
             "isES_6_8",
-            List.of("ES 6.8"),
+            List.of("ES 6.8", "ES 6.8.23"),
             List.of("ES 6.7", "ES 6.9", "OS 1.3")
         );
     }

@@ -20,14 +20,16 @@ public class RemoteReaderClient extends OpenSearchClient {
         super(connection);
     }
 
-    public ObjectNode getClusterData() {
-        var templateEndpoints = Map.of(
+    protected Map<String, String> getTemplateEndpoints() {
+        return Map.of(
             "index_template", "_index_template",
             "component_template", "_component_template",
-            "legacy_template", "_template"
+            "templates", "_template"
         );
-    
-        var responses = Flux.fromIterable(templateEndpoints.entrySet())
+    }
+
+    public ObjectNode getClusterData() {
+        var responses = Flux.fromIterable(getTemplateEndpoints().entrySet())
             .flatMap(entry -> client
                 .getAsync(entry.getValue(), null)
                 .flatMap(this::getJsonForTemplateApis)
@@ -41,7 +43,7 @@ public class RemoteReaderClient extends OpenSearchClient {
         var globalMetadata = globalMetadataFromParts(responses);
         log.atDebug()
             .setMessage("Combined global metadata:\n{}")
-            .addArgument(globalMetadata::toPrettyString)
+            .addArgument(globalMetadata::toString)
             .log();
         return globalMetadata;
     }
@@ -79,7 +81,7 @@ public class RemoteReaderClient extends OpenSearchClient {
         var indexData = combineIndexDetails(indexDetailsList);
         log.atDebug()
             .setMessage("Index data combined:\n{}")
-            .addArgument(indexData::toPrettyString)
+            .addArgument(indexData::toString)
             .log();
         return indexData;
     }

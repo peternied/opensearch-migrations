@@ -9,7 +9,7 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-
+import org.opensearch.migrations.SupportedTargetCluster;
 import org.opensearch.migrations.metadata.tracing.MetadataMigrationTestContext;
 import org.opensearch.migrations.reindexer.tracing.DocumentMigrationTestContext;
 import org.opensearch.migrations.snapshot.creation.tracing.SnapshotTestContext;

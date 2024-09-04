@@ -5,6 +5,7 @@ import org.opensearch.migrations.VersionMatchers;
 import org.opensearch.migrations.cluster.ClusterReader;
 import org.opensearch.migrations.cluster.RemoteCluster;
 
+import com.rfs.common.OpenSearchClient;
 import com.rfs.common.http.ConnectionContext;
 import com.rfs.models.GlobalMetadata.Factory;
 
@@ -15,7 +16,8 @@ public class RemoteReader implements RemoteCluster, ClusterReader {
 
     @Override
     public boolean compatibleWith(Version version) {
-        return VersionMatchers.isES_7_X
+        return VersionMatchers.isES_6_8
+            .or(VersionMatchers.isES_7_X)
             .or(VersionMatchers.isOS_1_X)
             .or(VersionMatchers.isOS_2_X)
             .test(version);
@@ -39,7 +41,8 @@ public class RemoteReader implements RemoteCluster, ClusterReader {
     @Override
     public Version getVersion() {
         if (version == null) {
-            version = getClient().getClusterVersion();
+            // Use a throw away client that will work on any version of the service
+            version = new OpenSearchClient(getConnection()).getClusterVersion();
         }
         return version;
     }
@@ -51,7 +54,11 @@ public class RemoteReader implements RemoteCluster, ClusterReader {
 
     private RemoteReaderClient getClient() {
         if (client == null) {
-            client = new RemoteReaderClient(getConnection());
+            if (VersionMatchers.isES_6_8.test(getVersion())) {
+                client = new RemoteReaderClient_ES_6_8(getConnection());
+            } else {
+                client = new RemoteReaderClient(getConnection());
+            }
         }
         return client;
     }

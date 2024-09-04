@@ -49,6 +49,8 @@ public class Migrate {
                 arguments.minNumberOfReplicas
             );
 
+            log.info("Using transformation " + transformer.toString());
+
             var metadataResults = new MetadataRunner(
                 arguments.snapshotName,
                 sourceCluster.getGlobalMetadata(),

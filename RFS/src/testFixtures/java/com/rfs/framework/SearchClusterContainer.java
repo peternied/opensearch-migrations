@@ -45,7 +45,10 @@ public class SearchClusterContainer extends GenericContainer<SearchClusterContai
     );
 
     private enum INITIALIZATION_FLAVOR {
-        ELASTICSEARCH(Map.of("discovery.type", "single-node", "path.repo", CLUSTER_SNAPSHOT_DIR)),
+        ELASTICSEARCH(Map.of(
+            "discovery.type", "single-node",
+            "path.repo", CLUSTER_SNAPSHOT_DIR,
+            "ES_JAVA_OPTS", "-Xms512m -Xmx512m")),
         OPENSEARCH(
             new ImmutableMap.Builder<String, String>().putAll(ELASTICSEARCH.getEnvVariables())
                 .put("plugins.security.disabled", "true")
