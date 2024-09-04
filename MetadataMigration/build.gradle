@@ -63,3 +63,7 @@ task slowTest(type: Test) {
         showCauses true
     }
 }
+
+tasks.named('jacocoTestReport').configure {
+    dependsOn slowTest
+}
