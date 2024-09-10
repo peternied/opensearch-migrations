@@ -1,9 +1,11 @@
 package com.rfs.worker;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+import org.opensearch.migrations.MigrationMode;
 import org.opensearch.migrations.metadata.IndexCreator;
 import org.opensearch.migrations.metadata.tracing.IMetadataMigrationContexts.ICreateIndexContext;
 
@@ -24,7 +26,7 @@ public class IndexRunner {
     private final Transformer transformer;
     private final List<String> indexAllowlist;
 
-    public List<String> migrateIndices(ICreateIndexContext context) {
+    public List<String> migrateIndices(MigrationMode mode, ICreateIndexContext context) {
         SnapshotRepo.Provider repoDataProvider = metadataFactory.getRepoDataProvider();
         // TODO - parallelize this, maybe ~400-1K requests per thread and do it asynchronously
 
@@ -39,13 +41,17 @@ public class IndexRunner {
             .map(index -> {
                 var indexMetadata = metadataFactory.fromRepo(snapshotName, index.getName());
                 var transformedRoot = transformer.transformIndexMetadata(indexMetadata);
-                var resultOp = indexCreator.create(transformedRoot, context);
-                resultOp.ifPresentOrElse(
-                    value -> log.info("Index " + index.getName() + " created successfully"),
-                    () -> log.info("Index " + index.getName() + " already existed; no work required")
-                );
-                return index.getName();
+                var created = indexCreator.create(transformedRoot, mode, context);
+                return Map.entry(index.getName(), created);
             })
+            .filter(e -> {
+                var wasNotCreated = !e.getValue();
+                if (wasNotCreated) {
+                    log.warn("Index {} was not created");
+                }
+                return wasNotCreated;
+            })
+            .map(Map.Entry::getKey)
             .collect(Collectors.toList());
     }
 }

@@ -41,6 +41,7 @@ import reactor.util.annotation.Nullable;
 public class RestClient {
     private final ConnectionContext connectionContext;
     private final HttpClient client;
+    private boolean disableWriteOperations;
 
     public static final String READ_METERING_HANDLER_NAME = "REST_CLIENT_READ_METERING_HANDLER";
     public static final String WRITE_METERING_HANDLER_NAME = "REST_CLIENT_WRITE_METERING_HANDLER";
@@ -239,6 +240,10 @@ public class RestClient {
 
     public HttpResponse put(String path, String body, IRfsContexts.IRequestContext context) {
         return putAsync(path, body, context).block();
+    }
+
+    public void disableRightOperations() {
+
     }
 
     private static void removeIfPresent(ChannelPipeline p, String name) {

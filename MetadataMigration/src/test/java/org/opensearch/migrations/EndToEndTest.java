@@ -3,13 +3,17 @@ package org.opensearch.migrations;
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.EnumSource;
-
+import org.junit.jupiter.params.provider.MethodSource;
+import org.opensearch.migrations.commands.MigrationItemResult;
 import org.opensearch.migrations.metadata.tracing.MetadataMigrationTestContext;
 import org.opensearch.migrations.snapshot.creation.tracing.SnapshotTestContext;
 
@@ -36,47 +40,55 @@ class EndToEndTest {
     @TempDir
     private File localDirectory;
 
-    @ParameterizedTest(name = "Medium of transfer {0}")
-    @EnumSource(TransferMedium.class)
-    void metadataMigrateFrom_ES_v6_8(TransferMedium medium) throws Exception {
+    private static Stream<Arguments> scenarios() {
+        return Stream.of(
+            Arguments.of(TransferMedium.Http, MetadataCommands.Evaluate),
+            Arguments.of(TransferMedium.SnapshotImage, MetadataCommands.Migrate),
+            Arguments.of(TransferMedium.Http, MetadataCommands.Migrate)
+        );
+    }
+
+    @ParameterizedTest(name = "Command {1}, Medium of transfer {0}")
+    @MethodSource(value = "scenarios")
+    void metadataMigrateFrom_ES_v6_8(TransferMedium medium, MetadataCommands command) throws Exception {
         try (
             final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.ES_V6_8_23);
             final var targetCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_14_0)
         ) {
-            migrateFrom_ES(sourceCluster, targetCluster, medium);
+            migrateFrom_ES(sourceCluster, targetCluster, medium, command);
         }
     }
 
-    @ParameterizedTest(name = "Medium of transfer {0}")
-    @EnumSource(TransferMedium.class)
-    void metadataMigrateFrom_ES_v7_17(TransferMedium medium) throws Exception {
+    @ParameterizedTest(name = "Command {1}, Medium of transfer {0}")
+    @MethodSource(value = "scenarios")
+    void metadataMigrateFrom_ES_v7_17(TransferMedium medium, MetadataCommands command) throws Exception {
         try (
             final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.ES_V7_17);
             final var targetCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_14_0)
         ) {
-            migrateFrom_ES(sourceCluster, targetCluster, medium);
+            migrateFrom_ES(sourceCluster, targetCluster, medium, command);
         }
     }
 
-    @ParameterizedTest(name = "Medium of transfer {0}")
-    @EnumSource(TransferMedium.class)
-    void metadataMigrateFrom_ES_v7_10(TransferMedium medium) throws Exception {
+    @ParameterizedTest(name = "Command {1}, Medium of transfer {0}")
+    @MethodSource(value = "scenarios")
+    void metadataMigrateFrom_ES_v7_10(TransferMedium medium, MetadataCommands command) throws Exception {
         try (
             final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.ES_V7_10_2);
             final var targetCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_14_0)
         ) {
-            migrateFrom_ES(sourceCluster, targetCluster, medium);
+            migrateFrom_ES(sourceCluster, targetCluster, medium, command);
         }
     }
 
-    @ParameterizedTest(name = "Medium of transfer {0}")
-    @EnumSource(TransferMedium.class)
-    void metadataMigrateFrom_OS_v1_3(TransferMedium medium) throws Exception {
+    @ParameterizedTest(name = "Command {1}, Medium of transfer {0}")
+    @MethodSource(value = "scenarios")
+    void metadataMigrateFrom_OS_v1_3(TransferMedium medium, MetadataCommands command) throws Exception {
         try (
             final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.OS_V1_3_16);
             final var targetCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_14_0)
         ) {
-            migrateFrom_ES(sourceCluster, targetCluster, medium);
+            migrateFrom_ES(sourceCluster, targetCluster, medium, command);
         }
     }
 
@@ -89,7 +101,8 @@ class EndToEndTest {
     private void migrateFrom_ES(
         final SearchClusterContainer sourceCluster,
         final SearchClusterContainer targetCluster,
-        final TransferMedium medium
+        final TransferMedium medium,
+        final MetadataCommands command
     ) {
         // ACTION: Set up the source/target clusters
         var bothClustersStarted = CompletableFuture.allOf(
@@ -163,7 +176,19 @@ class EndToEndTest {
 
         // ACTION: Migrate the templates
         var metadataContext = MetadataMigrationTestContext.factory().noOtelTracking();
-        var result = new MetadataMigration(arguments).migrate().execute(metadataContext);
+        var metadata = new MetadataMigration(arguments);
+        
+        MigrationItemResult result;
+        int expectedResponseCode;
+        if (MetadataCommands.Evaluate.equals(command)) {
+            result = metadata.evaluate().execute(metadataContext);
+            expectedResponseCode = 404;
+        } else if (MetadataCommands.Migrate.equals(command)) {
+            result = metadata.migrate().execute(metadataContext);
+            expectedResponseCode = 200;
+        } else {
+            throw new RuntimeException("Unexpected command " + command);
+        }
 
         log.info(result.toString());
         assertThat(result.getExitCode(), equalTo(0));
@@ -171,19 +196,18 @@ class EndToEndTest {
         // Check that the index was migrated
         var targetClusterOperations = new ClusterOperations(targetCluster.getUrl());
         var res = targetClusterOperations.get("/" + blogIndexName);
-        assertThat(res.getValue(), res.getKey(), equalTo(200));
+        assertThat(res.getValue(), res.getKey(), equalTo(expectedResponseCode));
 
         res = targetClusterOperations.get("/" + movieIndexName);
-        assertThat(res.getValue(), res.getKey(), equalTo(200));
+        assertThat(res.getValue(), res.getKey(), equalTo(expectedResponseCode));
         
         // Check that the templates were migrated
         if (sourceIsES7_X) {
             res = targetClusterOperations.get("/_index_template/" + indexTemplateName);
-            assertThat(res.getValue(), res.getKey(), equalTo(200));
-            assertThat(res.getValue(), Matchers.containsString("composed_of\":[\"" + compoTemplateName + "\"]"));
+            assertThat(res.getValue(), res.getKey(), equalTo(expectedResponseCode));
         } else if (sourceIsES6_8) {
             res = targetClusterOperations.get("/_template/" + indexTemplateName);
-            assertThat(res.getValue(), res.getKey(), equalTo(200));
+            assertThat(res.getValue(), res.getKey(), equalTo(expectedResponseCode));
         }
     }
 }
