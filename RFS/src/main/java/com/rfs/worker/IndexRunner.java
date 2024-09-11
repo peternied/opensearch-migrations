@@ -1,9 +1,7 @@
 package com.rfs.worker;
 
 import java.util.List;
-import java.util.Map;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 import org.opensearch.migrations.MigrationMode;
 import org.opensearch.migrations.metadata.IndexCreator;
@@ -26,7 +24,7 @@ public class IndexRunner {
     private final Transformer transformer;
     private final List<String> indexAllowlist;
 
-    public List<String> migrateIndices(MigrationMode mode, ICreateIndexContext context) {
+    public IndexMetadataResults migrateIndices(MigrationMode mode, ICreateIndexContext context) {
         SnapshotRepo.Provider repoDataProvider = metadataFactory.getRepoDataProvider();
         // TODO - parallelize this, maybe ~400-1K requests per thread and do it asynchronously
 
@@ -35,23 +33,24 @@ public class IndexRunner {
                 log.info("Index " + indexName + " rejected by allowlist");
             }
         };
-        return repoDataProvider.getIndicesInSnapshot(snapshotName)
+        var results = IndexMetadataResults.builder();
+
+        repoDataProvider.getIndicesInSnapshot(snapshotName)
             .stream()
             .filter(FilterScheme.filterIndicesByAllowList(indexAllowlist, logger))
-            .map(index -> {
-                var indexMetadata = metadataFactory.fromRepo(snapshotName, index.getName());
+            .forEach(index -> {
+                var indexName = index.getName();
+                var indexMetadata = metadataFactory.fromRepo(snapshotName, indexName);
                 var transformedRoot = transformer.transformIndexMetadata(indexMetadata);
                 var created = indexCreator.create(transformedRoot, mode, context);
-                return Map.entry(index.getName(), created);
-            })
-            .filter(e -> {
-                var wasNotCreated = !e.getValue();
-                if (wasNotCreated) {
-                    log.warn("Index {} was not created");
+                if (created) {
+                    log.debug("Index " + indexName + " created successfully");
+                    results.indexName(indexName);
+                    transformedRoot.getAliases().fieldNames().forEachRemaining(results::alias);
+                } else {
+                    log.warn("Index " + indexName + " already existed; no work required");
                 }
-                return wasNotCreated;
-            })
-            .map(Map.Entry::getKey)
-            .collect(Collectors.toList());
+            });
+        return results.build();
     }
 }

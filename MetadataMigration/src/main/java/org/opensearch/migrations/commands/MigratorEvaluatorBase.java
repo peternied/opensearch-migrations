@@ -1,7 +1,6 @@
 package org.opensearch.migrations.commands;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import org.opensearch.migrations.MetadataArgs;
 import org.opensearch.migrations.MigrationMode;
@@ -14,6 +13,7 @@ import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
 
 import com.rfs.transformers.TransformFunctions;
 import com.rfs.transformers.Transformer;
+import com.rfs.worker.IndexMetadataResults;
 import com.rfs.worker.IndexRunner;
 import com.rfs.worker.MetadataRunner;
 import lombok.extern.slf4j.Slf4j;
@@ -64,9 +64,10 @@ public abstract class MigratorEvaluatorBase {
         items.indexTemplates(indexTemplates);
         items.componentTemplates(metadataResults.getComponentTemplates());
 
-        var indexes = migrateIndices(migrationMode, clusters, transformer, context);
+        var indexResults = migrateIndices(migrationMode, clusters, transformer, context);
+        items.indexes(indexResults.getIndexNames());
+        items.aliases(indexResults.getAliases());
 
-        items.indexes(indexes);
         return items.build();
     }
 
@@ -82,7 +83,7 @@ public abstract class MigratorEvaluatorBase {
         return metadataResults;
     }
 
-    private List<String> migrateIndices(MigrationMode mode, Clusters clusters, Transformer transformer, RootMetadataMigrationContext context) {
+    private IndexMetadataResults migrateIndices(MigrationMode mode, Clusters clusters, Transformer transformer, RootMetadataMigrationContext context) {
         var indexRunner = new IndexRunner(
             arguments.snapshotName,
             clusters.getSource().getIndexMetadata(),
@@ -90,8 +91,8 @@ public abstract class MigratorEvaluatorBase {
             transformer,
             arguments.dataFilterArgs.indexAllowlist
         );
-        var indexes = indexRunner.migrateIndices(mode, context.createIndexContext());
+        var indexResults = indexRunner.migrateIndices(mode, context.createIndexContext());
         log.info("Index copy complete.");
-        return indexes;
+        return indexResults;
     } 
 }

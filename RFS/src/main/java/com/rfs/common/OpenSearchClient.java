@@ -230,24 +230,24 @@ public class OpenSearchClient {
             .map(c -> c.createCheckRequestContext())
             .orElse(null);
         var getResponse = client.getAsync(objectPath, requestContext)
-        .flatMap(resp -> {
-            if (resp.statusCode == HttpURLConnection.HTTP_NOT_FOUND || resp.statusCode == HttpURLConnection.HTTP_OK) {
-                return Mono.just(resp);
-            } else {
-                String errorMessage = ("Could not create object: "
-                    + objectPath
-                    + ". Response Code: "
-                    + resp.statusCode
-                    + ", Response Message: "
-                    + resp.statusText
-                    + ", Response Body: "
-                    + resp.body);
-                return Mono.error(new OperationFailed(errorMessage, resp));
-            }
-        })
-        .doOnError(e -> log.error(e.getMessage()))
-        .retryWhen(checkIfItemExistsRetryStrategy)
-        .block();
+            .flatMap(resp -> {
+                if (resp.statusCode == HttpURLConnection.HTTP_NOT_FOUND || resp.statusCode == HttpURLConnection.HTTP_OK) {
+                    return Mono.just(resp);
+                } else {
+                    String errorMessage = ("Could not create object: "
+                        + objectPath
+                        + ". Response Code: "
+                        + resp.statusCode
+                        + ", Response Message: "
+                        + resp.statusText
+                        + ", Response Body: "
+                        + resp.body);
+                    return Mono.error(new OperationFailed(errorMessage, resp));
+                }
+            })
+            .doOnError(e -> log.error(e.getMessage()))
+            .retryWhen(checkIfItemExistsRetryStrategy)
+            .block();
 
         assert getResponse != null : ("getResponse should not be null; it should either be a valid response or an exception"
             + " should have been thrown.");

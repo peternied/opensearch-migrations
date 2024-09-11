@@ -5,14 +5,12 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+
 import org.opensearch.migrations.commands.MigrationItemResult;
 import org.opensearch.migrations.metadata.tracing.MetadataMigrationTestContext;
 import org.opensearch.migrations.snapshot.creation.tracing.SnapshotTestContext;
@@ -27,8 +25,12 @@ import com.rfs.worker.SnapshotRunner;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 
 /**
  * Tests focused on setting up whole source clusters, performing a migration, and validation on the target cluster
@@ -119,21 +121,20 @@ class EndToEndTest {
             throw new RuntimeException("This test cannot handle the source cluster version" + sourceVersion);
         }
 
+        var testData = new TestData();
         // Create the component and index templates
         var sourceClusterOperations = new ClusterOperations(sourceCluster.getUrl());
-        var compoTemplateName = "simple_component_template";
-        var indexTemplateName = "simple_index_template";
         if (sourceIsES7_X) {
-            sourceClusterOperations.createES7Templates(compoTemplateName, indexTemplateName, "author", "blog*");
+            sourceClusterOperations.createES7Templates(testData.compoTemplateName, testData.indexTemplateName, "author", "blog*");
         } else if (sourceIsES6_8) {
-            sourceClusterOperations.createES6LegacyTemplate(indexTemplateName, "movies*");
+            sourceClusterOperations.createES6LegacyTemplate(testData.indexTemplateName, "movies*");
         }
 
         // Creates a document that uses the template
-        var blogIndexName = "blog_2023";
-        sourceClusterOperations.createDocument(blogIndexName, "222", "{\"author\":\"Tobias Funke\"}");
-        var movieIndexName = "movies_2023";
-        sourceClusterOperations.createDocument(movieIndexName,"123", "{\"title\":\"This is spinal tap\"}");
+        sourceClusterOperations.createDocument(testData.blogIndexName, "222", "{\"author\":\"Tobias Funke\"}");
+        sourceClusterOperations.createDocument(testData.movieIndexName,"123", "{\"title\":\"This is spinal tap\"}");
+
+        sourceClusterOperations.createAlias(testData.aliasName, "movies*");
 
         var arguments = new MetadataArgs();
 
@@ -168,9 +169,9 @@ class EndToEndTest {
         arguments.targetArgs.host = targetCluster.getUrl();
 
         var dataFilterArgs = new DataFilterArgs();
-        dataFilterArgs.indexAllowlist = List.of(blogIndexName, movieIndexName);
-        dataFilterArgs.componentTemplateAllowlist = List.of(compoTemplateName);
-        dataFilterArgs.indexTemplateAllowlist = List.of(indexTemplateName);
+        dataFilterArgs.indexAllowlist = List.of(testData.blogIndexName, testData.movieIndexName);
+        dataFilterArgs.componentTemplateAllowlist = List.of(testData.compoTemplateName);
+        dataFilterArgs.indexTemplateAllowlist = List.of(testData.indexTemplateName);
         arguments.dataFilterArgs = dataFilterArgs;
 
 
@@ -179,35 +180,78 @@ class EndToEndTest {
         var metadata = new MetadataMigration(arguments);
         
         MigrationItemResult result;
-        int expectedResponseCode;
-        if (MetadataCommands.Evaluate.equals(command)) {
-            result = metadata.evaluate().execute(metadataContext);
-            expectedResponseCode = 404;
-        } else if (MetadataCommands.Migrate.equals(command)) {
+        if (MetadataCommands.Migrate.equals(command)) {
             result = metadata.migrate().execute(metadataContext);
-            expectedResponseCode = 200;
         } else {
-            throw new RuntimeException("Unexpected command " + command);
+            result = metadata.evaluate().execute(metadataContext);
         }
 
+        verifyCommandResults(result, sourceIsES6_8, testData);
+
+        verifyTargetCluster(targetCluster, command, sourceIsES6_8, testData);
+    }
+
+    private static class TestData {
+        final String compoTemplateName = "simple_component_template";
+        final String indexTemplateName = "simple_index_template";
+        final String aliasInTemplate = "alias1";
+        final String blogIndexName = "blog_2023";
+        final String movieIndexName = "movies_2023";
+        final String aliasName = "movies-alias";
+    }
+
+    private void verifyCommandResults(
+        MigrationItemResult result,
+        boolean sourceIsES6_8,
+        TestData testData) {
         log.info(result.toString());
         assertThat(result.getExitCode(), equalTo(0));
 
+        var migratedItems = result.getItems();
+        assertThat(migratedItems.getIndexTemplates(), containsInAnyOrder(testData.indexTemplateName));
+        assertThat(migratedItems.getComponentTemplates(), equalTo(sourceIsES6_8 ? List.of() : List.of(testData.compoTemplateName)));
+        assertThat(migratedItems.getIndexes(), containsInAnyOrder(testData.blogIndexName, testData.movieIndexName));
+        assertThat(migratedItems.getAliases(), containsInAnyOrder(testData.aliasInTemplate, testData.aliasName));
+    }
+
+    private void verifyTargetCluster(
+        SearchClusterContainer targetCluster,
+        MetadataCommands command,
+        boolean sourceIsES6_8,
+        TestData testData
+        ) {
+        var expectUpdatesOnTarget = MetadataCommands.Migrate.equals(command);
+        // If the command was migrate, the target cluster should have the items, if not they
+        var verifyResponseCode = expectUpdatesOnTarget ? equalTo(200) : equalTo(404);
+
         // Check that the index was migrated
         var targetClusterOperations = new ClusterOperations(targetCluster.getUrl());
-        var res = targetClusterOperations.get("/" + blogIndexName);
-        assertThat(res.getValue(), res.getKey(), equalTo(expectedResponseCode));
+        var res = targetClusterOperations.get("/" + testData.blogIndexName);
+        assertThat(res.getValue(), res.getKey(), verifyResponseCode);
 
-        res = targetClusterOperations.get("/" + movieIndexName);
-        assertThat(res.getValue(), res.getKey(), equalTo(expectedResponseCode));
-        
+        res = targetClusterOperations.get("/" + testData.movieIndexName);
+        assertThat(res.getValue(), res.getKey(), verifyResponseCode);
+
+        res = targetClusterOperations.get("/" + testData.aliasName);
+        assertThat(res.getValue(), res.getKey(), verifyResponseCode);
+        if (expectUpdatesOnTarget) {
+            assertThat(res.getValue(), containsString(testData.movieIndexName));
+        }
+
+        res = targetClusterOperations.get("/_aliases");
+        assertThat(res.getValue(), res.getKey(), equalTo(200));
+        var verifyAliasWasListed = allOf(containsString(testData.aliasInTemplate), containsString(testData.aliasName));
+        assertThat(res.getValue(), expectUpdatesOnTarget ? verifyAliasWasListed : not(expectUpdatesOnTarget));
+
         // Check that the templates were migrated
-        if (sourceIsES7_X) {
-            res = targetClusterOperations.get("/_index_template/" + indexTemplateName);
-            assertThat(res.getValue(), res.getKey(), equalTo(expectedResponseCode));
-        } else if (sourceIsES6_8) {
-            res = targetClusterOperations.get("/_template/" + indexTemplateName);
-            assertThat(res.getValue(), res.getKey(), equalTo(expectedResponseCode));
+        if (sourceIsES6_8) {
+            res = targetClusterOperations.get("/_template/" + testData.indexTemplateName);
+            assertThat(res.getValue(), res.getKey(), verifyResponseCode);
+            var verifyBodyHasComponentTemplate = containsString("composed_of\":[\"" + testData.compoTemplateName + "\"]");
+            assertThat(res.getValue(), expectUpdatesOnTarget ? verifyBodyHasComponentTemplate : not(verifyBodyHasComponentTemplate));
+        } else {
+            res = targetClusterOperations.get("/_index_template/" + testData.indexTemplateName);
+            assertThat(res.getValue(), res.getKey(), verifyResponseCode);
         }
     }
 }
