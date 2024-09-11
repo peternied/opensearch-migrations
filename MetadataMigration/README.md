@@ -7,7 +7,7 @@ When performing a migration of a search cluster, the metadata items such as inde
   - [Metadata verification with evaluate command](#metadata-verification-with-evaluate-command)
   - [Metadata migration with migrate command](#metadata-migration-with-migrate-command)
   - [Metadata verification process](#metadata-verification-process)
-- [How does this tool work?](#how-does-this-tool-work)
+- [How the tool works](#how-the-tool-works)
   - [Breaking change compatibility](#breaking-change-compatibility)
     - [Deprecation of Mapping Types](#deprecation-of-mapping-types)
 
@@ -18,15 +18,22 @@ Metadata migration is part of the Migration Assistant and can be accessed throug
 Metadata migration is a relatively fast process to execute so we recommend attempting this workflow as quickly as possible to discover any issues which could impact longer running migration steps.
 
 ### Metadata verification with evaluate command
+
+By scanning the contents of the source cluster, applying filtering, and applying modifications a list of all items that will be migrated will be created.  Any items not seen in this output will not be migrated onto the target cluster if the migrate command was to be run.  This is a safety check before making modifications on the target cluster.
+
 ```shell
 console metadata evaluate
 ```
 
-**Example evaluate command output:**
+<details>
+<summary>
+Example evaluate command output
+</summary>
+
 ```
 Starting Metadata Evaluation
 Clusters:
-   Source:q
+   Source:
       Remote Cluster: OpenSearch 1.3.16 ConnectionContext(uri=http://localhost:33039, protocol=HTTP, insecure=false, compressionSupported=false)
 
    Target:
@@ -50,14 +57,21 @@ Migration Candidates:
 Results:
    0 issue(s) detected
 ```
+</details>
 
 ### Metadata migration with migrate command
+
+Running through the same data as the evaluate command all of the migrated items will be applied onto the target cluster.  If re-run multiple times items that were previously migrated will not be recreated.  If any items do need to be remigrated, please delete them from the target cluster and then rerun the evaluate then migrate commands to ensure the desired changes are made.
 
 ```shell
 console metadata migrate
 ```
 
-**Example migrate command output:**
+<details>
+<summary>
+Example migrate command output
+</summary>
+
 ```
 Starting Metadata Migration
 
@@ -86,12 +100,13 @@ Migrated Items:
 Results:
    0 issue(s) detected
 ```
+</details>
 
 ### Metadata verification process
 
 Before moving on to additional migration steps, it is recommended to confirm details of your cluster.  Depending on your configuration, this could be checking the sharding strategy or making sure index mappings are correctly defined by ingesting a test document.
 
-## How does this tool work?
+## How the tool works
 
 This tool gathers information from a source cluster, through a snapshot or through HTTP requests against the source cluster.  These snapshots are fully compatible with Reindex-From-Snapshot (RFS) scenarios, [learn more](../DocumentsFromSnapshotMigration/README.md).
 
