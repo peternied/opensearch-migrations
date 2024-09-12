@@ -136,6 +136,9 @@ class EndToEndTest {
 
         sourceClusterOperations.createAlias(testData.aliasName, "movies*");
 
+        var aliasName = "movies-alias";
+        sourceClusterOperations.createAlias(aliasName, "movies*");
+
         var arguments = new MetadataArgs();
 
         switch (medium) {
