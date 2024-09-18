@@ -12,6 +12,7 @@ import lombok.Data;
 @Builder
 @Data
 public class Items {
+    static final String NONE_FOUND_MARKER = "<NONE FOUND>";
     public boolean dryRun;
     public List<String> indexTemplates;
     public List<String> componentTemplates;
@@ -42,7 +43,7 @@ public class Items {
 
     private String getPrintableList(List<String> list) {
         if (list == null || list.isEmpty()) {
-            return "<NONE FOUND>";
+            return NONE_FOUND_MARKER;
         }
         return list.stream().sorted().collect(Collectors.joining(", "));
     }
