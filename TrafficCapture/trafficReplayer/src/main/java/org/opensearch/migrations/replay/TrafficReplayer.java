@@ -347,20 +347,16 @@ public class TrafficReplayer {
             // both Log4J and the java builtin loggers add shutdown hooks.
             // The API for addShutdownHook says that those hooks registered will run in an undetermined order.
             // Hence, the reason that this code logs via slf4j logging AND stderr.
-            Optional.of("Running TrafficReplayer Shutdown.  "
-                    + "The logging facilities may also be shutting down concurrently, "
-                    + "resulting in missing logs messages.")
-                .ifPresent(beforeMsg -> {
-                    log.atWarn().setMessage(beforeMsg).log();
-                    System.err.println(beforeMsg);
-                });
+            var beforeMsg = "Running TrafficReplayer Shutdown.  "
+                + "The logging facilities may also be shutting down concurrently, "
+                + "resulting in missing logs messages.";
+            log.atWarn().setMessage(beforeMsg).log();
+            System.err.println(beforeMsg);
             Optional.ofNullable(weakTrafficReplayer.get()).ifPresent(o -> o.shutdown(null));
-            Optional.of("Done shutting down TrafficReplayer (due to Runtime shutdown).  "
-                    + "Logs may be missing for events that have happened after the Shutdown event was received.")
-                .ifPresent(afterMsg -> {
-                    log.atWarn().setMessage(afterMsg).log();
-                    System.err.println(afterMsg);
-                });
+            var afterMsg = "Done shutting down TrafficReplayer (due to Runtime shutdown).  "
+                + "Logs may be missing for events that have happened after the Shutdown event was received.";
+            log.atWarn().setMessage(afterMsg).log();
+            System.err.println(afterMsg);
         }));
     }
 
