@@ -1,0 +1,111 @@
+:mergeJacocoReports
++--- :awsUtilities:jacocoTestReport
+|    +--- :awsUtilities:isolatedTest
+|    +--- :awsUtilities:slowTest
+|    \--- :awsUtilities:test
++--- :commonDependencyVersionConstraints:jacocoTestReport
+|    +--- :commonDependencyVersionConstraints:isolatedTest
+|    +--- :commonDependencyVersionConstraints:slowTest
+|    \--- :commonDependencyVersionConstraints:test
++--- :coreUtilities:jacocoTestReport
+|    +--- :coreUtilities:isolatedTest
+|    +--- :coreUtilities:slowTest
+|    \--- :coreUtilities:test
++--- :CreateSnapshot:jacocoTestReport
+|    +--- :CreateSnapshot:isolatedTest
+|    +--- :CreateSnapshot:slowTest
+|    \--- :CreateSnapshot:test
++--- :dashboardsSanitizer:jacocoTestReport
+|    +--- :dashboardsSanitizer:isolatedTest
+|    +--- :dashboardsSanitizer:slowTest
+|    \--- :dashboardsSanitizer:test
++--- :DocumentsFromSnapshotMigration:jacocoTestReport
+|    +--- :DocumentsFromSnapshotMigration:isolatedTest
+|    +--- :DocumentsFromSnapshotMigration:slowTest
+|    |    \--- :TrafficCapture:dockerSolution:buildDockerImage_elasticsearchTestConsole
+|    \--- :DocumentsFromSnapshotMigration:test
++--- :MetadataMigration:jacocoTestReport
+|    +--- :MetadataMigration:isolatedTest
+|    +--- :MetadataMigration:slowTest
+|    \--- :MetadataMigration:test
++--- :RFS:jacocoTestReport
+|    +--- :RFS:isolatedTest
+|    +--- :RFS:slowTest
+|    \--- :RFS:test
++--- :testHelperFixtures:jacocoTestReport
+|    +--- :testHelperFixtures:isolatedTest
+|    +--- :testHelperFixtures:slowTest
+|    \--- :testHelperFixtures:test
++--- :TrafficCapture:jacocoTestReport
+|    +--- :TrafficCapture:isolatedTest
+|    +--- :TrafficCapture:slowTest
+|    \--- :TrafficCapture:test
++--- :transformation:jacocoTestReport
+|    +--- :transformation:isolatedTest
+|    +--- :transformation:slowTest
+|    \--- :transformation:test
++--- :TrafficCapture:captureKafkaOffloader:jacocoTestReport
+|    +--- :TrafficCapture:captureKafkaOffloader:isolatedTest
+|    +--- :TrafficCapture:captureKafkaOffloader:slowTest
+|    \--- :TrafficCapture:captureKafkaOffloader:test
++--- :TrafficCapture:captureOffloader:jacocoTestReport
+|    +--- :TrafficCapture:captureOffloader:isolatedTest
+|    +--- :TrafficCapture:captureOffloader:slowTest
+|    \--- :TrafficCapture:captureOffloader:test
++--- :TrafficCapture:captureProtobufs:jacocoTestReport
+|    +--- :TrafficCapture:captureProtobufs:isolatedTest
+|    +--- :TrafficCapture:captureProtobufs:slowTest
+|    \--- :TrafficCapture:captureProtobufs:test
++--- :TrafficCapture:dockerSolution:jacocoTestReport
+|    +--- :TrafficCapture:dockerSolution:isolatedTest
+|    +--- :TrafficCapture:dockerSolution:slowTest
+|    \--- :TrafficCapture:dockerSolution:test
++--- :TrafficCapture:nettyWireLogging:jacocoTestReport
+|    +--- :TrafficCapture:nettyWireLogging:isolatedTest
+|    +--- :TrafficCapture:nettyWireLogging:slowTest
+|    \--- :TrafficCapture:nettyWireLogging:test
++--- :TrafficCapture:trafficCaptureProxyServer:jacocoTestReport
+|    +--- :TrafficCapture:trafficCaptureProxyServer:isolatedTest
+|    +--- :TrafficCapture:trafficCaptureProxyServer:slowTest
+|    \--- :TrafficCapture:trafficCaptureProxyServer:test
++--- :TrafficCapture:trafficCaptureProxyServerTest:jacocoTestReport
+|    +--- :TrafficCapture:trafficCaptureProxyServerTest:isolatedTest
+|    +--- :TrafficCapture:trafficCaptureProxyServerTest:slowTest
+|    \--- :TrafficCapture:trafficCaptureProxyServerTest:test
++--- :TrafficCapture:trafficReplayer:jacocoTestReport
+|    +--- :TrafficCapture:trafficReplayer:isolatedTest
+|    +--- :TrafficCapture:trafficReplayer:slowTest
+|    \--- :TrafficCapture:trafficReplayer:test
++--- :TrafficCapture:transformationPlugins:jacocoTestReport
+|    +--- :TrafficCapture:transformationPlugins:isolatedTest
+|    +--- :TrafficCapture:transformationPlugins:slowTest
+|    \--- :TrafficCapture:transformationPlugins:test
++--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jacocoTestReport
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:isolatedTest
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:slowTest
+|    \--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:test
++--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformer:jacocoTestReport
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformer:isolatedTest
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformer:slowTest
+|    \--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformer:test
++--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformerProvider:jacocoTestReport
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformerProvider:isolatedTest
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformerProvider:slowTest
+|    \--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformerProvider:test
++--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformer:jacocoTestReport
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformer:isolatedTest
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformer:slowTest
+|    \--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformer:test
++--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformerProvider:jacocoTestReport
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformerProvider:isolatedTest
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformerProvider:slowTest
+|    \--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformerProvider:test
++--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonMessageTransformerInterface:jacocoTestReport
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonMessageTransformerInterface:isolatedTest
+|    +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonMessageTransformerInterface:slowTest
+|    \--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:jsonMessageTransformerInterface:test
+\--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:openSearch23PlusTargetTransformerProvider:jacocoTestReport
+     +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:openSearch23PlusTargetTransformerProvider:isolatedTest
+     +--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:openSearch23PlusTargetTransformerProvider:slowTest
+     \--- :TrafficCapture:transformationPlugins:jsonMessageTransformers:openSearch23PlusTargetTransformerProvider:test
+ *

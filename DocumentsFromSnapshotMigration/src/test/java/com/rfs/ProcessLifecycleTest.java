@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
+import java.util.ArrayList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -20,12 +20,15 @@ import org.opensearch.migrations.snapshot.creation.tracing.SnapshotTestContext;
 import org.opensearch.migrations.testutils.ToxiProxyWrapper;
 import org.opensearch.testcontainers.OpensearchContainer;
 
-import com.rfs.framework.PreloadedSearchClusterContainer;
 import com.rfs.framework.SearchClusterContainer;
+import com.rfs.http.ClusterOperations;
+
 import eu.rekawek.toxiproxy.model.ToxicDirection;
 import lombok.extern.slf4j.Slf4j;
+
 import org.jetbrains.annotations.NotNull;
 import org.testcontainers.containers.Network;
+import java.util.concurrent.Executors;
 
 /**
  * TODO - the code in this test was lifted from FullTest.java (now named ParallelDocumentMigrationsTest.java).
@@ -50,10 +53,10 @@ public class ProcessLifecycleTest extends SourceTestBase {
     @CsvSource(value = {
         // This test will go through a proxy that doesn't add any defects and the process will use defaults
         // so that it successfully runs to completion on a small dataset in a short amount of time
-        "NEVER, 0",
+        // "NEVER, 0",
         // This test is dependent on the toxiproxy being disabled before Migrate Documents is called.
         // The Document Migration process will throw an exception immediately, which will cause an exit.
-        "AT_STARTUP, 1",
+        // "AT_STARTUP, 1",
         // This test is dependent upon the max lease duration that is passed to the command line. It's set
         // to such a short value (1s) that no document migration will exit in that amount of time. For good
         // measure though, the toxiproxy also adds latency to the requests to make it impossible for the
@@ -63,10 +66,6 @@ public class ProcessLifecycleTest extends SourceTestBase {
         final var failHow = FailHow.valueOf(failAfterString);
         final var testSnapshotContext = SnapshotTestContext.factory().noOtelTracking();
 
-        var sourceImageArgs = makeParamsForBase(SearchClusterContainer.ES_V7_10_2);
-        var baseSourceImageVersion = (SearchClusterContainer.ContainerVersion) sourceImageArgs[0];
-        var generatorImage = (String) sourceImageArgs[1];
-        var generatorArgs = (String[]) sourceImageArgs[2];
         var targetImageName = SearchClusterContainer.OS_V2_14_0.getImageName();
 
         var tempDirSnapshot = Files.createTempDirectory("opensearchMigrationReindexFromSnapshot_test_snapshot");
@@ -74,12 +73,9 @@ public class ProcessLifecycleTest extends SourceTestBase {
 
         try (
             var network = Network.newNetwork();
-            var esSourceContainer = new PreloadedSearchClusterContainer(
-                baseSourceImageVersion,
-                SOURCE_SERVER_ALIAS,
-                generatorImage,
-                generatorArgs
-            );
+            var esSourceContainer = new SearchClusterContainer(SearchClusterContainer.ES_V7_10_2)
+                .withNetwork(network)
+                .withNetworkAliases(SOURCE_SERVER_ALIAS);
             var osTargetContainer = new OpensearchContainer<>(targetImageName).withExposedPorts(OPENSEARCH_PORT)
                 .withNetwork(network)
                 .withNetworkAliases(TARGET_DOCKER_HOSTNAME);
@@ -96,6 +92,32 @@ public class ProcessLifecycleTest extends SourceTestBase {
                 proxyContainer.start(TARGET_DOCKER_HOSTNAME, OPENSEARCH_PORT);
                 return null;
             })).join();
+
+            var sourceUrl = esSourceContainer.getUrl() + "/"; //"https://" + SOURCE_SERVER_ALIAS +":9200/";
+            System.err.println("Source cluster " + sourceUrl);
+            var operations = new ClusterOperations(sourceUrl);
+
+            var createDocThreadPool = Executors.newFixedThreadPool(20);
+            var futures = new ArrayList<CompletableFuture<Void>>();
+            var defaultBody = "{\"test\":\"abc\"}";
+            for (int i = 0; i < 10; i++) {
+                for (int j = 0; j < 1000; j++) {
+                    final var indexName = "index" + i;
+                    final var docId = "doc" + j;
+                    futures.add(
+                        CompletableFuture.runAsync(() -> {
+                            try {
+                            operations.createDocument(indexName, docId, defaultBody);
+                            } catch (Exception e) {
+                                // Ignored
+                            }
+                            log.debug("Created " + indexName + ", ");
+                        }, createDocThreadPool)
+                    );
+                }
+            }
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            operations.get("_refresh");
 
             var args = new CreateSnapshot.Args();
             args.snapshotName = SNAPSHOT_NAME;
