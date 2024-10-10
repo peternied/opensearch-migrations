@@ -22,6 +22,8 @@ public class WorkloadGenerator {
     public void generate(WorkloadOptions options) {
         log.info("Starting document creation");
 
+        // This workflow creates ALL documents in memory, schedules them and waits for completion.
+        // If larger scale is needed remove the toList() calls and stream all data.  
         var allDocs = new ArrayList<CompletableFuture<?>>();
         for (var workload : options.workloads) {
             var workloadInstance = workload.getNewInstance().get();

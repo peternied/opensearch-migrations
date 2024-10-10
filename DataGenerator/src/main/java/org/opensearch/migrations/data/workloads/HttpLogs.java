@@ -90,11 +90,11 @@ public class HttpLogs implements Workload {
      */
     @Override
     public Stream<ObjectNode> createDocs(int numDocs) {
-        var random = new Random(1L);
         var currentTime = System.currentTimeMillis();
 
         return IntStream.range(0, numDocs)
             .mapToObj(i -> {
+                var random = new Random(i);
                 ObjectNode doc = mapper.createObjectNode();
                 doc.put("@timestamp", randomTime(currentTime, random));
                 doc.put("clientip", randomIpAddress(random));

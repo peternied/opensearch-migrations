@@ -3,6 +3,7 @@ package org.opensearch.migrations.data;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+/** Shared ways to build fields for index mappings */
 public class FieldBuilders {
     private static final ObjectMapper mapper = new ObjectMapper();
 

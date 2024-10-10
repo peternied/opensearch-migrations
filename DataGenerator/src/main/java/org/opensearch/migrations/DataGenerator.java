@@ -10,6 +10,7 @@ import com.beust.jcommander.JCommander;
 import lombok.extern.slf4j.Slf4j;
 
 
+/** Command line tool to generate data on a search cluster */
 @Slf4j
 public class DataGenerator {
 
@@ -37,8 +38,8 @@ public class DataGenerator {
         var client = new OpenSearchClient(connectionContext);
 
         var startTimeMillis = System.currentTimeMillis();
-        var workloadGenerator = new WorkloadGenerator();
-        workloadGenerator.generate(client, arguments.workloadOptions);
+        var workloadGenerator = new WorkloadGenerator(client);
+        workloadGenerator.generate(arguments.workloadOptions);
         var generateTimeMillis = System.currentTimeMillis() - startTimeMillis;
 
         log.info("Generation complete, took {}ms", formatMillis(generateTimeMillis));

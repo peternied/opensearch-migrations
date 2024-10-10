@@ -7,6 +7,7 @@ import java.util.Random;
 
 import lombok.experimental.UtilityClass;
 
+/** Shared ways to build random data */
 @UtilityClass
 public class RandomDataBuilders {
     private static final ZoneId UTC_ZONE = ZoneId.of("UTC");

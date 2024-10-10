@@ -118,21 +118,21 @@ public class NycTaxis implements Workload {
      */
     @Override
     public Stream<ObjectNode> createDocs(int numDocs) {
-        var random = new Random(1L);
         var currentTime = System.currentTimeMillis();
 
         return IntStream.range(0, numDocs)
             .mapToObj(i -> {
+                var random = new Random(i);
                 var doc = mapper.createObjectNode();
                 doc.put("total_amount", randomDouble(random, 5.0, 50.0));
                 doc.put("improvement_surcharge", 0.3);
-                doc.set("pickup_location", randomLocation(random));
+                doc.set("pickup_location", randomLocationInNyc(random));
                 doc.put("pickup_datetime", randomTimeISOString(currentTime, random));
                 doc.put("trip_type", randomTripType(random));
                 doc.put("dropoff_datetime", randomTimeISOString(currentTime, random));
                 doc.put("rate_code_id", "1");
                 doc.put("tolls_amount", randomDouble(random, 0.0, 5.0));
-                doc.set("dropoff_location", randomLocation(random));
+                doc.set("dropoff_location", randomLocationInNyc(random));
                 doc.put("passenger_count", random.nextInt(4) + 1);
                 doc.put("fare_amount", randomDouble(random, 5.0, 50.0));
                 doc.put("extra", randomDouble(random, 0.0, 1.0));
@@ -148,7 +148,7 @@ public class NycTaxis implements Workload {
         );
     }
 
-    private static ArrayNode randomLocation(Random random) {
+    private static ArrayNode randomLocationInNyc(Random random) {
         var location = mapper.createArrayNode();
         location.add(randomDouble(random, -74.05, -73.75)); // Longitude
         location.add(randomDouble(random, 40.63, 40.85));   // Latitude

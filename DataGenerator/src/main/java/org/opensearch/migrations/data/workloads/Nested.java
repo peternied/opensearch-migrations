@@ -90,11 +90,11 @@ public class Nested implements Workload {
      */
     @Override
     public Stream<ObjectNode> createDocs(int numDocs) {
-        var random = new Random(1L);
         var currentTime = System.currentTimeMillis();
 
         return IntStream.range(0, numDocs)
             .mapToObj(i -> {
+                var random = new Random(i);
                 var creationTime = randomTime(currentTime, random);
                 var doc = mapper.createObjectNode();
                 doc.put("title", randomTitle(random));
@@ -110,7 +110,7 @@ public class Nested implements Workload {
 
     private static ArrayNode randomAnswers(ObjectMapper mapper, long timeFrom, Random random) {
         var answers = mapper.createArrayNode();
-        var numAnswers = random.nextInt(5) + 1; // 1 to 5
+        var numAnswers = random.nextInt(5) + 1;
 
         for (int i = 0; i < numAnswers; i++) {
             var answer = mapper.createObjectNode();

@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import static org.opensearch.migrations.data.FieldBuilders.createField;
 import static org.opensearch.migrations.data.FieldBuilders.createFieldTextRawKeyword;
+import static org.opensearch.migrations.data.RandomDataBuilders.randomDouble;
 import static org.opensearch.migrations.data.RandomDataBuilders.randomElement;
 
 /**
@@ -114,17 +115,9 @@ public class Geonames implements Workload {
 
     private static ArrayNode randomLocation(Random random) {
         var location = mapper.createArrayNode();
-        location.add(randomLongitude(random));
-        location.add(randomLatitude(random));
+        location.add(randomDouble(random, -180, 180)); // Longitude
+        location.add(randomDouble(random, -90, 90));   // Latitude
         return location;
-    }
-
-    private static double randomLatitude(Random random) {
-        return -90 + (180 * random.nextDouble()); // Latitude range: -90 to +90
-    }
-
-    private static double randomLongitude(Random random) {
-        return -180 + (360 * random.nextDouble()); // Longitude range: -180 to +180
     }
 
     private static String randomCountryCode(Random random) {
