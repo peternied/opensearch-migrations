@@ -41,7 +41,7 @@ export function applyAppRegistry(stack: Stack, stage: string, infraProps: Soluti
             infraProps.solutionName,
             Aws.REGION,
             Aws.ACCOUNT_ID,
-            stage // If your solution supports multiple deployments in the same region, add stage to the application name to make it unique.
+            stage
         ]),
         description: `Service Catalog application to track and manage all your resources for the solution ${infraProps.solutionName}`,
     });
@@ -77,11 +77,7 @@ export class SolutionsInfrastructureStack extends Stack {
 
     constructor(scope: Construct, id: string, props: SolutionsInfrastructureStackProps) {
         super(scope, id, props);
-
-        // CFN template format version
         this.templateOptions.templateFormatVersion = '2010-09-09';
-
-        // CFN Mappings
         new CfnMapping(this, 'Solution', {
             mapping: {
                 Config: {
@@ -104,38 +100,25 @@ export class SolutionsInfrastructureStack extends Stack {
 
         const appRegistryAppARN = applyAppRegistry(this, stageParameter.valueAsString, props)
 
+        if (!props.useExistingVpc) {
+            const vpcIdParam = new CfnParameter(this, 'VpcId', {
+                type: 'AWS::EC2::VPC::Id',
+                description: 'The ID of the existing VPC',
+            });
 
-        let vpc = undefined;
+            const subnetIdsParam = new CfnParameter(this, 'SubnetIds', {
+                type: 'List<AWS::EC2::Subnet::Id>',
+                description: 'List of subnet IDs in the VPC',
+            });
 
-        if (props.useExistingVpc) {
-            // Parameters for VPC details
-            // const vpcIdParam = new CfnParameter(this, 'VpcId', {
-            //     type: 'AWS::EC2::VPC::Id',
-            //     default: 'abc',
-            //     description: 'The ID of the existing VPC',
-            // });
-
-            // const subnetIdsParam = new CfnParameter(this, 'SubnetIds', {
-            //     type: 'List<AWS::EC2::Subnet::Id>',
-            //     default: 'abc',
-            //     description: 'List of subnet IDs in the VPC',
-            // });
-
-            // const availabilityZonesParam = new CfnParameter(this, 'AvailabilityZones', {
-            //     type: 'List<String>',
-            //     default: 'abc',
-            //     description: 'List of availability zones for the subnets',
-            // });
-
-            // Import the VPC
-            // vpc = Vpc.fromVpcAttributes(this, 'ImportedVPC', {
-            //     vpcId: vpcIdParam.valueAsString,
-            //     availabilityZones: this.availabilityZones
-            // });
-
+            const availabilityZonesParam = new CfnParameter(this, 'AvailabilityZones', {
+                type: 'List<String>',
+                description: 'List of availability zones for the subnets',
+            });
+            /** TODO: Figure out how to handle user provided Vpc */
         }
 
-        vpc = new Vpc(this, 'Vpc', {
+        const vpc = new Vpc(this, 'Vpc', {
             // IP space should be customized for use cases that have specific IP range needs
             ipAddresses: IpAddresses.cidr('10.0.0.0/16'),
             maxAzs: 1,
@@ -179,13 +162,13 @@ export class SolutionsInfrastructureStack extends Stack {
         })
 
         var reindexFromSnapshotParam = new CfnParameter(this, "ReindexFromSnapshot", {
-            description: "If the backfill via reindex from snapshot should be enabled in the Migration Console",
+            description: "Backfill via reindex from snapshot is enabled in the Migration Console",
             default: 'Enabled',
             allowedValues: ['Enabled', 'Disabled']
         });
 
         var trafficCaptureReplayerParam = new CfnParameter(this, "TrafficCaptureReplayer", {
-            description: "If the traffic capture and replayer should be enabled in the Migration Console",
+            description: "Traffic capture and replayer is enabled in the Migration Console",
             default: 'Disabled',
             allowedValues: ['Enabled', 'Disabled']
         });
@@ -193,16 +176,15 @@ export class SolutionsInfrastructureStack extends Stack {
         const reindexFromSnapshotEnabledCondition = new CfnCondition(this, 'ReindexFromSnapshotEnabledCondition', {
             expression: Fn.conditionEquals(reindexFromSnapshotParam.valueAsString, 'Enabled'),
         });
-
         const trafficReplayerEnabledCondition = new CfnCondition(this, 'TrafficReplayerEnabledCondition', {
             expression: Fn.conditionEquals(trafficCaptureReplayerParam.valueAsString, 'Enabled'),
         });
 
-        // Step 3: Construct the File Content
         const fileContent = Fn.join('', [
             '{\n',
             '  "migration": {\n',
-            '    "stage": ', stageParameter.valueAsString, ',\n',
+            '    "stage": "', stageParameter.valueAsString, '",\n',
+            '    "vpcId": "', vpc.vpcId, ',\n',
             '    "reindexFromSnapshotServiceEnabled": ', Fn.conditionIf(reindexFromSnapshotEnabledCondition.logicalId, 'true', 'false').toString(), ',\n',
             '    "trafficReplayerServiceEnabled": ', Fn.conditionIf(trafficReplayerEnabledCondition.logicalId, 'true', 'false').toString(), '\n',
             '  }\n',
@@ -216,7 +198,7 @@ export class SolutionsInfrastructureStack extends Stack {
                 mode: "000744"
             }),
             InitCommand.shellCommand("sudo -s /bin/bash /opensearch-migrations/initBootstrap.sh"),
-            InitFile.fromString('/opensearch-migrations/cdk.context.json', fileContent)
+            InitFile.fromString('/opensearch-migrations/cdk.context.json', fileContent) /** TODO: Fix order of operations to import this file directly */
         ]
 
         const bootstrapRole = new Role(this, 'BootstrapRole', {
@@ -234,10 +216,17 @@ export class SolutionsInfrastructureStack extends Stack {
         this.node.findAll()
         .filter(c => c instanceof CfnParameter)
         .forEach(c => {
-            hasher.update((c as CfnParameter).valueAsString);
+            let strValue;
+            try {
+                strValue = (c as CfnParameter).valueAsString;
+            } catch {
+                strValue = (c as CfnParameter).valueAsList.join(",");
+            }
+             
+            hasher.update(strValue);
         });
 
-        const buildMachine = new Instance(this, 'BootstrapEC2Instance', {
+        new Instance(this, 'BootstrapEC2Instance', {
             vpc: vpc,
             instanceName: `bootstrap-${stageParameter.valueAsString}-instance-${hasher.digest('base64')}`,
             instanceType: InstanceType.of(InstanceClass.T3, InstanceSize.LARGE),
@@ -250,7 +239,10 @@ export class SolutionsInfrastructureStack extends Stack {
                 }
             ],
             init: CloudFormationInit.fromElements(...cfnInitConfig),
-            userDataCausesReplacement: true,
+            initOptions: {
+                printLog: true,
+                ignoreFailures: true,
+            }, 
         });
 
         var dynamicEc2ImageParameter = this.node.findAll()
@@ -262,25 +254,32 @@ export class SolutionsInfrastructureStack extends Stack {
             dynamicEc2ImageParameter.overrideLogicalId("LastedAmazonLinuxImageId");
         }
 
+        var parameterGroups = [];
+
+        parameterGroups.push({
+            Label: { default: "Migration Assistant Features" },
+            Parameters: [reindexFromSnapshotParam.logicalId, trafficCaptureReplayerParam.logicalId]
+        });
+
+        if (!props.useExistingVpc) {
+            parameterGroups.push({
+                Label: { default: "Network Options" },
+                Parameters: ['VpcId', 'SubnetIds', 'AvailabilityZones'],
+            });
+        }
+        parameterGroups.push({
+            Label: { default: "Additional parameters" },
+            Parameters: [stageParameter.logicalId]
+        });
+        parameterGroups.push(                    {
+            Label: { default: "System parameters"},
+            Parameters: [dynamicEc2ImageParameter?.logicalId]
+        });
+
         this.templateOptions.metadata = {
             'AWS::CloudFormation::Interface': {
-                ParameterGroups: [
-                    {
-                        Label: { default: "Features" },
-                        Parameters: [reindexFromSnapshotParam.logicalId, trafficCaptureReplayerParam.logicalId]
-                    },
-                    {
-                        Label: { default: "Network Options" },
-                        Parameters: ['VpcId', 'SubnetIds', 'AvailabilityZones'],
-                    },
-                    {
-                        Label: { default: "Additional parameter" },
-                        Parameters: [dynamicEc2ImageParameter?.logicalId]
-                    }
-                ]
+                ParameterGroups: parameterGroups
             }
         }
-
-
     }
 }
