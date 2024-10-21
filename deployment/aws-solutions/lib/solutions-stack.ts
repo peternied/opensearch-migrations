@@ -1,13 +1,8 @@
-// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
-
-import { Aws, CfnCondition, CfnMapping, CfnParameter, CustomResource, Fn, Stack, StackProps, Tags } from 'aws-cdk-lib';
+import { Aws, CfnCondition, CfnMapping, CfnParameter, Fn, Stack, StackProps, Tags } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
     BlockDeviceVolume,
     CloudFormationInit,
-    ISubnet,
-    IVpc,
     InitCommand,
     InitElement,
     InitFile,
@@ -17,15 +12,13 @@ import {
     InstanceType,
     IpAddresses,
     MachineImage,
-    Subnet,
     SubnetType,
     Vpc
 } from "aws-cdk-lib/aws-ec2";
-import { InstanceProfile, ManagedPolicy, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { InstanceProfile, ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { CfnDocument } from "aws-cdk-lib/aws-ssm";
 import { Application, AttributeGroup } from "@aws-cdk/aws-servicecatalogappregistry-alpha";
-import { Code, Function, Runtime } from "aws-cdk-lib/aws-lambda";
-import * as crypto from 'crypto';
+import { createHash } from 'crypto';
 
 export interface SolutionsInfrastructureStackProps extends StackProps {
     readonly solutionId: string;
@@ -161,13 +154,13 @@ export class SolutionsInfrastructureStack extends Stack {
             }
         })
 
-        var reindexFromSnapshotParam = new CfnParameter(this, "ReindexFromSnapshot", {
+        const reindexFromSnapshotParam = new CfnParameter(this, "ReindexFromSnapshot", {
             description: "Backfill via reindex from snapshot is enabled in the Migration Console",
             default: 'Enabled',
             allowedValues: ['Enabled', 'Disabled']
         });
 
-        var trafficCaptureReplayerParam = new CfnParameter(this, "TrafficCaptureReplayer", {
+        const trafficCaptureReplayerParam = new CfnParameter(this, "TrafficCaptureReplayer", {
             description: "Traffic capture and replayer is enabled in the Migration Console",
             default: 'Disabled',
             allowedValues: ['Enabled', 'Disabled']
@@ -212,19 +205,20 @@ export class SolutionsInfrastructureStack extends Stack {
             role: bootstrapRole
         })
 
-        var hasher = crypto.createHash('md5');
+        const hasher = createHash('md5');
         this.node.findAll()
-        .filter(c => c instanceof CfnParameter)
-        .forEach(c => {
-            let strValue;
-            try {
-                strValue = (c as CfnParameter).valueAsString;
-            } catch {
-                strValue = (c as CfnParameter).valueAsList.join(",");
-            }
-             
-            hasher.update(strValue);
-        });
+            .filter((c: any) => c instanceof CfnParameter)
+            .map((c: any) => c as CfnParameter)
+            .forEach((c: CfnParameter) => {
+                let strValue;
+                try {
+                    strValue = c.valueAsString;
+                } catch {
+                    strValue = c.valueAsList.join(",");
+                }
+
+                hasher.update(strValue);
+            });
 
         new Instance(this, 'BootstrapEC2Instance', {
             vpc: vpc,
@@ -242,10 +236,10 @@ export class SolutionsInfrastructureStack extends Stack {
             initOptions: {
                 printLog: true,
                 ignoreFailures: true,
-            }, 
+            },
         });
 
-        var dynamicEc2ImageParameter = this.node.findAll()
+        const dynamicEc2ImageParameter = this.node.findAll()
             .filter(c => c instanceof CfnParameter)
             .filter(c => (c as CfnParameter).type === "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>")
             .pop() as CfnParameter;
@@ -254,7 +248,7 @@ export class SolutionsInfrastructureStack extends Stack {
             dynamicEc2ImageParameter.overrideLogicalId("LastedAmazonLinuxImageId");
         }
 
-        var parameterGroups = [];
+        const parameterGroups = [];
 
         parameterGroups.push({
             Label: { default: "Migration Assistant Features" },
@@ -271,8 +265,8 @@ export class SolutionsInfrastructureStack extends Stack {
             Label: { default: "Additional parameters" },
             Parameters: [stageParameter.logicalId]
         });
-        parameterGroups.push(                    {
-            Label: { default: "System parameters"},
+        parameterGroups.push({
+            Label: { default: "System parameters" },
             Parameters: [dynamicEc2ImageParameter?.logicalId]
         });
 

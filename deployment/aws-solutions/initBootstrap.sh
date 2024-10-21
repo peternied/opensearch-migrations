@@ -37,9 +37,8 @@ done
 
 yum update && yum install -y git java-11-amazon-corretto-devel docker nodejs https://s3.amazonaws.com/session-manager-downloads/plugin/latest/linux_64bit/session-manager-plugin.rpm
 systemctl start docker
-branch=bootstrap
 git init
-git remote | grep "origin" || git remote add -f origin https://github.com/peternied/opensearch-migrations.git
+git remote | grep "origin" || git remote add -f origin https://github.com/opensearch-project/opensearch-migrations.git
 
 if [ -n "$branch" ]; then
   git checkout $branch
