@@ -17,8 +17,8 @@ jobs:
         options: >-
           --health-cmd="curl -s http://localhost:9000/api/system/health | grep -o UP"
           --health-interval=10s
-          --health-timeout=5s
-          --health-retries=30
+          --health-timeout=10s
+          --health-retries=60
         env:
           SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
 
