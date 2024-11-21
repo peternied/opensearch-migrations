@@ -1,0 +1,81 @@
+name: Local SonarQube Analysis
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  sonar:
+    name: Run Local SonarQube Analysis
+    runs-on: ubuntu-latest
+
+    services:
+      sonarqube:
+        image: sonarqube:community
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd="curl -s http://localhost:9000/api/system/health | grep -o UP"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=30
+        env:
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+    - name: Wait for SonarQube to be ready
+      run: |
+        until curl -s http://localhost:9000/api/system/health | grep -o UP; do
+          echo "Waiting for SonarQube to be ready..."
+          sleep 2
+        done
+        echo "SonarQube is ready."
+    - name: Cache SonarQube Scanner
+      uses: actions/cache@v3
+      with:
+        path: ~/.sonar/cache
+        key: sonar-cache
+        restore-keys: sonar-cache
+    - name: Run SonarQube Scanner
+      env:
+        SONAR_HOST_URL: http://localhost:9000
+        SONAR_LOGIN: admin
+        SONAR_PASSWORD: admin
+      run: |
+        curl -sLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+        unzip -q sonar-scanner-cli.zip -d $HOME
+        export PATH="$HOME/sonar-scanner-4.8.0.2856-linux/bin:$PATH"
+        sonar-scanner \
+          -Dsonar.projectKey=local_project \
+          -Dsonar.sources=. \
+          -Dsonar.host.url=$SONAR_HOST_URL \
+          -Dsonar.login=$SONAR_LOGIN
+    - name: Save the reports
+      run: |
+        mkdir -p sonar-reports
+        curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project" -o sonar-reports/issues.json
+
+        echo "SonarQube Issues Cmdline Report:"
+        jq -r '.issues[] | "Type: \(.type), Severity: \(.severity), Message: \(.message), File: \(.component)"' sonar-reports/issues.json
+
+        ISSUE_COUNT=$(jq '.issues | length' issues.json)
+
+        if [ "$ISSUE_COUNT" -gt 0 ]; then
+          echo "❌ Build failed: Found $ISSUE_COUNT issues in the codebase."
+        else
+          echo "✅ No issues found in the codebase."
+        fi
+        
+        curl -s -u admin:admin "$SONAR_HOST_URL/dashboard/index/local_project" -o sonar-reports/sonar-report.html
+        [ "$ISSUE_COUNT" -eq 0 ] || exit 1
+    - name: Upload SonarQube Artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: sonar-reports
+        path: sonar-reports
