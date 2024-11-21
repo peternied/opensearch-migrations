@@ -61,11 +61,11 @@ jobs:
       run: |
         mkdir -p sonar-reports
         curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project" -o sonar-reports/issues.json
+        curl -s -u admin:admin "$SONAR_HOST_URL/dashboard/index/local_project" -o sonar-reports/sonar-report.html
 
         echo "SonarQube Issues Cmdline Report:"
         jq -r '.issues[] | "Type: \(.type), Severity: \(.severity), Message: \(.message), File: \(.component)"' sonar-reports/issues.json
-
-        ISSUE_COUNT=$(jq '.issues | length' issues.json)
+        ISSUE_COUNT=$(jq '.issues | length' sonar-reports/issues.json)
 
         if [ "$ISSUE_COUNT" -gt 0 ]; then
           echo "❌ Build failed: Found $ISSUE_COUNT issues in the codebase."
@@ -73,7 +73,6 @@ jobs:
           echo "✅ No issues found in the codebase."
         fi
         
-        curl -s -u admin:admin "$SONAR_HOST_URL/dashboard/index/local_project" -o sonar-reports/sonar-report.html
         [ "$ISSUE_COUNT" -eq 0 ] || exit 1
     - name: Upload SonarQube Artifacts
       if: always()
