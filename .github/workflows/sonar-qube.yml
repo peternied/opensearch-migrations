@@ -35,20 +35,28 @@ jobs:
         path: ~/.sonar/cache
         key: sonar-cache
         restore-keys: sonar-cache
+    - uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: 8.0.2
+        gradle-home-cache-cleanup: true
+    - name: Run Gradle Build
+      run: ./gradlew copyDependencies
     - name: Run SonarQube Scanner
       env:
         SONAR_HOST_URL: http://localhost:9000
         SONAR_LOGIN: admin
         SONAR_PASSWORD: admin
       run: |
-        curl -sLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+        curl -sLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
         unzip -q sonar-scanner-cli.zip -d $HOME
-        export PATH="$HOME/sonar-scanner-4.8.0.2856-linux/bin:$PATH"
+        export PATH="$HOME/sonar-scanner-6.2.1.4610-linux-x64/bin:$PATH"
         sonar-scanner \
           -Dsonar.projectKey=local_project \
           -Dsonar.sources=. \
           -Dsonar.host.url=$SONAR_HOST_URL \
-          -Dsonar.login=$SONAR_LOGIN
+          -Dsonar.login=$SONAR_LOGIN \
+          -Dsonar.password=$SONAR_PASSWORD
+
     - name: Save the reports
       run: |
         mkdir -p sonar-reports
