@@ -1,12 +1,16 @@
-name: Local SonarQube Analysis
+name: SonarQube Analysis
 
 on:
   push:
   pull_request:
 
+env:
+  java-version: '11'
+  gradle-version: '8.0.2'
+
 jobs:
   sonar:
-    name: Run Local SonarQube Analysis
+    name: Run SonarQube Analysis
     runs-on: ubuntu-latest
 
     services:
@@ -42,10 +46,6 @@ jobs:
     - name: Run Gradle Build
       run: ./gradlew copyDependencies
     - name: Run SonarQube Scanner
-      env:
-        SONAR_HOST_URL: http://localhost:9000
-        SONAR_LOGIN: admin
-        SONAR_PASSWORD: admin
       run: |
         curl -sLo sonar-scanner-cli.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-6.2.1.4610-linux-x64.zip
         unzip -q sonar-scanner-cli.zip -d $HOME
@@ -53,24 +53,23 @@ jobs:
         sonar-scanner \
           -Dsonar.projectKey=local_project \
           -Dsonar.sources=. \
-          -Dsonar.host.url=$SONAR_HOST_URL \
-          -Dsonar.login=$SONAR_LOGIN \
-          -Dsonar.password=$SONAR_PASSWORD
-    - name: Wait for the report to be processed
-      run: sleep 30
-    - name: Collect Issues From SonarQube
+          -Dsonar.host.url=http://localhost:9000 \
+          -Dsonar.login=admin \
+          -Dsonar.password=admin
+    - name: Wait for issues to be processed
+      run: sleep 60
+    - name: Collect issues from the server
       run: |
-        curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project"
         curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project" -o issues.json
         echo "SonarQube Issues Cmdline Report:"
         jq -r '.issues[] | "File: \(.component), Rule: \(.rule), Message: \(.message)"' issues.json | sort
         ISSUE_COUNT=$(jq '.issues | length' issues.json)
 
         if [ "$ISSUE_COUNT" -gt 0 ]; then
-          echo "❌ Build failed: Found $ISSUE_COUNT issues in the codebase."
+          echo "❌ Build failed: Found $ISSUE_COUNT issues."
           exit 1
         else
-          echo "✅ No issues found in the codebase."
+          echo "✅ No issues found."
         fi
     - name: Upload SonarQube Artifacts
       if: always()
