@@ -62,7 +62,6 @@ jobs:
         mkdir -p sonar-reports
         curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project" -o sonar-reports/issues.json
         cat sonar-reports/issues.json | jq > sonar-reports/issues.json
-        curl -s -u admin:admin "http://localhost:9000/dashboard/index/local_project" -o sonar-reports/sonar-report.html
 
         echo "SonarQube Issues Cmdline Report:"
         jq -r '.issues[] | "File: \(.component), Rule: \(.rule), Message: \(.message)"' sonar-reports/issues.json | sort
@@ -70,11 +69,10 @@ jobs:
 
         if [ "$ISSUE_COUNT" -gt 0 ]; then
           echo "❌ Build failed: Found $ISSUE_COUNT issues in the codebase."
+          exit 1
         else
           echo "✅ No issues found in the codebase."
         fi
-        
-        [ "$ISSUE_COUNT" -eq 0 ] || exit 1
     - name: Upload SonarQube Artifacts
       if: always()
       uses: actions/upload-artifact@v3
