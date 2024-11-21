@@ -56,9 +56,11 @@ jobs:
           -Dsonar.host.url=$SONAR_HOST_URL \
           -Dsonar.login=$SONAR_LOGIN \
           -Dsonar.password=$SONAR_PASSWORD
-
+    - name: Wait for the report to be processed
+      run: sleep 30
     - name: Collect Issues From SonarQube
       run: |
+        curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project"
         curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project" -o issues.json
         echo "SonarQube Issues Cmdline Report:"
         jq -r '.issues[] | "File: \(.component), Rule: \(.rule), Message: \(.message)"' issues.json | sort
