@@ -27,7 +27,7 @@ jobs:
       run: |
         until curl -s http://localhost:9000/api/system/health | grep -o UP; do
           echo "Waiting for SonarQube to be ready..."
-          curl -s http://localhost:9000/api/system/health -v
+          curl -s http://localhost:9000/api/system/health -v || true
           sleep 5
         done
         echo "SonarQube is ready."
