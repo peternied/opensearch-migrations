@@ -29,7 +29,7 @@ ENV PROXY_TLS_CONFIG_FILE=$CONFIG_HOME/proxy_tls.yml
 
 # Copy certificates from builder stage
 USER root
-RUN mkdir -p $CONFIG_HOME/certs
+RUN mkdir -p "$CONFIG_HOME"/certs
 COPY --from=cert-builder /certs/ca.pem $CONFIG_HOME/ca.pem
 COPY --from=cert-builder /certs/pub.pem $CONFIG_HOME/pub.pem
 COPY --from=cert-builder /certs/key.pem $CONFIG_HOME/key.pem

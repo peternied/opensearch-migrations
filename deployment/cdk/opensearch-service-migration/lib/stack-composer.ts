@@ -314,7 +314,7 @@ export class StackComposer {
 
         let streamingSourceType
         if (captureProxyServiceEnabled || captureProxyESServiceEnabled || trafficReplayerServiceEnabled || kafkaBrokerServiceEnabled) {
-            streamingSourceType = determineStreamingSourceType(kafkaBrokerServiceEnabled)
+            streamingSourceType = kafkaBrokerServiceEnabled ? StreamingSourceType.KAFKA_ECS : StreamingSourceType.AWS_MSK
         } else {
             streamingSourceType = StreamingSourceType.DISABLED
         }
