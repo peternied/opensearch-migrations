@@ -57,15 +57,12 @@ jobs:
           -Dsonar.login=$SONAR_LOGIN \
           -Dsonar.password=$SONAR_PASSWORD
 
-    - name: Save the reports
+    - name: Collect Issues From SonarQube
       run: |
-        mkdir -p sonar-reports
-        curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project" -o sonar-reports/issues.json
-        cat sonar-reports/issues.json | jq > sonar-reports/issues.json
-
+        curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project" -o issues.json
         echo "SonarQube Issues Cmdline Report:"
-        jq -r '.issues[] | "File: \(.component), Rule: \(.rule), Message: \(.message)"' sonar-reports/issues.json | sort
-        ISSUE_COUNT=$(jq '.issues | length' sonar-reports/issues.json)
+        jq -r '.issues[] | "File: \(.component), Rule: \(.rule), Message: \(.message)"' issues.json | sort
+        ISSUE_COUNT=$(jq '.issues | length' issues.json)
 
         if [ "$ISSUE_COUNT" -gt 0 ]; then
           echo "❌ Build failed: Found $ISSUE_COUNT issues in the codebase."
@@ -78,4 +75,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: sonar-reports
-        path: sonar-reports
+        path: issues.json
