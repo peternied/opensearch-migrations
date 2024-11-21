@@ -14,11 +14,11 @@ jobs:
         image: sonarqube:community
         ports:
           - 9000:9000
-        # options: >-
-        #   --health-cmd="curl -s -u admin:admin http://localhost:9000/api/system/health | grep -o GREEN"
-        #   --health-interval=10s
-        #   --health-timeout=10s
-        #   --health-retries=60
+        options: >-
+          --health-cmd="curl -s -u admin:admin http://localhost:9000/api/system/health | grep -o GREEN"
+          --health-interval=10s
+          --health-timeout=10s
+          --health-retries=60
         env:
           SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
 
@@ -26,16 +26,8 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-java@v3
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'temurin'
-    - name: Wait for SonarQube to be ready
-      run: |
-        until curl -s -u admin:admin http://localhost:9000/api/system/health | grep -o GREEN; do
-          echo "Waiting for SonarQube to be ready..."
-          curl -v -u admin:admin http://localhost:9000/api/system/health || true
-          sleep 2
-        done
-        echo "SonarQube is ready."
     - name: Cache SonarQube Scanner
       uses: actions/cache@v3
       with:
