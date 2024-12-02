@@ -1,8 +1,20 @@
-import { Aws, CfnMapping, CfnParameter, Fn, Stack, StackProps, Tags } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
+import {
+    Aws,
+    CfnMapping,
+    CfnParameter,
+    Fn,
+    Stack,
+    StackProps,
+    Tags
+} from 'aws-cdk-lib';
+import {Construct} from 'constructs';
 import {
     BlockDeviceVolume,
     CloudFormationInit,
+    GatewayVpcEndpoint,
+    GatewayVpcEndpointAwsService,
+    IVpc,
+    GenericLinuxImage,
     InitCommand,
     InitElement,
     InitFile,
@@ -10,21 +22,30 @@ import {
     InstanceClass,
     InstanceSize,
     InstanceType,
-    MachineImage,
+    InterfaceVpcEndpoint,
+    InterfaceVpcEndpointAwsService,
+    IpProtocol,
+    SecurityGroup,
     Vpc
 } from "aws-cdk-lib/aws-ec2";
-import { InstanceProfile, ManagedPolicy, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
-import { CfnDocument } from "aws-cdk-lib/aws-ssm";
-import { Application, AttributeGroup } from "@aws-cdk/aws-servicecatalogappregistry-alpha";
+import {CfnDocument} from "aws-cdk-lib/aws-ssm";
+import {Application, AttributeGroup} from "@aws-cdk/aws-servicecatalogappregistry-alpha";
+import { InstanceProfile, ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 
 export interface SolutionsInfrastructureStackProps extends StackProps {
     readonly solutionId: string;
     readonly solutionName: string;
     readonly solutionVersion: string;
     readonly codeBucket: string;
+    readonly createVPC: boolean;
+    readonly stackNameSuffix?: string;
 }
 
-export function applyAppRegistry(stack: Stack, stage: string, infraProps: SolutionsInfrastructureStackProps): string {
+interface ParameterLabel {
+    default: string;
+}
+
+function applyAppRegistry(stack: Stack, stage: string, infraProps: SolutionsInfrastructureStackProps): string {
     const application = new Application(stack, "AppRegistry", {
         applicationName: Fn.join("-", [
             infraProps.solutionName,
@@ -62,10 +83,39 @@ export function applyAppRegistry(stack: Stack, stage: string, infraProps: Soluti
     return application.applicationArn
 }
 
+function addParameterLabel(labels: Record<string, ParameterLabel>, parameter: CfnParameter, labelName: string) {
+    labels[parameter.logicalId] = {"default": labelName}
+}
+
+function importVPC(stack: Stack, vpdIdParameter: CfnParameter, availabilityZonesParameter: CfnParameter, privateSubnetIdsParameter: CfnParameter): IVpc {
+    const availabilityZones = availabilityZonesParameter.valueAsList
+    const privateSubnetIds = privateSubnetIdsParameter.valueAsList
+    return Vpc.fromVpcAttributes(stack, 'ImportedVPC', {
+        vpcId: vpdIdParameter.valueAsString,
+        availabilityZones: [Fn.select(0, availabilityZones)],
+        privateSubnetIds: [Fn.select(0, privateSubnetIds)]
+    });
+}
+
+function generateExportString(exports:  Record<string, string>): string {
+    return Object.entries(exports)
+        .map(([key, value]) => `export ${key}=${value}`)
+        .join("; ");
+}
+
+function getVpcEndpointForEFS(stack: Stack): InterfaceVpcEndpointAwsService {
+    const isGovRegion = stack.region?.startsWith('us-gov-')
+    if (isGovRegion) {
+        return InterfaceVpcEndpointAwsService.ELASTIC_FILESYSTEM_FIPS;
+    }
+    return InterfaceVpcEndpointAwsService.ELASTIC_FILESYSTEM;
+}
+
 export class SolutionsInfrastructureStack extends Stack {
 
     constructor(scope: Construct, id: string, props: SolutionsInfrastructureStackProps) {
-        super(scope, id, props);
+        const finalId = props.stackNameSuffix ? `${id}-${props.stackNameSuffix}` : id
+        super(scope, finalId, props);
         this.templateOptions.templateFormatVersion = '2010-09-09';
         new CfnMapping(this, 'Solution', {
             mapping: {
@@ -80,15 +130,18 @@ export class SolutionsInfrastructureStack extends Stack {
             lazy: false,
         });
 
+        const importedVPCParameters: string[] = [];
+        const additionalParameters: string[] = [];
+        const parameterLabels: Record<string, ParameterLabel> = {};
         const stageParameter = new CfnParameter(this, 'Stage', {
             type: 'String',
             description: 'Specify the stage identifier which will be used in naming resources, e.g. dev,gamma,wave1',
             default: 'dev',
         });
+        additionalParameters.push(stageParameter.logicalId)
 
         const stackMarker = `${stageParameter.valueAsString}-${Aws.REGION}`;
         const appRegistryAppARN = applyAppRegistry(this, stackMarker, props)
-        const vpc = new Vpc(this, 'Vpc', {});
 
         new CfnDocument(this, "BootstrapShellDoc", {
             name: `BootstrapShellDoc-${stackMarker}`,
@@ -114,12 +167,6 @@ export class SolutionsInfrastructureStack extends Stack {
         })
 
         const solutionsUserAgent = `AwsSolution/${props.solutionId}/${props.solutionVersion}`
-        const cfnInitConfig: InitElement[] = [
-            InitCommand.shellCommand(`echo "export MIGRATIONS_APP_REGISTRY_ARN=${appRegistryAppARN}; export MIGRATIONS_USER_AGENT=${solutionsUserAgent}" > /etc/profile.d/solutionsEnv.sh`),
-            InitFile.fromFileInline("/opensearch-migrations/initBootstrap.sh", './initBootstrap.sh', {
-                mode: "000744"
-            }),
-        ]
 
         const bootstrapRole = new Role(this, 'BootstrapRole', {
             assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
@@ -132,11 +179,107 @@ export class SolutionsInfrastructureStack extends Stack {
             role: bootstrapRole
         })
 
+        let vpc: IVpc;
+        if (props.createVPC) {
+            vpc = new Vpc(this, 'Vpc', {
+                ipProtocol: IpProtocol.DUAL_STACK
+            });
+            // S3 used for storage and retrieval of snapshot data for backfills
+            new GatewayVpcEndpoint(this, 'S3VpcEndpoint', {
+                service: GatewayVpcEndpointAwsService.S3,
+                vpc: vpc,
+            });
+
+            const serviceEndpoints = [
+                // Logs and disk usage scales based on total data transfer
+                InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+                getVpcEndpointForEFS(this),
+
+                // Elastic container registry is used for all images in the solution
+                InterfaceVpcEndpointAwsService.ECR,
+                InterfaceVpcEndpointAwsService.ECR_DOCKER,
+            ];
+
+            serviceEndpoints.forEach(service => {
+                new InterfaceVpcEndpoint(this, `${service.shortName}VpcEndpoint`, {
+                    service,
+                    vpc: vpc,
+                });
+            })
+        }
+        else {
+            const vpcIdParameter = new CfnParameter(this, 'VPCId', {
+                type: 'AWS::EC2::VPC::Id',
+                description: 'Select a VPC, we recommend choosing the VPC of the target cluster.'
+            });
+            addParameterLabel(parameterLabels, vpcIdParameter, "VPC")
+
+            const availabilityZonesParameter = new CfnParameter(this, 'VPCAvailabilityZones', {
+                type: 'List<AWS::EC2::AvailabilityZone::Name>',
+                description: 'Select Availability Zones in the selected VPC. Please provide two zones at least, corresponding with the private subnets selected next.'
+            });
+            addParameterLabel(parameterLabels, availabilityZonesParameter, "Availability Zones")
+
+            const privateSubnetIdsParameter = new CfnParameter(this, 'VPCPrivateSubnetIds', {
+                type: 'List<AWS::EC2::Subnet::Id>',
+                description: 'Select Private Subnets in the selected VPC. Please provide two subnets at least, corresponding with the availability zones selected previously.'
+            });
+            addParameterLabel(parameterLabels, privateSubnetIdsParameter, "Private Subnets")
+            importedVPCParameters.push(vpcIdParameter.logicalId, availabilityZonesParameter.logicalId, privateSubnetIdsParameter.logicalId)
+            vpc = importVPC(this, vpcIdParameter, availabilityZonesParameter, privateSubnetIdsParameter);
+        }
+
+        const exportString = generateExportString({
+            "MIGRATIONS_APP_REGISTRY_ARN": appRegistryAppARN,
+            "MIGRATIONS_USER_AGENT": solutionsUserAgent,
+            "VPC_ID": vpc.vpcId,
+            "STAGE": stageParameter.valueAsString,
+        })
+        const cfnInitConfig: InitElement[] = [
+            InitCommand.shellCommand(`echo "${exportString}" > /etc/profile.d/solutionsEnv.sh`),
+            InitFile.fromFileInline("/opensearch-migrations/initBootstrap.sh", './initBootstrap.sh', {
+                mode: "000744"
+            }),
+        ]
+
+        // Generated with ../create-ami-map.sh
+        const amiMap: Record<string, string> =  {
+            'us-east-2': 'ami-0fae88c1e6794aa17',
+            'us-east-1': 'ami-063d43db0594b521b',
+            'us-west-1': 'ami-05c65d8bb2e35991a',
+            'us-west-2': 'ami-066a7fbea5161f451',
+            'ca-central-1': 'ami-0d13170a36bc1b384',
+            'ap-south-1': 'ami-08bf489a05e916bbd',
+            'sa-east-1': 'ami-065c72b3f381dab73',
+            'eu-north-1': 'ami-04b54ebf295fe01d7',
+            'ap-northeast-1': 'ami-08ce76bae392de7dc',
+            'ap-northeast-2': 'ami-03d31e4041396b53c',
+            'ap-northeast-3': 'ami-0403e868508046e73',
+            'eu-central-1': 'ami-0eddb4a4e7d846d6f',
+            'eu-west-2': 'ami-02f617729751b375a',
+            'eu-west-3': 'ami-0db5e28c1b3823bb7',
+            'eu-west-1': 'ami-03ca36368dbc9cfa1',
+            'ap-southeast-2': 'ami-037a2314eeca55594',
+            'ap-southeast-1': 'ami-08f49baa317796afd',
+        };
+
+        // Manually looked up with https://us-gov-east-1.console.amazonaws-us-gov.com/ec2/home?region=us-gov-east-1#AMICatalog:
+        amiMap['us-gov-west-1'] = 'ami-0e46a6a8d36d6f1f2';
+        amiMap['us-gov-east-1'] = 'ami-0016d10ace091da71';
+
+        const securityGroup = new SecurityGroup(this, 'BootstrapSecurityGroup', {
+            vpc: vpc,
+            allowAllOutbound: true,
+            allowAllIpv6Outbound: true,
+        });
         new Instance(this, 'BootstrapEC2Instance', {
             vpc: vpc,
+            vpcSubnets: {
+                subnets: vpc.privateSubnets,
+            },
             instanceName: `bootstrap-instance-${stackMarker}`,
             instanceType: InstanceType.of(InstanceClass.T3, InstanceSize.LARGE),
-            machineImage: MachineImage.latestAmazonLinux2023(),
+            machineImage: new GenericLinuxImage(amiMap),
             role: bootstrapRole,
             blockDevices: [
                 {
@@ -148,31 +291,25 @@ export class SolutionsInfrastructureStack extends Stack {
             initOptions: {
                 printLog: true,
             },
+            securityGroup
         });
-
-        const dynamicEc2ImageParameter = this.node.findAll()
-            .filter(c => c instanceof CfnParameter)
-            .filter(c => (c as CfnParameter).type === "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>")
-            .pop() as CfnParameter;
-        if (dynamicEc2ImageParameter) {
-            dynamicEc2ImageParameter.description = "Latest Amazon Linux Image Id for the build machine";
-            dynamicEc2ImageParameter.overrideLogicalId("LastedAmazonLinuxImageId");
-            dynamicEc2ImageParameter.noEcho = true;
-        }
 
         const parameterGroups = [];
+        if (importedVPCParameters.length > 0) {
+            parameterGroups.push({
+                Label: { default: "Imported VPC parameters" },
+                Parameters: importedVPCParameters
+            });
+        }
         parameterGroups.push({
             Label: { default: "Additional parameters" },
-            Parameters: [stageParameter.logicalId]
-        });
-        parameterGroups.push({
-            Label: { default: "System parameters" },
-            Parameters: [dynamicEc2ImageParameter?.logicalId]
+            Parameters: additionalParameters
         });
 
         this.templateOptions.metadata = {
             'AWS::CloudFormation::Interface': {
-                ParameterGroups: parameterGroups
+                ParameterGroups: parameterGroups,
+                ParameterLabels: parameterLabels
             }
         }
     }
