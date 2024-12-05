@@ -1,11 +1,11 @@
 'use client';
 
-import { Button } from '@cloudscape-design/components'
+import { Button } from '@cloudscape-design/components';
 
 export default function Page() {
-    return (
-        <div>
-            Hello world page <Button>b1</Button>
-        </div>
-    )
+  return (
+    <div>
+      Hello world page <Button>b1</Button>
+    </div>
+  );
 }

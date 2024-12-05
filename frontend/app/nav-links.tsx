@@ -1,11 +1,10 @@
 'use client';
 import Link from 'next/link';
 
-
 export default function NavLinks() {
-    return (
-      <>
-        {/* {links.map((link) => {
+  return (
+    <>
+      {/* {links.map((link) => {
           const LinkIcon = link.icon;
           return (
             <Link
@@ -18,6 +17,6 @@ export default function NavLinks() {
             </Link>
           );
         })} */}
-      </>
-    );
-  }
+    </>
+  );
+}

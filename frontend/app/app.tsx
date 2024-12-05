@@ -1,13 +1,13 @@
 'use client';
-import { useState } from "react";
-import Header from "@cloudscape-design/components/header";
-import Container from "@cloudscape-design/components/container";
-import SpaceBetween from "@cloudscape-design/components/space-between";
-import Input from "@cloudscape-design/components/input";
-import Button from "@cloudscape-design/components/button";
+import { useState } from 'react';
+import Header from '@cloudscape-design/components/header';
+import Container from '@cloudscape-design/components/container';
+import SpaceBetween from '@cloudscape-design/components/space-between';
+import Input from '@cloudscape-design/components/input';
+import Button from '@cloudscape-design/components/button';
 
 export default function App() {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState('');
 
   return (
     <SpaceBetween size="m">
