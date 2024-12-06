@@ -3,12 +3,9 @@ import React from 'react';
 import {
   AppLayout,
   BreadcrumbGroup,
-  Container,
   ContentLayout,
   Flashbar,
-  Header,
   HelpPanel,
-  Link,
   SideNavigation,
   SplitPanel
 } from '@cloudscape-design/components';
@@ -41,10 +38,10 @@ export default function AppLayoutPreview({
               <SideNavigation
                 header={{
                   href: '#',
-                  text: 'Service name'
+                  text: 'Migration Assistant'
                 }}
                 items={[
-                  { type: 'link', text: `Home`, href: `/` },
+                  { type: 'link', text: `Overview`, href: `/` },
                   { type: 'link', text: `Migrations`, href: `/migration` },
                   {
                     type: 'link',
@@ -68,33 +65,17 @@ export default function AppLayoutPreview({
                 ]}
               />
             }
-            toolsOpen={true}
-            onToolsChange={() => true}
             tools={
               <HelpPanel header={<h2>Overview</h2>}>Help content</HelpPanel>
             }
             content={
-              <ContentLayout
-                header={
-                  <Header variant="h1" info={<Link variant="info">Info</Link>}>
-                    Page header
-                  </Header>
-                }
-              >
-                <Container
-                  header={
-                    <Header variant="h2" description="Container description">
-                      Container header
-                    </Header>
-                  }
-                >
-                  <div className="contentPlaceholder">{children}</div>
-                </Container>
+              <ContentLayout>
+                <div className="contentPlaceholder">{children}</div>
               </ContentLayout>
             }
             splitPanel={
-              <SplitPanel header="Split panel header">
-                Split panel content
+              <SplitPanel header="Migration Status">
+                Migration status details
               </SplitPanel>
             }
           />
