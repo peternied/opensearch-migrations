@@ -10,9 +10,7 @@ from cerberus import Validator
 DOCKER_REPLAY_SCHEMA = {
     "type": "dict",
     "nullable": True,
-    "schema": {
-        "socket": {"type": "string", "required": False}
-    }
+    "schema": {"socket": {"type": "string", "required": False}},
 }
 
 ECS_REPLAY_SCHEMA = {
@@ -20,8 +18,8 @@ ECS_REPLAY_SCHEMA = {
     "schema": {
         "cluster_name": {"type": "string", "required": True},
         "service_name": {"type": "string", "required": True},
-        "aws_region": {"type": "string", "required": False}
-    }
+        "aws_region": {"type": "string", "required": False},
+    },
 }
 
 SCHEMA = {
@@ -30,20 +28,23 @@ SCHEMA = {
         "schema": {
             "docker": DOCKER_REPLAY_SCHEMA,
             "ecs": ECS_REPLAY_SCHEMA,
-            "scale": {"type": "integer", "required": False, "min": 1}
+            "scale": {"type": "integer", "required": False, "min": 1},
         },
-        "check_with": contains_one_of({"docker", "ecs"})
+        "check_with": contains_one_of({"docker", "ecs"}),
     }
 }
 
 
-ReplayStatus = Enum("ReplayStatus", ["NOT_STARTED", "STARTING", "RUNNING", "STOPPED", "FAILED"])
+ReplayStatus = Enum(
+    "ReplayStatus", ["NOT_STARTED", "STARTING", "RUNNING", "STOPPED", "FAILED"]
+)
 
 
 class Replayer(ABC):
     """
     Interface for replaying data from kafka to a target cluster.
     """
+
     def __init__(self, config: Dict) -> None:
         v = Validator(SCHEMA)
         self.config = config

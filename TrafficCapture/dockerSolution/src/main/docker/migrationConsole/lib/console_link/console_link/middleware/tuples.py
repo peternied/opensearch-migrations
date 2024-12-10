@@ -2,6 +2,7 @@ import logging
 import typing
 
 from console_link.models.tuple_reader import TupleReader
+
 logger = logging.getLogger(__name__)
 
 

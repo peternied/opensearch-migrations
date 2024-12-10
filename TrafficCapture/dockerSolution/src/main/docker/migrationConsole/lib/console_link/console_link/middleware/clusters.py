@@ -12,16 +12,31 @@ class ConnectionResult:
     cluster_version: str
 
 
-def call_api(cluster: Cluster, path: str, method=HttpMethod.GET, data=None, headers=None, timeout=None,
-             session=None, raise_error=False):
-    r = cluster.call_api(path=path, method=method, data=data, headers=headers, timeout=timeout, session=session,
-                         raise_error=raise_error)
+def call_api(
+    cluster: Cluster,
+    path: str,
+    method=HttpMethod.GET,
+    data=None,
+    headers=None,
+    timeout=None,
+    session=None,
+    raise_error=False,
+):
+    r = cluster.call_api(
+        path=path,
+        method=method,
+        data=data,
+        headers=headers,
+        timeout=timeout,
+        session=session,
+        raise_error=raise_error,
+    )
     return r
 
 
 def cat_indices(cluster: Cluster, refresh=False, as_json=False):
     if refresh:
-        cluster.call_api('/_refresh')
+        cluster.call_api("/_refresh")
     as_json_suffix = "?format=json" if as_json else "?v=true"
     cat_indices_path = f"/_cat/indices/_all{as_json_suffix}"
     r = cluster.call_api(cat_indices_path)
@@ -39,13 +54,17 @@ def connection_check(cluster: Cluster) -> ConnectionResult:
         logging.debug(f"Unable to access cluster: {cluster} with exception: {e}")
     if caught_exception is None:
         response_json = r.json()
-        return ConnectionResult(connection_message="Successfully connected!",
-                                connection_established=True,
-                                cluster_version=response_json['version']['number'])
+        return ConnectionResult(
+            connection_message="Successfully connected!",
+            connection_established=True,
+            cluster_version=response_json["version"]["number"],
+        )
     else:
-        return ConnectionResult(connection_message=f"Unable to connect to cluster with error: {caught_exception}",
-                                connection_established=False,
-                                cluster_version=None)
+        return ConnectionResult(
+            connection_message=f"Unable to connect to cluster with error: {caught_exception}",
+            connection_established=False,
+            cluster_version=None,
+        )
 
 
 def run_test_benchmarks(cluster: Cluster):
@@ -58,5 +77,9 @@ def run_test_benchmarks(cluster: Cluster):
 # As a default we exclude system indices and searchguard indices
 def clear_indices(cluster: Cluster):
     clear_indices_path = "/*,-.*,-searchguard*,-sg7*,.migrations_working_state"
-    r = cluster.call_api(clear_indices_path, method=HttpMethod.DELETE, params={"ignore_unavailable": "true"})
+    r = cluster.call_api(
+        clear_indices_path,
+        method=HttpMethod.DELETE,
+        params={"ignore_unavailable": "true"},
+    )
     return r.content

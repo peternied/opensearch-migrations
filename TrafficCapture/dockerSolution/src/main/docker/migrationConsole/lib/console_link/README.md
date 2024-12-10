@@ -21,6 +21,7 @@
   - [Development](#development)
     - [Unit Tests](#unit-tests)
     - [Coverage](#coverage)
+    - [GraphQL](#graphql)
 
 The console link library is designed to provide a unified interface for the many possible backend services involved in a migration. The interface can be used by multiple frontends--a CLI app and a web API, for instance.
 
@@ -307,4 +308,19 @@ or generated as HTML:
 
 ```shell
 pipenv run coverage html
+```
+
+
+### GraphQL
+
+Navigate into the correct starting directory
+
+```bash
+cd TrafficCapture/dockerSolution/src/main/docker/migrationConsole/lib/console_link
+```
+
+Start the graphql server
+
+```bash
+python3 console_link/manage.py runserver
 ```

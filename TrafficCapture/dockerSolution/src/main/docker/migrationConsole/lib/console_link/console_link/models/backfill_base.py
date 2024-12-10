@@ -14,18 +14,23 @@ SCHEMA = {
             "opensearch_ingestion": {"type": "dict"},
             "reindex_from_snapshot": {"type": "dict"},
         },
-        "check_with": contains_one_of({"opensearch_ingestion", "reindex_from_snapshot"})
+        "check_with": contains_one_of(
+            {"opensearch_ingestion", "reindex_from_snapshot"}
+        ),
     }
 }
 
 
-BackfillStatus = Enum("BackfillStatus", ["NOT_STARTED", "STARTING", "RUNNING", "STOPPED", "FAILED"])
+BackfillStatus = Enum(
+    "BackfillStatus", ["NOT_STARTED", "STARTING", "RUNNING", "STOPPED", "FAILED"]
+)
 
 
 class Backfill(ABC):
     """
     Interface for backfilling data from a source to target cluster.
     """
+
     def __init__(self, config: Dict) -> None:
         v = Validator(SCHEMA)
         self.config = config

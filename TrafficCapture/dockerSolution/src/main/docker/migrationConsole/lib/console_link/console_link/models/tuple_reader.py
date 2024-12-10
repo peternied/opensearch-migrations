@@ -12,9 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class TupleReader:
-    """ This class is fairly minimal for now. There is likely a future in which multiple
+    """This class is fairly minimal for now. There is likely a future in which multiple
     tuple storage locations/types are supported, but we are not there yet and don't have
     a clear enough vision for it to make sense to frame it out now."""
+
     def __init__(self) -> None:
         # Initialize a TupleReader object.
         pass
@@ -24,7 +25,7 @@ class TupleReader:
         while True:
             try:
                 json.dump(next(transformer), outputfile)
-                outputfile.write('\n')
+                outputfile.write("\n")
             except StopIteration:
                 logger.info("Reached the end of the input object")
                 return
@@ -47,7 +48,7 @@ LIST_COMPONENTS = [TARGET_RESPONSE]
 
 URI_PATH = SOURCE_REQUEST + ".Request-URI"
 
-CONTENT_TYPE_REGEX = re.compile('Content-Type', flags=re.IGNORECASE)
+CONTENT_TYPE_REGEX = re.compile("Content-Type", flags=re.IGNORECASE)
 
 
 class DictionaryPathException(Exception):
@@ -60,16 +61,20 @@ def get_element_with_regex(regex: re.Pattern, dict_: Dict, raise_on_error=False)
         match = next(filter(regex.match, keys))
     except StopIteration:
         if raise_on_error:
-            raise DictionaryPathException(f"An element matching the regex ({regex}) was not found.")
+            raise DictionaryPathException(
+                f"An element matching the regex ({regex}) was not found."
+            )
         return None
-    
+
     return dict_[match]
 
 
-def get_element(element: str, dict_: dict, raise_on_error=False, try_lowercase_keys=False) -> Optional[any]:
+def get_element(
+    element: str, dict_: dict, raise_on_error=False, try_lowercase_keys=False
+) -> Optional[any]:
     """This has a limited version of case-insensitivity. It specifically only checks the provided key
     and an all lower-case version of the key (if `try_lowercase_keys` is True)."""
-    keys = element.split('.')
+    keys = element.split(".")
     rv = dict_
     for key in keys:
         try:
@@ -89,7 +94,7 @@ def get_element(element: str, dict_: dict, raise_on_error=False, try_lowercase_k
 
 
 def set_element(element: str, dict_: dict, value: any) -> None:
-    keys = element.split('.')
+    keys = element.split(".")
     rv = dict_
     for key in keys[:-1]:
         try:
@@ -99,17 +104,21 @@ def set_element(element: str, dict_: dict, value: any) -> None:
     try:
         rv[keys[-1]] = value
     except TypeError:
-        raise DictionaryPathException(f"Path {element} did not reach an assignable object.")
+        raise DictionaryPathException(
+            f"Path {element} did not reach an assignable object."
+        )
 
 
-Flag = Enum('Flag', ['Bulk_Request', 'Json'])
+Flag = Enum("Flag", ["Bulk_Request", "Json"])
 
 
 class TupleComponent:
-    def __init__(self, component_name: str, component: Dict, line_no: int, is_bulk_path: bool):
+    def __init__(
+        self, component_name: str, component: Dict, line_no: int, is_bulk_path: bool
+    ):
         body = get_element("body", component)
         self.value: Union[bytes, str] = body
-        
+
         self.flags = get_flags_for_component(component, is_bulk_path)
 
         self.line_no = line_no
@@ -124,8 +133,10 @@ class TupleComponent:
         try:
             self.value = base64.b64decode(self.value)
         except Exception as e:
-            self.error = (f"Body value of {self.component_name} on line {self.line_no} could not be decoded: {e}."
-                          "Skipping parsing body value.")
+            self.error = (
+                f"Body value of {self.component_name} on line {self.line_no} could not be decoded: {e}."
+                "Skipping parsing body value."
+            )
             logger.debug(self.error)
             logger.debug(self.value)
         return self
@@ -136,8 +147,10 @@ class TupleComponent:
         try:
             self.value = self.value.decode("utf-8")
         except Exception as e:
-            self.error = (f"Body value of {self.component_name} on line {self.line_no} could not be decoded to utf-8: "
-                          f"{e}. Skipping parsing body value.")
+            self.error = (
+                f"Body value of {self.component_name} on line {self.line_no} could not be decoded to utf-8: "
+                f"{e}. Skipping parsing body value."
+            )
             logger.debug(self.error)
             logger.debug(self.value)
         return self
@@ -148,17 +161,21 @@ class TupleComponent:
         if Flag.Json not in self.flags:
             self.final_value = self.value
             return self
-        
+
         if self.value.strip() == "":
             self.final_value = self.value
             return self
 
         if Flag.Bulk_Request in self.flags:
             try:
-                self.final_value = [json.loads(line) for line in self.value.splitlines()]
+                self.final_value = [
+                    json.loads(line) for line in self.value.splitlines()
+                ]
             except Exception as e:
-                self.error = (f"Body value of {self.component_name} on line {self.line_no} should be a bulk json, but "
-                              f"could not be parsed: {e}. Skipping parsing body value.")
+                self.error = (
+                    f"Body value of {self.component_name} on line {self.line_no} should be a bulk json, but "
+                    f"could not be parsed: {e}. Skipping parsing body value."
+                )
                 logger.debug(self.error)
                 logger.debug(self.value)
                 self.final_value = self.value
@@ -166,8 +183,10 @@ class TupleComponent:
             try:
                 self.final_value = json.loads(self.value)
             except Exception as e:
-                self.error = (f"Body value of {self.component_name} on line {self.line_no} should be a json, but "
-                              f"could not be parsed: {e}. Skipping parsing body value.")
+                self.error = (
+                    f"Body value of {self.component_name} on line {self.line_no} should be a json, but "
+                    f"could not be parsed: {e}. Skipping parsing body value."
+                )
                 logger.debug(self.error)
                 logger.debug(self.value)
                 self.final_value = self.value
@@ -177,21 +196,29 @@ class TupleComponent:
 def get_flags_for_component(component: Dict[str, Any], is_bulk_path: bool) -> Set[Flag]:
     content_type = get_element_with_regex(CONTENT_TYPE_REGEX, component)
     is_json = content_type is not None and CONTENT_TYPE_JSON in content_type
-    return {Flag.Json if is_json else None,
-            Flag.Bulk_Request if is_bulk_path else None} - {None}
+    return {
+        Flag.Json if is_json else None,
+        Flag.Bulk_Request if is_bulk_path else None,
+    } - {None}
 
 
 def parse_tuple(line: str, line_no: int) -> dict:
     initial_tuple = json.loads(line)
     try:
-        is_bulk_path = BULK_URI_PATH in get_element(URI_PATH, initial_tuple, raise_on_error=True)
+        is_bulk_path = BULK_URI_PATH in get_element(
+            URI_PATH, initial_tuple, raise_on_error=True
+        )
     except DictionaryPathException as e:
-        logger.error(f"`{URI_PATH}` on line {line_no} could not be loaded: {e} "
-                     f"Skipping parsing tuple.")
+        logger.error(
+            f"`{URI_PATH}` on line {line_no} could not be loaded: {e} "
+            f"Skipping parsing tuple."
+        )
         return initial_tuple
 
     for component in SINGLE_COMPONENTS:
-        tuple_component = TupleComponent(component, initial_tuple[component], line_no, is_bulk_path)
+        tuple_component = TupleComponent(
+            component, initial_tuple[component], line_no, is_bulk_path
+        )
 
         processed_tuple = tuple_component.b64decode().decode_utf8().parse_as_json()
         final_value = processed_tuple.final_value
@@ -202,7 +229,9 @@ def parse_tuple(line: str, line_no: int) -> dict:
 
     for component in LIST_COMPONENTS:
         for i, item in enumerate(initial_tuple[component]):
-            tuple_component = TupleComponent(f"{component} item {i}", item, line_no, is_bulk_path)
+            tuple_component = TupleComponent(
+                f"{component} item {i}", item, line_no, is_bulk_path
+            )
 
             processed_tuple = tuple_component.b64decode().decode_utf8().parse_as_json()
             final_value = processed_tuple.final_value
@@ -210,5 +239,5 @@ def parse_tuple(line: str, line_no: int) -> dict:
                 set_element("body", item, final_value)
             else:
                 logger.error(processed_tuple.error)
-    
+
     return initial_tuple

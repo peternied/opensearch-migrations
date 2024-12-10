@@ -11,7 +11,9 @@ def create(snapshot: Snapshot, *args, **kwargs) -> CommandResult:
         return snapshot.create(*args, **kwargs)
     except Exception as e:
         logger.error(f"Failure running create snapshot: {e}")
-        return CommandResult(success=False, value=f"Failure running create snapshot: {e}")
+        return CommandResult(
+            success=False, value=f"Failure running create snapshot: {e}"
+        )
 
 
 def status(snapshot: Snapshot, *args, **kwargs) -> CommandResult:
@@ -25,4 +27,6 @@ def delete(snapshot: Snapshot, *args, **kwargs) -> CommandResult:
         return CommandResult(success=True, value=snapshot.delete(*args, **kwargs))
     except Exception as e:
         logger.error(f"Failure running delete snapshot: {e}")
-        return CommandResult(success=False, value=f"Failure running delete snapshot: {e}")
+        return CommandResult(
+            success=False, value=f"Failure running delete snapshot: {e}"
+        )

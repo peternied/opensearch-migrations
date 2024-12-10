@@ -19,22 +19,34 @@ def describe(replayer: Replayer, as_json=False) -> Tuple[ExitCode, Dict]:
 handle_replay_errors = partial(handle_errors, service_type="replayer")
 
 
-@handle_replay_errors(on_success=lambda result: (ExitCode.SUCCESS,
-                                                 "Replayer started successfully." + "\n" + result))
+@handle_replay_errors(
+    on_success=lambda result: (
+        ExitCode.SUCCESS,
+        "Replayer started successfully." + "\n" + result,
+    )
+)
 def start(replayer: Replayer, *args, **kwargs) -> CommandResult[str]:
     logger.info("Starting replayer")
     return replayer.start(*args, **kwargs)
 
 
-@handle_replay_errors(on_success=lambda result: (ExitCode.SUCCESS,
-                                                 "Replayer stopped successfully." + "\n" + result))
+@handle_replay_errors(
+    on_success=lambda result: (
+        ExitCode.SUCCESS,
+        "Replayer stopped successfully." + "\n" + result,
+    )
+)
 def stop(replayer: Replayer, *args, **kwargs) -> CommandResult[str]:
     logger.info("Stopping replayer")
     return replayer.stop(*args, **kwargs)
 
 
-@handle_replay_errors(on_success=lambda result: (ExitCode.SUCCESS,
-                                                 "Replayer scaled successfully." + "\n" + result))
+@handle_replay_errors(
+    on_success=lambda result: (
+        ExitCode.SUCCESS,
+        "Replayer scaled successfully." + "\n" + result,
+    )
+)
 def scale(replayer: Replayer, units: int, *args, **kwargs) -> CommandResult[str]:
     logger.info(f"Scaling replayer to {units} units")
     return replayer.scale(units, *args, **kwargs)

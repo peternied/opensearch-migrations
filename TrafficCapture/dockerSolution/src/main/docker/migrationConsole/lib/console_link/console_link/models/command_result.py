@@ -1,7 +1,7 @@
 from typing import Generic, TypeVar
 from dataclasses import dataclass
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 @dataclass
