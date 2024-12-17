@@ -2,6 +2,14 @@ import type { NextConfig } from 'next';
 
 const { execSync } = require('child_process');
 
+function getGitMostRecentTag() {
+  try {
+    return execSync('git describe --tags --abbrev=0 HEAD').toString().trim();
+  } catch (e) {
+    return 'unknown';
+  }
+}
+
 function getGitCommitHash() {
   try {
     return execSync('git rev-parse --short HEAD').toString().trim();
@@ -25,6 +33,7 @@ const nextConfig: NextConfig = {
   ],
   output: 'export',
   env: {
+    COMMIT_RECENT_TAG: getGitMostRecentTag(),
     COMMIT_SHA: getGitCommitHash(),
     COMMIT_DATE: getGitCommitDate(),
   },
