@@ -19,7 +19,7 @@ export default function Page() {
         <SpaceBetween size="s">
         <MigrationAssistantVersion versionIdentifier={commitRecentTag}  />
           <span>
-            Built from commit <code>{commitSha}</code> on{' '} <code>{commitDate.toLocaleDateString()}</code>.
+            Built from commit <a href="https://github.com/opensearch-project/opensearch-migrations/commits/"><code>{commitSha}</code></a> on{' '} <code>{commitDate.toLocaleDateString()}</code>.
           </span>
         </SpaceBetween>
       </Container>
