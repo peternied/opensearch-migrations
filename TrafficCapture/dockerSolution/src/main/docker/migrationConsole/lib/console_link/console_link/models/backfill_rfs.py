@@ -274,13 +274,7 @@ class ECSRFSBackfill(RFSBackfill):
                 f" sum to the incomplete ({values['incomplete']}) shards." + disclaimer
             )
 
-        return "\n".join(
-            [
-                f"Shards {key}: {value}"
-                for key, value in values.items()
-                if value is not None
-            ]
-        )
+        return "\n".join([f"Work items {key}: {value}" for key, value in values.items() if value is not None])
 
 
 def get_working_state_index_backup_path(

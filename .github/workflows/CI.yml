@@ -121,6 +121,24 @@ jobs:
         env:
           OS_MIGRATIONS_GRADLE_SCAN_TOS_AGREE_AND_ENABLED: ''
 
+      - name: Detect Memory Dumps
+        if: failure()
+        run: |
+          if find . -type f -name "*.hprof" | grep -q '.'; then
+            echo "::group::Memory Dumps Detected"
+            echo "::warning::Memory dumps were found and uploaded as artifacts. Review these files to diagnose OOM issues."
+            echo "To download and inspect these files, navigate to 'Actions' -> 'Artifacts'."
+            echo "::endgroup::"
+          fi
+
+      - name: Upload memory dump
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: ignore
+          name: memory-dumps
+          path: ./**/*.hprof
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -161,6 +179,7 @@ jobs:
         uses: ScribeMD/docker-cache@0.5.0
         with:
           key: docker-${{ runner.os }}-${{ steps.generate_cache_key.outputs.key }}
+          read-only: true
       - name: Start Docker Solution
         run: ./gradlew -p TrafficCapture dockerSolution:ComposeUp -x test -x spotlessCheck --info --stacktrace
         env:
