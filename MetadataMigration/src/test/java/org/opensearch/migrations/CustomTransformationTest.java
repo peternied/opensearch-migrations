@@ -193,9 +193,9 @@ class CustomTransformationTest extends BaseMigrationTest {
         "          \"script\": {\n" +
         "            \"operation\": \"modify-overwrite-beta\",\n" +
         "            \"spec\": {\n" +
-        "              \"index\": [\n" +
+        "              \"index\": \n" +
         "                  {\"\\\\_index\": \"transformed_index\"}\n" + 
-        "              ]\n" +
+        "              \n" +
         "            }\n" +
         "          }\n" +
         "        }}\n" +
@@ -216,10 +216,13 @@ class CustomTransformationTest extends BaseMigrationTest {
         log.info(result.asCliOutput());
         assertThat(result.getExitCode(), equalTo(0));
 
+
         // Verify that the transformed index exists on the target cluster
         var res = targetOperations.get("/" + transformedIndexName);
         assertThat(res.getKey(), equalTo(200));
         assertThat(res.getValue(), containsString(transformedIndexName));
+
+        res = targetOperations.get("/_refresh");
 
         res = targetOperations.get("/_search?size=50");
         System.out.println("****\n\n" + res.getValue());
