@@ -1,7 +1,6 @@
 package org.opensearch.migrations.bulkload.common;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -56,10 +55,8 @@ public class DocumentReindexer {
     @SneakyThrows
     BulkDocSection transformDocument(RfsLuceneDocument doc, String indexName) {
         var original = new BulkDocSection(doc.id, indexName, doc.type, doc.source, doc.routing);
-        log.atInfo().setMessage("Original doc {}").addArgument(original.toMap()).log();
         if (transformer != null) {
-            final Map<String,Object> transformedDoc = transformer.transformJson(original.toMap());
-            log.atInfo().setMessage("Transformed doc {}").addArgument(transformedDoc).log();
+            final Object transformedDoc = transformer.transformJson(original.toMap());
             return BulkDocSection.fromMap(transformedDoc);
         }
         return BulkDocSection.fromMap(original.toMap());
