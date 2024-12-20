@@ -169,7 +169,7 @@ class HttpJsonTransformingConsumerTest extends InstrumentationTest {
         String redactBody = "{ " +
             "    \"operation\": \"modify-overwrite-beta\", " +
             "    \"spec\": { " +
-            "       \"payload\": { " +
+            "       \"payload\": { " +  
             "         \"inlinedTextBody\": \"ReplacedPlainText\" " +
             "       } " +
             "   } " +

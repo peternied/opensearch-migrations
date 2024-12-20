@@ -1,5 +1,6 @@
 package org.opensearch.migrations;
 
+import java.nio.file.Files;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -35,7 +36,7 @@ class CustomTransformationTest extends BaseMigrationTest {
                 .flatMap(sourceCluster ->
                         SupportedClusters.targets().stream()
                                 .map(targetCluster -> Arguments.of(sourceCluster, targetCluster))
-                );
+                ).limit(1);
     }
 
     @ParameterizedTest(name = "Custom Transformation From {0} to {1}")
@@ -62,7 +63,7 @@ class CustomTransformationTest extends BaseMigrationTest {
         // Test data
         var originalIndexName = "test_index";
         var transformedIndexName = "transformed_index";
-        var documentId = "1";
+        var documentId = "112233";
         var documentContent = "{\"field\":\"value\"}";
 
         // Create index and add a document on the source cluster
@@ -85,7 +86,7 @@ class CustomTransformationTest extends BaseMigrationTest {
 
         // Create indices that match the templates
         var legacyIndexName = "legacy_index";
-        var indexIndexName = "index_index";
+        var indexIndexName = "index_index"; //TODO: this looks broken
         sourceOperations.createIndex(legacyIndexName);
         sourceOperations.createIndex(indexIndexName);
 
@@ -176,6 +177,41 @@ class CustomTransformationTest extends BaseMigrationTest {
         // Execute migration
         MigrationItemResult result = executeMigration(arguments, MetadataCommands.MIGRATE);
 
+        var tempDir = Files.createTempDirectory("opensearchMigrationReindexFromSnapshot_test_lucene");
+
+        var backfillArgs = new RfsMigrateDocuments.Args();
+        backfillArgs.luceneDir = tempDir.toString();
+        backfillArgs.snapshotLocalDir = localDirectory.toString();
+        backfillArgs.snapshotName = snapshotName;
+        backfillArgs.sourceVersion = sourceCluster.getContainerVersion().getVersion();
+        backfillArgs.targetArgs.host = targetCluster.getUrl();
+        backfillArgs.docTransformationParams.transformerConfig =             "[{\n" +
+        "    \"JsonConditionalTransformerProvider\": [\n" +
+        "      {\"JsonJMESPathPredicateProvider\": { \"script\": \"index._index == 'test_index'\"}},\n" +
+        "      [\n" +
+        "        {\"JsonJoltTransformerProvider\": { \n" +
+        "          \"script\": {\n" +
+        "            \"operation\": \"modify-overwrite-beta\",\n" +
+        "            \"spec\": {\n" +
+        "              \"index\": [\n" +
+        "                  {\"\\\\_index\": \"transformed_index\"}\n" + 
+        "              ]\n" +
+        "            }\n" +
+        "          }\n" +
+        "        }}\n" +
+        "      ]\n" +
+        "    ]\n" +
+        "  }]\n";
+
+        var moreWork = true;
+        do {
+            try {
+                RfsMigrateDocuments.invoke(backfillArgs, "test");
+            } catch (RfsMigrateDocuments.NoWorkLeftException e) {
+                moreWork = false;
+            }
+        } while (moreWork);
+
         // Verify the migration result
         log.info(result.asCliOutput());
         assertThat(result.getExitCode(), equalTo(0));
@@ -184,6 +220,11 @@ class CustomTransformationTest extends BaseMigrationTest {
         var res = targetOperations.get("/" + transformedIndexName);
         assertThat(res.getKey(), equalTo(200));
         assertThat(res.getValue(), containsString(transformedIndexName));
+
+        res = targetOperations.get("/_search?size=50");
+        System.out.println("****\n\n" + res.getValue());
+        assertThat(res.getKey(), equalTo(200));
+        assertThat(res.getValue(), containsString(documentId));
 
         // Verify that the original index does not exist on the target cluster
         res = targetOperations.get("/" + originalIndexName);

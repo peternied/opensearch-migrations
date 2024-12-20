@@ -168,7 +168,7 @@ public class RfsMigrateDocuments {
         public Version sourceVersion = Version.fromString("ES 7.10");
 
         @ParametersDelegate
-        private DocParams docTransformationParams = new DocParams();
+        public DocParams docTransformationParams = new DocParams();
     }
 
     @Getter
@@ -184,7 +184,7 @@ public class RfsMigrateDocuments {
                 arity = 1,
                 description = "Configuration of doc transformers.  The same contents as --doc-transformer-config but " +
                         "Base64 encoded so that the configuration is easier to pass as a command line parameter.")
-        private String transformerConfigEncoded;
+        public String transformerConfigEncoded;
 
         @Parameter(
                 required = false,
@@ -195,14 +195,14 @@ public class RfsMigrateDocuments {
                         + "as well as multiple transformers to run in sequence.  "
                         + "For json, keys are the (simple) names of the loaded transformers and values are the "
                         + "configuration passed to each of the transformers.")
-        private String transformerConfig;
+        public String transformerConfig;
 
         @Parameter(
                 required = false,
                 names = "--" + DOC_CONFIG_PARAMETER_ARG_PREFIX + "transformer-config-file",
                 arity = 1,
                 description = "Path to the JSON configuration file of doc transformers.")
-        private String transformerConfigFile;
+        public String transformerConfigFile;
     }
 
     public static class NoWorkLeftException extends Exception {
@@ -252,6 +252,19 @@ public class RfsMigrateDocuments {
 
         validateArgs(arguments);
 
+        try {
+            invoke(arguments, workerId);
+        } catch (NoWorkLeftException e) {
+            log.atWarn().setMessage("No work left to acquire.  Exiting with error code to signal that.").log();
+            System.exit(NO_WORK_LEFT_EXIT_CODE);
+        } catch (Exception e) {
+            log.atError().setCause(e).setMessage("Unexpected error running RfsWorker").log();
+            throw e;
+        }
+
+    }
+
+    public static void invoke(Args arguments, String workerId) throws NoWorkLeftException, Exception {
         var context = makeRootContext(arguments, workerId);
         var luceneDirPath = Paths.get(arguments.luceneDir);
         var snapshotLocalDirPath = arguments.snapshotLocalDir != null ? Paths.get(arguments.snapshotLocalDir) : null;
@@ -317,12 +330,6 @@ public class RfsMigrateDocuments {
                 unpackerFactory,
                 arguments.maxShardSizeBytes,
                 context);
-        } catch (NoWorkLeftException e) {
-            log.atWarn().setMessage("No work left to acquire.  Exiting with error code to signal that.").log();
-            System.exit(NO_WORK_LEFT_EXIT_CODE);
-        } catch (Exception e) {
-            log.atError().setCause(e).setMessage("Unexpected error running RfsWorker").log();
-            throw e;
         }
     }
 

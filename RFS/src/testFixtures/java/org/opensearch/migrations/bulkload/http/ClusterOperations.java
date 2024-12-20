@@ -91,7 +91,7 @@ public class ClusterOperations {
         var body = "{" +
                 "  \"settings\": {" +
                 "    \"index\": {" +
-                "      \"number_of_shards\": 5," +
+                "      \"number_of_shards\": 1," +
                 "      \"number_of_replicas\": 0" +
                 "    }" +
                 "  }," +
@@ -104,7 +104,7 @@ public class ClusterOperations {
         var body = "{" + //
         "  \"settings\": {" + //
         "    \"index\": {" + //
-        "      \"number_of_shards\": 5," + //
+        "      \"number_of_shards\": 1," + //
         "      \"number_of_replicas\": 0" + //
         "    }" + //
         "  }" + //

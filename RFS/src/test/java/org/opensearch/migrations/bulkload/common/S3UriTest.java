@@ -2,6 +2,7 @@ package org.opensearch.migrations.bulkload.common;
 
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -22,6 +23,7 @@ public class S3UriTest {
     @MethodSource("provideUris")
     void S3Uri_AsExpected(String uri, String expectedBucketName, String expectedPrefix, String expectedUri) {
         S3Uri s3Uri = new S3Uri(uri);
+        System.out.println(s3Uri);
         assertEquals(expectedBucketName, s3Uri.bucketName);
         assertEquals(expectedPrefix, s3Uri.key);
         assertEquals(expectedUri, s3Uri.uri);
