@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.opensearch.migrations.CreateSnapshot;
-import org.opensearch.migrations.bulkload.common.OpenSearchClient;
+import org.opensearch.migrations.bulkload.common.OpenSearchClientFactory;
 import org.opensearch.migrations.bulkload.common.http.ConnectionContextTestParams;
 import org.opensearch.migrations.bulkload.framework.SearchClusterContainer;
 import org.opensearch.migrations.bulkload.http.ClusterOperations;
@@ -84,7 +84,8 @@ public class LeaseExpirationTest extends SourceTestBase {
             proxyContainer.start("target", 9200);
 
             // Populate the source cluster with data
-            var client = new OpenSearchClient(ConnectionContextTestParams.builder()
+            var clientFactory = new OpenSearchClientFactory(null);
+            var client = clientFactory.get(ConnectionContextTestParams.builder()
                 .host(esSourceContainer.getUrl())
                 .build()
                 .toConnectionContext()
