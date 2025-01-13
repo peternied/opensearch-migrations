@@ -84,12 +84,11 @@ public class LeaseExpirationTest extends SourceTestBase {
             proxyContainer.start("target", 9200);
 
             // Populate the source cluster with data
-            var clientFactory = new OpenSearchClientFactory(null);
-            var client = clientFactory.get(ConnectionContextTestParams.builder()
-                .host(esSourceContainer.getUrl())
-                .build()
-                .toConnectionContext()
-            );
+            var clientFactory = new OpenSearchClientFactory(ConnectionContextTestParams.builder()
+                    .host(esSourceContainer.getUrl())
+                    .build()
+                    .toConnectionContext());
+            var client = clientFactory.determineVersionAndCreate();
             var generator = new WorkloadGenerator(client);
             var workloadOptions = new WorkloadOptions();
 
