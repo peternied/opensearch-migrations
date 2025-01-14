@@ -11,7 +11,7 @@ function getGitCommitHash() {
 }
 
 function getGitCommitDate() {
-    return execOrUnknown('git show -s --format=%ci HEAD');
+  return execOrUnknown('git show -s --format=%ci HEAD');
 }
 
 function execOrUnknown(command: string) {
@@ -31,8 +31,8 @@ const nextConfig: NextConfig = {
   env: {
     COMMIT_RECENT_TAG: getGitMostRecentTag(),
     COMMIT_SHA: getGitCommitHash(),
-    COMMIT_DATE: getGitCommitDate(),
-  },
+    COMMIT_DATE: getGitCommitDate()
+  }
 };
 
 export default nextConfig;
