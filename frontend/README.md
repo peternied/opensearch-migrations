@@ -1,8 +1,15 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+## Migration Assistant Frontend
+This project contains all the frontend components for the Migration Assistant.  Deployed alongside the Migration Assistant, this website provide a graphical user interface to customers so they can monitor, update, and complete a migration. 
 
-First, run the development server:
+- [Migration Assistant Frontend](#migration-assistant-frontend)
+- [Start the Frontend](#start-the-frontend)
+- [Deployment](#deployment)
+- [Configuration](#configuration)
+
+## Start the Frontend
+
+Run the development server:
 
 ```bash
 npm run dev
@@ -10,21 +17,18 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> !Note
+> Not yet available for deployment
 
-## Learn More
+In production scenarios the frontend is deployed with the same process as the Migration Console.  By using the [Solutions Deployment](../deployment/migration-assistant-solution/README.md) it will be deployed to the AWS Cloud.
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Configuration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+To communicate with the backend systems the endpoint needs to be known before starting the development server, it is set through the environment variable
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+set MA_CONSOLE_API_URL=https://localhost:8000
+```

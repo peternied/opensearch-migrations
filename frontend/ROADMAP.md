@@ -29,4 +29,3 @@ This experience keeps the CLI for Migration Assistant prominently featured, all 
 
 ##### Negatives  
 - Replayer scenarios will wait longer before seeing investment
-- 
