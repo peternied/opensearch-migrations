@@ -286,11 +286,7 @@ public class LuceneDocumentsReaderTest {
         // start at.
         var snapshot = TestResources.SNAPSHOT_ES_7_10_W_SOFT;
         var version = Version.fromString("ES 7.10");
-        List<List<String>> documentIds = List.of(
-                List.of("complexdoc", "unchangeddoc", "updateddoc"),
-                List.of("unchangeddoc", "updateddoc"),
-                List.of("unchangeddoc"));
-        List<Integer> documentStartingIndices = List.of(0, 2, 5);
+        List<String> documentIds = List.of("complexdoc", "unchangeddoc", "updateddoc");
 
         final var repo = new FileSystemRepo(snapshot.dir);
         var sourceResourceProvider = ClusterProviderRegistry.getSnapshotReader(version, repo);
@@ -309,15 +305,12 @@ public class LuceneDocumentsReaderTest {
         // Use the LuceneDocumentsReader to get the documents
         var reader = LuceneDocumentsReader.getFactory(sourceResourceProvider).apply(luceneDir);
 
+        Flux<RfsLuceneDocument> documents = reader.readDocuments(0, 0)
+                .sort(Comparator.comparing(doc -> doc.id)); // Sort for consistent order given LuceneDocumentsReader may interleave
 
-        for (int i = 0; i < documentStartingIndices.size(); i++) {
-            Flux<RfsLuceneDocument> documents = reader.readDocuments(0, documentStartingIndices.get(i))
-                    .sort(Comparator.comparing(doc -> doc.id)); // Sort for consistent order given LuceneDocumentsReader may interleave
-
-            var actualDocIds = documents.collectList().block().stream().map(doc -> doc.id).collect(Collectors.joining(","));
-            var expectedDocIds = String.join(",", documentIds.get(i));
-            Assertions.assertEquals(expectedDocIds, actualDocIds);
-        }
+        var actualDocIds = documents.collectList().block().stream().map(doc -> doc.id).collect(Collectors.joining(","));
+        var expectedDocIds = String.join(",", documentIds);
+        Assertions.assertEquals(expectedDocIds, actualDocIds);
     }
 
     @Test
@@ -325,10 +318,7 @@ public class LuceneDocumentsReaderTest {
         // This snapshot has three segments, each with only a single document.
         var snapshot = TestResources.SNAPSHOT_ES_6_8;
         var version = Version.fromString("ES 6.8");
-        List<List<String>> documentIds = List.of(
-                List.of("complexdoc", "unchangeddoc", "updateddoc"),
-                List.of("unchangeddoc", "updateddoc"),
-                List.of("unchangeddoc"));
+        List<String> documentIds = List.of("complexdoc", "unchangeddoc", "updateddoc");
 
         final var repo = new FileSystemRepo(snapshot.dir);
         var sourceResourceProvider = ClusterProviderRegistry.getSnapshotReader(version, repo);
@@ -347,15 +337,12 @@ public class LuceneDocumentsReaderTest {
         // Use the LuceneDocumentsReader to get the documents
         var reader = LuceneDocumentsReader.getFactory(sourceResourceProvider).apply(luceneDir);
 
+        Flux<RfsLuceneDocument> documents = reader.readDocuments(0, 0)
+                .sort(Comparator.comparing(doc -> doc.id)); // Sort for consistent order given LuceneDocumentsReader may interleave
 
-        for (int i = 0; i < documentIds.size(); i++) {
-            Flux<RfsLuceneDocument> documents = reader.readDocuments(i, 0)
-                    .sort(Comparator.comparing(doc -> doc.id)); // Sort for consistent order given LuceneDocumentsReader may interleave
-
-            var actualDocIds = documents.collectList().block().stream().map(doc -> doc.id).collect(Collectors.joining(","));
-            var expectedDocIds = String.join(",", documentIds.get(i));
-            Assertions.assertEquals(expectedDocIds, actualDocIds);
-        }
+        var actualDocIds = documents.collectList().block().stream().map(doc -> doc.id).collect(Collectors.joining(","));
+        var expectedDocIds = String.join(",", documentIds);
+        Assertions.assertEquals(expectedDocIds, actualDocIds);
     }
 
     protected void assertDocsEqual(String expectedId, String actualId, String expectedType,

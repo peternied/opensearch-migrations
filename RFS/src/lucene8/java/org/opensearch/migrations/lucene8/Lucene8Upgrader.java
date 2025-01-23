@@ -9,13 +9,15 @@ import org.apache.lucene.util.InfoStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.IndexWriterConfig;
 
+import org.opensearch.migrations.LuceneUpgrader;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 
-public class Lucene8Upgrader {
+public class Lucene8Upgrader implements LuceneUpgrader {
 
-    public void upgradeIndex(String indexPath) throws IOException {
+    public void upgradeIndex(String indexPath) {
         try (var dir = FSDirectory.open(Paths.get(indexPath))) {
             var analyzer = new StandardAnalyzer();
             var config = new IndexWriterConfig(analyzer);

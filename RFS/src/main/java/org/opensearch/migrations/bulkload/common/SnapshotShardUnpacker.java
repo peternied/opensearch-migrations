@@ -3,16 +3,16 @@ package org.opensearch.migrations.bulkload.common;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.opensearch.migrations.LuceneUpgrader;
 import org.opensearch.migrations.bulkload.models.ShardFileInfo;
 import org.opensearch.migrations.bulkload.models.ShardMetadata;
 
@@ -99,117 +99,52 @@ public class SnapshotShardUnpacker {
                 e
             );
         }
-        printShards(luceneIndexDir, 1);
-        var lucene6Jars = getJarUrls("lucene6");
-        try (var lucene6Loader = new URLClassLoader(lucene6Jars, null)) {
-            var upgraderClass = lucene6Loader.loadClass("org.opensearch.migrations.lucene6.Lucene6Upgrader");
-            var upgraderInstance = upgraderClass.getDeclaredConstructor().newInstance();
-
-            var method = upgraderClass.getMethod("upgradeIndex", String.class);
-            method.invoke(upgraderInstance, luceneIndexDir.toString());
-        } catch (Exception e) {
-            log.atInfo().setMessage("Unable to upgrade with lucene6").setCause(e).log();
-        }
-
-        printShards(luceneIndexDir, 2);
-        var lucene7Jars = getJarUrls("lucene7");
-        try (var lucene7Loader = new URLClassLoader(lucene7Jars, null)) {
-            var upgraderClass = lucene7Loader.loadClass("org.opensearch.migrations.lucene7.Lucene7Upgrader");
-            var upgraderInstance = upgraderClass.getDeclaredConstructor().newInstance();
-
-            var method = upgraderClass.getMethod("upgradeIndex", String.class);
-            method.invoke(upgraderInstance, luceneIndexDir.toString());
-        } catch (Exception e) {
-            log.atInfo().setMessage("Unable to upgrade with lucene7").setCause(e).log();
-        }
-
-        printShards(luceneIndexDir, 3);
-        var lucene8Jars = getJarUrls("lucene8");
-        try (var lucene8Loader = new URLClassLoader(lucene8Jars, null)) {
-            var upgraderClass = lucene8Loader.loadClass("org.opensearch.migrations.lucene8.Lucene8Upgrader");
-            var upgraderInstance = upgraderClass.getDeclaredConstructor().newInstance();
-
-            var method = upgraderClass.getMethod("upgradeIndex", String.class);
-            method.invoke(upgraderInstance, luceneIndexDir.toString());
-        } catch (Exception e) {
-            log.atInfo().setMessage("Unable to upgrade with lucene8").setCause(e).log();
-        }
-
-        printShards(luceneIndexDir, 4);
+        
+        upgradeWithLuceneVersion("lucene6", luceneIndexDir);
+        upgradeWithLuceneVersion("lucene7", luceneIndexDir);
+        upgradeWithLuceneVersion("lucene8", luceneIndexDir);
         return luceneIndexDir;
     }
 
-    @SneakyThrows
-    private void printShards(Path indexDir, int num) {
-        var dir = new File(indexDir.toString());
-        var files = dir.listFiles((d, name) -> true);
-        var newDir = new File(dir.getAbsolutePath() + "/" + num);
-        newDir.mkdir();
-  
-        copyDirectory(indexDir, Path.of(indexDir.toString(), "..", "copy_"+num));
-        log.atInfo()
-            .setMessage("shard files: {}")
-            .addArgument(files)
-            .log();
+    private void upgradeWithLuceneVersion(String version, Path indexDir) {
+        var luceneJars = getJarUrls(version);
+        try (var classLoader = new URLClassLoader(luceneJars, Thread.currentThread().getContextClassLoader())) {
+            Thread.currentThread().setContextClassLoader(classLoader);
+            for (URL url : classLoader.getURLs()) {
+                System.out.println("Loaded URL: " + url);
+            }
+            var upgraderClass = classLoader.loadClass("org.opensearch.migrations." + version + ".Lucene" + version.substring(version.length() - 1) + "Upgrader");
+            var upgraderInstance = (LuceneUpgrader) upgraderClass.getDeclaredConstructor().newInstance();
+
+            upgraderInstance.upgradeIndex(indexDir.toString());
+        } catch (Exception e) {
+            log.atInfo()
+                .setMessage("Unable to upgrade with {}: {}")
+                .addArgument(version)
+                .addArgument(e.getMessage())
+                .setCause(e)
+                .log();
+        }
     }
 
     @SneakyThrows
-    public static void copyDirectory(Path source, Path target) {
-        // Create the target directory if it doesn't exist
-        if (!Files.exists(target)) {
-            Files.createDirectories(target);
-        }
-
-        // Walk the file tree starting at 'source'
-        try (Stream<Path> paths = Files.walk(source)) {
-            // For each path encountered...
-            paths.forEach(path -> {
-                // Resolve the path relative to the source,
-                // then resolve it against the target
-                Path targetPath = target.resolve(source.relativize(path));
-
+    private URL[] getJarUrls(String version) {
+        var jarListFile = Path.of("build/luceneJarPaths", version + ".txt");
+        var jarUrls = Files.readAllLines(jarListFile)
+            .stream()
+            .map(jarPath -> {
                 try {
-                    if (Files.isDirectory(path)) {
-                        // Create directory if it doesn't exist
-                        if (!Files.exists(targetPath)) {
-                            Files.createDirectories(targetPath);
-                        }
-                    } else {
-                        // Copy file, overwriting existing files
-                        Files.copy(path, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                    }
-                } catch (IOException e) {
-                    // In a production setting, handle or log this exception properly
-                    throw new RuntimeException("Error copying file " + path + " to " + targetPath, e);
+                    return Path.of(jarPath).toUri().toURL();
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to convert path to URL: " + jarPath, e);
                 }
-            });
-        }
-    }
-
-    private URL[] getJarUrls(String subdir) {
-        var dir = new File("build/" + subdir + "Libs");
-        var jarFiles = dir.listFiles((d, name) -> name.endsWith(".jar"));
-        log.atInfo().setMessage( subdir + " libs: {}").addArgument(jarFiles).log();
-        var jarUrls = Arrays.stream(jarFiles)
-                .map(f -> extracted(f))
-                .toArray(URL[]::new);
-        return jarUrls;
-    } 
-    private URL extracted(File f) {
-        try {
-            return f.toURI().toURL();
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
+            })
+            .collect(Collectors.toList());
+        return jarUrls.toArray(new URL[0]);
     }
 
     public static class CouldNotUnpackShard extends RfsException {
         public CouldNotUnpackShard(String message, Exception e) {
-            super(message, e);
-        }
-    }
-    public static class CouldNotUpgradeShard extends RfsException {
-        public CouldNotUpgradeShard(String message, Exception e) {
             super(message, e);
         }
     }

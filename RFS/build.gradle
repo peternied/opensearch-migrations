@@ -12,22 +12,23 @@ java.targetCompatibility = JavaVersion.VERSION_11
 ext {
     awsSdkVersion = '2.25.16'
     dataset = findProperty('dataset') ?: 'skip_dataset'
+    luceneVersions = [
+        6: '6.6.6',
+        7: '7.7.3',
+        8: '8.11.2'
+    ]
 }
 
-configurations {
-    lucene6 {}
-    lucene7 {}
-    lucene8 {}
+luceneVersions.each { version, luceneVersion ->
+    configurations.create("lucene$version")
 }
 
 dependencies {
 
-    lucene6 'org.apache.lucene:lucene-core:6.6.6'
-    lucene6 'org.apache.lucene:lucene-backward-codecs:6.6.6'
-    lucene7 'org.apache.lucene:lucene-core:7.7.3'
-    lucene7 'org.apache.lucene:lucene-backward-codecs:7.7.3'
-    lucene8 'org.apache.lucene:lucene-core:8.11.2'
-    lucene8 'org.apache.lucene:lucene-backward-codecs:8.11.2'
+    luceneVersions.each { version, luceneVersion ->
+        add("lucene$version", "org.apache.lucene:lucene-core:$luceneVersion")
+        add("lucene$version", "org.apache.lucene:lucene-backward-codecs:$luceneVersion")
+    }
 
     implementation project(':awsUtilities')
     implementation project(':coreUtilities')
@@ -108,83 +109,62 @@ dependencies {
     testFixturesImplementation group: 'org.hamcrest', name: 'hamcrest'
 }
 
-sourceSets {
-    lucene6 {
+luceneVersions.each { version, _ ->
+    sourceSets.create("lucene$version") {
         java {
-            srcDir 'src/lucene6/java'
-            compileClasspath += configurations.lucene6
-            runtimeClasspath += configurations.lucene6
+            srcDir "src/lucene$version/java"
+            compileClasspath += configurations["lucene$version"]
+            runtimeClasspath += configurations["lucene$version"]
         }
     }
-    lucene7 {
-        java {
-            srcDir 'src/lucene7/java'
-            compileClasspath += configurations.lucene7
-            runtimeClasspath += configurations.lucene7
-        }
+
+    tasks.register("lucene${version}Jar", Jar) {
+        group = 'build'
+        archiveClassifier = "lucene$version"
+        from sourceSets["lucene$version"].output
     }
-    lucene8 {
-        java {
-            srcDir 'src/lucene8/java'
-            compileClasspath += configurations.lucene8
-            runtimeClasspath += configurations.lucene8
-        }
+
+    tasks.register("copyLucene${version}Jars", Copy) {
+        dependsOn tasks.named("compileLucene${version}Java")
+        dependsOn tasks.named("lucene${version}Jar")
+        from configurations["lucene$version"]
+        into "$buildDir/lucene${version}Libs"
+        from file("$buildDir/libs/RFS-0.1.0-SNAPSHOT-lucene${version}.jar")
+        into "$buildDir/lucene${version}Libs"
     }
 }
 
-task lucene6Jar(type: Jar) {
-    group = 'build'
-    archiveClassifier = 'lucene6'
-    from sourceSets.lucene6.output
-}
-
-task lucene7Jar(type: Jar) {
-    group = 'build'
-    archiveClassifier = 'lucene7'
-    from sourceSets.lucene7.output
-}
-
-task lucene8Jar(type: Jar) {
-    group = 'build'
-    archiveClassifier = 'lucene8'
-    from sourceSets.lucene8.output
-}
-
-assemble.dependsOn compileLucene6Java
-assemble.dependsOn compileLucene7Java
-assemble.dependsOn compileLucene8Java
-
-task copyLucene6Jars(type: Copy) {
-    dependsOn compileLucene6Java
-    dependsOn lucene6Jar
-    from configurations.lucene6
-    into "$buildDir/lucene6Libs"
-    from file("$buildDir/libs/RFS-0.1.0-SNAPSHOT-lucene6.jar")
-    into "$buildDir/lucene6Libs"
-}
-
-task copyLucene7Jars(type: Copy) {
-    dependsOn compileLucene7Java
-    dependsOn lucene7Jar
-    from configurations.lucene7
-    into "$buildDir/lucene7Libs"
-    from file("$buildDir/libs/RFS-0.1.0-SNAPSHOT-lucene7.jar")
-    into "$buildDir/lucene7Libs"
-}
-
-task copyLucene8Jars(type: Copy) {
-    dependsOn compileLucene8Java
-    dependsOn lucene8Jar
-    from configurations.lucene8
-    into "$buildDir/lucene8Libs"
-    from file("$buildDir/libs/RFS-0.1.0-SNAPSHOT-lucene8.jar")
-    into "$buildDir/lucene8Libs"
-}
+assemble.dependsOn luceneVersions.collect { "compileLucene${it.key}Java" }
 
 test {
-    dependsOn copyLucene6Jars
-    dependsOn copyLucene7Jars
-    dependsOn copyLucene8Jars
+    dependsOn luceneVersions.collect { "copyLucene${it.key}Jars" }
+}
+
+task bundledJar(type: Jar) {
+    group = 'build'
+    archiveClassifier = 'all-lucene'
+    from(luceneVersions.collect {
+        sourceSets["lucene${it.key}"].output
+    })
+}
+
+artifacts {
+    archives bundledJar
+}
+
+task exportLuceneJarPaths {
+    doLast {
+        def outputDir = file("$buildDir/luceneJarPaths")
+        outputDir.mkdirs()
+        luceneVersions.each { version, _ ->
+            def jars = configurations["lucene$version"].files.collect { it.absolutePath }
+            file("${outputDir}/lucene${version}.txt").text = jars.join("\n")
+        }
+    }
+}
+
+tasks.named("processResources").configure {
+    dependsOn exportLuceneJarPaths
 }
 
 jmh {
