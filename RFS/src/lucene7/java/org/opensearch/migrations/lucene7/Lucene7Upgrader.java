@@ -20,6 +20,7 @@ public class Lucene7Upgrader {
             var analyzer = new StandardAnalyzer();
             var config = new IndexWriterConfig(analyzer);
             config.setInfoStream(System.out);
+            config.setSoftDeletesField("__soft_deletes"); 
             var upgrader = new IndexUpgrader(
                 dir, 
                 config,
