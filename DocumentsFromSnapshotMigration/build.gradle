@@ -22,7 +22,22 @@ class DockerServiceProps {
     List<String> taskDependencies = []
 }
 
+configurations {
+    lucene7 {
+        // Usually you want transitive = true if you need all transitive JARs
+        transitive = true
+    }
+    lucene8 {
+        // Usually you want transitive = true if you need all transitive JARs
+        transitive = true
+    }
+}
+
 dependencies {
+    lucene7 'org.apache.lucene:lucene-core:7.7.3'
+    lucene7 'org.apache.lucene:lucene-backward-codecs:7.7.3'
+    lucene8 'org.apache.lucene:lucene-core:8.11.2'
+    lucene8 'org.apache.lucene:lucene-backward-codecs:8.11.2'
     implementation platform('io.projectreactor:reactor-bom:2023.0.5')
     testImplementation platform('io.projectreactor:reactor-bom:2023.0.5')
 
@@ -65,6 +80,13 @@ dependencies {
     testImplementation platform('io.projectreactor:reactor-bom:2023.0.5')
     testRuntimeOnly group: 'org.junit.jupiter', name: 'junit-jupiter-engine'
 
+}
+
+task copyLuceneJars(type: Copy) {
+    from configurations.lucene7
+    into "$buildDir/lucene7Libs"
+    from configurations.lucene8
+    into "$buildDir/lucene8Libs"
 }
 
 application {
@@ -150,4 +172,7 @@ tasks.named('composeUp') {
 tasks.named('slowTest') {
     dependsOn(':TrafficCapture:dockerSolution:buildDockerImage_elasticsearch_client_test_console')
     testLogging.showStandardStreams = false
+}
+test {
+    dependsOn copyLuceneJars
 }

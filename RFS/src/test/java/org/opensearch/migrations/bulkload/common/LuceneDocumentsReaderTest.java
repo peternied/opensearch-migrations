@@ -60,16 +60,16 @@ public class LuceneDocumentsReaderTest {
 
     @AfterEach
     public void tearDown() throws IOException {
-        Files.walk(tempDirectory)
-            .sorted(Comparator.reverseOrder()) // Delete files before directories
-            .forEach(path -> {
-                try {
-                    Files.delete(path);
-                } catch (IOException e) {
-                    log.atError().setCause(e).setMessage("Failed to delete: {}").addArgument(path).log();
-                }
-            });
-        log.atDebug().log("Temporary directory deleted.");
+        // Files.walk(tempDirectory)
+        //     .sorted(Comparator.reverseOrder()) // Delete files before directories
+        //     .forEach(path -> {
+        //         try {
+        //             Files.delete(path);
+        //         } catch (IOException e) {
+        //             log.atError().setCause(e).setMessage("Failed to delete: {}").addArgument(path).log();
+        //         }
+        //     });
+        // log.atDebug().log("Temporary directory deleted.");
     }
 
     static Stream<Arguments> provideSnapshots() {

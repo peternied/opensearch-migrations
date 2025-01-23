@@ -111,9 +111,9 @@ public class LuceneDocumentsReader {
             IndexCommit latestCommit = commits.get(commits.size() - 1);
 
             return DirectoryReader.open(
-                latestCommit//,
-//                0,
-//                null
+                latestCommit,
+                0,
+                null
             );
         }
     }

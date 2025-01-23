@@ -14,7 +14,21 @@ ext {
     dataset = findProperty('dataset') ?: 'skip_dataset'
 }
 
+configurations {
+    lucene6 {}
+    lucene7 {}
+    lucene8 {}
+}
+
 dependencies {
+
+    lucene6 'org.apache.lucene:lucene-core:6.6.6'
+    lucene6 'org.apache.lucene:lucene-backward-codecs:6.6.6'
+    lucene7 'org.apache.lucene:lucene-core:7.7.3'
+    lucene7 'org.apache.lucene:lucene-backward-codecs:7.7.3'
+    lucene8 'org.apache.lucene:lucene-core:8.11.2'
+    lucene8 'org.apache.lucene:lucene-backward-codecs:8.11.2'
+
     implementation project(':awsUtilities')
     implementation project(':coreUtilities')
     implementation project(':transformation')
@@ -91,6 +105,85 @@ dependencies {
     testFixturesImplementation group: 'org.testcontainers', name: 'testcontainers'
 
     testFixturesImplementation group: 'org.hamcrest', name: 'hamcrest'
+}
+
+sourceSets {
+    lucene6 {
+        java {
+            srcDir 'src/lucene6/java'
+            compileClasspath += configurations.lucene6
+            runtimeClasspath += configurations.lucene6
+        }
+    }
+    lucene7 {
+        java {
+            srcDir 'src/lucene7/java'
+            compileClasspath += configurations.lucene7
+            runtimeClasspath += configurations.lucene7
+        }
+    }
+    lucene8 {
+        java {
+            srcDir 'src/lucene8/java'
+            compileClasspath += configurations.lucene8
+            runtimeClasspath += configurations.lucene8
+        }
+    }
+}
+
+task lucene6Jar(type: Jar) {
+    group = 'build'
+    archiveClassifier = 'lucene6'
+    from sourceSets.lucene6.output
+}
+
+task lucene7Jar(type: Jar) {
+    group = 'build'
+    archiveClassifier = 'lucene7'
+    from sourceSets.lucene7.output
+}
+
+task lucene8Jar(type: Jar) {
+    group = 'build'
+    archiveClassifier = 'lucene8'
+    from sourceSets.lucene8.output
+}
+
+assemble.dependsOn compileLucene6Java
+assemble.dependsOn compileLucene7Java
+assemble.dependsOn compileLucene8Java
+
+task copyLucene6Jars(type: Copy) {
+    dependsOn compileLucene6Java
+    dependsOn lucene6Jar
+    from configurations.lucene6
+    into "$buildDir/lucene6Libs"
+    from file("$buildDir/libs/RFS-0.1.0-SNAPSHOT-lucene6.jar")
+    into "$buildDir/lucene6Libs"
+}
+
+task copyLucene7Jars(type: Copy) {
+    dependsOn compileLucene7Java
+    dependsOn lucene7Jar
+    from configurations.lucene7
+    into "$buildDir/lucene7Libs"
+    from file("$buildDir/libs/RFS-0.1.0-SNAPSHOT-lucene7.jar")
+    into "$buildDir/lucene7Libs"
+}
+
+task copyLucene8Jars(type: Copy) {
+    dependsOn compileLucene8Java
+    dependsOn lucene8Jar
+    from configurations.lucene8
+    into "$buildDir/lucene8Libs"
+    from file("$buildDir/libs/RFS-0.1.0-SNAPSHOT-lucene8.jar")
+    into "$buildDir/lucene8Libs"
+}
+
+test {
+    dependsOn copyLucene6Jars
+    dependsOn copyLucene7Jars
+    dependsOn copyLucene8Jars
 }
 
 jmh {
