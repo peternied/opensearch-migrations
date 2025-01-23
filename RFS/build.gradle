@@ -51,6 +51,7 @@ dependencies {
     implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j2-impl'
 
     implementation group: 'org.apache.lucene', name: 'lucene-core'
+    implementation group: 'org.apache.lucene', name: 'lucene-analysis-common'
     runtimeOnly group: 'org.apache.lucene', name: 'lucene-backward-codecs'
 
     implementation group: 'software.amazon.awssdk', name: 's3'

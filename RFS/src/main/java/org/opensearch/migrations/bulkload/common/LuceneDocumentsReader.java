@@ -112,8 +112,8 @@ public class LuceneDocumentsReader {
 
             return DirectoryReader.open(
                 latestCommit,
-                0,
-                null
+                6, // Minimum supported major version - Elastic 5/Lucene 6
+                null // No specific sorting required
             );
         }
     }

@@ -111,11 +111,10 @@ dependencies {
     api group: 'eu.rekawek.toxiproxy', name: 'toxiproxy-java', version: '2.1.7'
 
     // Force Lucene version 7 to support lucene 6 segments
-    // def lucene = '7.7.3';
-   def lucene = '9.11.1';
+    def lucene = '9.11.1';
     api group: 'org.apache.lucene', name: 'lucene-core', version: lucene
+    api group: 'org.apache.lucene', name: 'lucene-analysis-common', version: lucene
     api group: 'org.apache.lucene', name: 'lucene-backward-codecs', version: lucene
-
 
     api group: 'org.hamcrest', name: 'hamcrest', version: '2.2'
 
