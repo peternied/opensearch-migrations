@@ -43,8 +43,8 @@ dockerFilesForExternalServices.each { dockerImageName, projectName ->
             inputDir = project.file("src/main/docker/${escapedProjectName}")
         }
         def hashNonce = CommonUtils.calculateDockerHash(project.fileTree(inputDir))
-        images.add("migrations/${dockerImageName}:${hashNonce}")
-        images.add("migrations/${dockerImageName}:latest")
+        images.add("migrations/${dockerImageName}:${hashNonce}".toString())
+        images.add("migrations/${dockerImageName}:latest".toString())
     }
 }
 
@@ -113,8 +113,8 @@ javaContainerServices.forEach { dockerImageName, projectName ->
     task "buildDockerImage_${dockerImageName}"(type: DockerBuildImage) {
         dependsOn "createDockerfile_${dockerImageName}"
         inputDir = project.file("${dockerBuildDir}")
-        images.add("migrations/${dockerImageName}:${version}")
-        images.add("migrations/${dockerImageName}:latest")
+        // images.add("migrations/${dockerImageName}:${version}")
+        // images.add("migrations/${dockerImageName}:latest")
     }
 }
 
