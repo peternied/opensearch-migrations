@@ -58,10 +58,14 @@ static Sync getMigrationConsoleSyncTask(Project project, String dockerImageName,
         // Applications and Standalone Libraries both have libraries, sync them
         (libraries + applications).each { lib ->
             def applicationDestDir = "staging/${lib.name}/"
-            from (lib.configurations.findByName("runtimeClasspath").files) {
+
+            // Ensure dependencies are resolved within the correct project context
+            project.evaluationDependsOn(lib.path)
+
+            from (lib.files { lib.configurations.runtimeClasspath }) {
                 into "${applicationDestDir}/lib"
             }
-            from (lib.tasks.getByName('jar')) {
+            from (lib.tasks.named('jar')) {
                 into "${applicationDestDir}/lib"
             }
         }
@@ -69,7 +73,7 @@ static Sync getMigrationConsoleSyncTask(Project project, String dockerImageName,
         // Sync application start scripts
         applications.each { app ->
             def applicationDestDir = "staging/${app.name}/"
-            from (app.tasks.getByName('startScripts').outputs.files) {
+            from (app.tasks.named('startScripts').get().outputs.files) {
                 into "${applicationDestDir}/bin"
             }
         }

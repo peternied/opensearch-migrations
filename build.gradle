@@ -7,7 +7,7 @@ plugins {
     id 'me.champeau.jmh' version '0.7.2' apply false
     id 'com.gradleup.shadow' version '8.3.5' apply false
     id 'com.avast.gradle.docker-compose' version "0.17.4" apply false
-    id 'com.google.protobuf' version "0.9.2" apply false
+    id 'com.google.protobuf' version "0.9.4" apply false
 }
 
 allprojects {
@@ -24,26 +24,24 @@ ext.captureProxyDependencies = []
 gradle.projectsEvaluated {
     def captureProxyProject = rootProject.project(":TrafficCapture:trafficCaptureProxyServer")
     captureProxyDependencies = captureProxyProject.configurations.collectMany { configuration ->
-        configuration.dependencies.findAll { it instanceof ProjectDependency }.collect { it.dependencyProject.path }
+        configuration.dependencies.findAll { it instanceof ProjectDependency }.collect { it.path }
     }
     // Add the TrafficCaptureProxyServer project itself
     captureProxyDependencies << captureProxyProject.path
 }
 
 // Modify sourceCompatibility during the execution phase
-gradle.taskGraph.whenReady { taskGraph ->
+gradle.taskGraph.whenReady {
     allprojects {
         tasks.withType(JavaCompile).configureEach {
-            if (project.path in rootProject.captureProxyDependencies) {
-                sourceCompatibility = JavaVersion.VERSION_11
-                targetCompatibility = JavaVersion.VERSION_11
-            } else {
-                sourceCompatibility = JavaVersion.VERSION_17
-                targetCompatibility = JavaVersion.VERSION_17
-            }
+            def jvmVersion = (project.path in rootProject.captureProxyDependencies) ? JavaVersion.VERSION_11 : JavaVersion.VERSION_17
+            sourceCompatibility = jvmVersion
+            targetCompatibility = jvmVersion
         }
     }
 }
+
+
 
 // Define version properties
 ext {
