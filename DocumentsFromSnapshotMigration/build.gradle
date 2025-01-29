@@ -115,7 +115,7 @@ for (dockerService in dockerServices) {
         }
         inputDir = project.file(dockerService.inputDir)
         // platform.set("linux/amd64")
-        buildArgs = dockerService.buildArgs
+        buildArgs = dockerService.buildArgs // QESTION?
         images.add("migrations/${dockerService.dockerImageName}:${hash}")
         images.add("migrations/${dockerService.dockerImageName}:${version}")
         images.add("migrations/${dockerService.dockerImageName}:latest")

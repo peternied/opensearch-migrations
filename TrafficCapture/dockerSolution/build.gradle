@@ -1,6 +1,6 @@
 plugins {
     id 'org.opensearch.migrations.java-library-conventions'
-    id "com.avast.gradle.docker-compose" version "0.17.4"
+    id "com.avast.gradle.docker-compose"
     id 'com.bmuschko.docker-remote-api'
 }
 
@@ -43,7 +43,7 @@ dockerFilesForExternalServices.each { dockerImageName, projectName ->
             inputDir = project.file("src/main/docker/${escapedProjectName}")
         }
         def hashNonce = CommonUtils.calculateDockerHash(project.fileTree(inputDir))
-        images.add("migrations/${dockerImageName}:$hashNonce")
+        images.add("migrations/${dockerImageName}:${hashNonce}")
         images.add("migrations/${dockerImageName}:latest")
     }
 }
