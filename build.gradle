@@ -17,7 +17,7 @@ allprojects {
 }
 
 
-// Ensure Capture Proxy and Dependencies are built with JDK 11 for On Node Install
+// // Ensure Capture Proxy and Dependencies are built with JDK 11 for On Node Install
 
 // Cache dependencies during the configuration phase
 ext.captureProxyDependencies = []
