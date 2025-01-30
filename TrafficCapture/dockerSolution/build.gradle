@@ -113,8 +113,8 @@ javaContainerServices.forEach { dockerImageName, projectName ->
     task "buildDockerImage_${dockerImageName}"(type: DockerBuildImage) {
         dependsOn "createDockerfile_${dockerImageName}"
         inputDir = project.file("${dockerBuildDir}")
-        // images.add("migrations/${dockerImageName}:${version}")
-        // images.add("migrations/${dockerImageName}:latest")
+        images.add("migrations/${dockerImageName}:${version}".toString())
+        images.add("migrations/${dockerImageName}:latest".toString())
     }
 }
 
