@@ -19,7 +19,7 @@ sourceSets {
 dependencies {
     implementation 'org.codehaus.groovy:groovy-all:3.0.20'
     testImplementation 'com.lesfurets:jenkins-pipeline-unit:1.23'
-    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation platform('org.junit:junit-bom:5.11.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
 }
 
