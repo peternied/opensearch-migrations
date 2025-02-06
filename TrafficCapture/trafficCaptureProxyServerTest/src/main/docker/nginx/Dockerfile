@@ -1,4 +1,4 @@
-FROM nginx:1.25.1
+FROM nginx:1.27.4
 
 # Installing VIM for the sake of users who would like to exec shells in the webserver container.
 RUN apt-get update

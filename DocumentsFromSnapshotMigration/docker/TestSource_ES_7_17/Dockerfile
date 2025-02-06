@@ -1,4 +1,4 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:7.17.21 AS base
+FROM docker.elastic.co/elasticsearch/elasticsearch:8.17.1 AS base
 
 # Configure Elastic
 ENV ELASTIC_SEARCH_CONFIG_FILE=/usr/share/elasticsearch/config/elasticsearch.yml
