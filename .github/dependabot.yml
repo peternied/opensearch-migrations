@@ -6,13 +6,23 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/"
+    directories:
+      - deployment/cdk/opensearch-service-migration/package.json
+      - deployment/migration-assistant-solution/package.json
     schedule:
       interval: "daily"
+    groups:
+      npm-core:
+        patterns:
+          - "*"
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      gradle-core:
+        patterns:
+          - "*"
   - package-ecosystem: "docker"
     directories:
       - DocumentsFromSnapshotMigration/docker/Dockerfile
@@ -32,3 +42,7 @@ updates:
       - dev-tools/jenkinsdocker/Dockerfile
     schedule:
       interval: "daily"
+    groups:
+      docker-core:
+        patterns:
+          - "*"
