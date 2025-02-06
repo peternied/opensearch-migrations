@@ -35,7 +35,7 @@ dependencies {
     api group: 'org.apache.logging.log4j', name: 'log4j-core', version: log4j
     api group: 'org.apache.logging.log4j', name: 'log4j-slf4j2-impl', version: log4j
 
-    api group: 'org.projectlombok', name:'lombok', version:'1.18.26'
+    api group: 'org.projectlombok', name:'lombok', version:'1.18.36'
 
     api group: 'org.apache.kafka', name:'kafka-clients', version:'3.7.2'
 
@@ -48,7 +48,7 @@ dependencies {
 
     api group: 'org.jcommander', name: 'jcommander', version: '1.85'
 
-    api group: 'org.projectlombok', name: 'lombok', version: '1.18.28'
+    api group: 'org.projectlombok', name: 'lombok', version: '1.18.36'
 
     def jackson = '2.16.2'
     api group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: jackson
