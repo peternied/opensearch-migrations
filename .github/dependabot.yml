@@ -9,12 +9,12 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
- -  package-ecosystem: "gradle"
+  - package-ecosystem: "gradle"
     directory: "/"
     schedule:
       interval: "daily"
   - package-ecosystem: "docker"
-    directory:
+    directories:
       - DocumentsFromSnapshotMigration/docker/Dockerfile
       - DocumentsFromSnapshotMigration/docker/TestSource_ES_5_6/Dockerfile
       - DocumentsFromSnapshotMigration/docker/TestSource_ES_6_8/Dockerfile
