@@ -10,8 +10,8 @@ plugins {
 ext {
     awsSdkVersion = '2.25.16'
     dataset = findProperty('dataset') ?: 'skip_dataset'
-    luceneVersion7 = '7.7.3'
-    luceneVersion9 = '9.11.1'
+    luceneVersion7 = '10.1.0'
+    luceneVersion9 = '10.1.0'
 }
 
 configurations {
@@ -88,7 +88,7 @@ dependencies {
     implementation group: 'software.amazon.awssdk', name: 's3-transfer-manager'
     implementation group: 'software.amazon.awssdk.crt', name: 'aws-crt'
 
-    implementation platform('io.projectreactor:reactor-bom:2023.0.5')
+    implementation platform('io.projectreactor:reactor-bom:2024.0.2')
     implementation 'io.projectreactor.netty:reactor-netty-core'
     implementation 'io.projectreactor.netty:reactor-netty-http'
 
@@ -96,8 +96,8 @@ dependencies {
     implementation group: 'software.amazon.awssdk', name: 's3-transfer-manager'
     implementation group: 'software.amazon.awssdk.crt', name: 'aws-crt'
 
-    testImplementation 'com.github.docker-java:docker-java-core:3.3.6'
-    testImplementation 'com.github.docker-java:docker-java-transport-httpclient5:3.3.6'
+    testImplementation 'com.github.docker-java:docker-java-core:3.4.1'
+    testImplementation 'com.github.docker-java:docker-java-transport-httpclient5:3.4.1'
 
     testImplementation testFixtures(project(path: ':RFS'))
     testImplementation group: 'org.apache.lucene', name: 'lucene-backward-codecs'
