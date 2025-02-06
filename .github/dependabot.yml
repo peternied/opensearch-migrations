@@ -7,8 +7,7 @@ version: 2
 updates:
   - package-ecosystem: "npm"
     directories:
-      - deployment/cdk/opensearch-service-migration/package.json
-      - deployment/migration-assistant-solution/package.json
+      - "**/*"
     schedule:
       interval: "daily"
     groups:
@@ -23,23 +22,12 @@ updates:
       gradle-core:
         patterns:
           - "*"
+    ignore:
+      - dependency-name: "org.opensearch*"
+      - dependency-name: "org.apache.lucene*"
   - package-ecosystem: "docker"
     directories:
-      - DocumentsFromSnapshotMigration/docker/Dockerfile
-      - DocumentsFromSnapshotMigration/docker/TestSource_ES_5_6/Dockerfile
-      - DocumentsFromSnapshotMigration/docker/TestSource_ES_6_8/Dockerfile
-      - DocumentsFromSnapshotMigration/docker/TestSource_ES_7_10/Dockerfile
-      - DocumentsFromSnapshotMigration/docker/TestSource_ES_7_17/Dockerfile
-      - DocumentsFromSnapshotMigration/docker/TrafficGenerator/Dockerfile
-      - TrafficCapture/dockerSolution/src/main/docker/captureProxyBase/Dockerfile
-      - TrafficCapture/dockerSolution/src/main/docker/elasticsearchTestConsole/Dockerfile
-      - TrafficCapture/dockerSolution/src/main/docker/elasticsearchWithSearchGuard/Dockerfile
-      - TrafficCapture/dockerSolution/src/main/docker/grafana/Dockerfile
-      - TrafficCapture/dockerSolution/src/main/docker/k8sConfigMapUtilScripts/Dockerfile
-      - TrafficCapture/dockerSolution/src/main/docker/migrationConsole/Dockerfile
-      - TrafficCapture/dockerSolution/src/main/docker/otelCollector/Dockerfile
-      - TrafficCapture/trafficCaptureProxyServerTest/src/main/docker/nginx/Dockerfile
-      - dev-tools/jenkinsdocker/Dockerfile
+      - "**/*"
     schedule:
       interval: "daily"
     groups:
