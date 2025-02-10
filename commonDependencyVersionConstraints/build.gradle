@@ -127,6 +127,8 @@ dependencies {
 
     api group: 'org.codehaus.groovy', name: 'groovy-all', version: '3.0.23'
 
+    api group: 'com.lesfurets', name: 'jenkins-pipeline-unit', version: '1.23'
+
     // ************************************************************
     // The following constraints are for mitigating transitive CVEs
     // ************************************************************
