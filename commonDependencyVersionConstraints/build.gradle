@@ -84,7 +84,7 @@ dependencies {
     api group: 'io.opentelemetry', name: 'opentelemetry-sdk', version: opentelemetry
     api group: 'io.opentelemetry', name: 'opentelemetry-sdk-testing', version: opentelemetry
 
-    api group: 'io.opentelemetry.semconv', name: 'opentelemetry-semconv', version: '1.30.0-rc.1'
+    api group: 'io.opentelemetry.semconv', name: 'opentelemetry-semconv', version: '1.29.0-alpha'
 
     api group: 'com.lmax', name: 'disruptor', version: '4.0.0'
 
