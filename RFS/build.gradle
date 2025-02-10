@@ -96,8 +96,8 @@ dependencies {
     implementation group: 'software.amazon.awssdk', name: 's3-transfer-manager'
     implementation group: 'software.amazon.awssdk.crt', name: 'aws-crt'
 
-    testImplementation 'com.github.docker-java:docker-java-core:3.4.1'
-    testImplementation 'com.github.docker-java:docker-java-transport-httpclient5:3.4.1'
+    testImplementation 'com.github.docker-java:docker-java-core'
+    testImplementation 'com.github.docker-java:docker-java-transport-httpclient5'
 
     testImplementation testFixtures(project(path: ':RFS'))
     testImplementation group: 'org.apache.lucene', name: 'lucene-backward-codecs'
