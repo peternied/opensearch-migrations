@@ -41,7 +41,6 @@ dependencies {
     implementation group: 'software.amazon.awssdk', name: 'secretsmanager'
     implementation group: 'software.amazon.awssdk', name: 'sdk-core'
     implementation group: 'software.amazon.msk', name: 'aws-msk-iam-auth'
-    implementation 'org.apache.commons:commons-compress'
 
     testFixturesImplementation project(':transformation:transformationPlugins:jsonMessageTransformers:jsonMessageTransformerInterface')
     testFixturesImplementation project(':TrafficCapture:captureOffloader')
