@@ -63,8 +63,6 @@ dependencies {
 
     api group: 'io.burt', name: 'jmespath-core', version: '0.6.0'
 
-    api group: 'org.apache.commons', name: 'commons-compress', version: '1.27.1'
-
     def awssdk = '2.30.16'
     api group: 'software.amazon.awssdk', name: 'arns', version: awssdk
     api group: 'software.amazon.awssdk', name: 'auth', version: awssdk
