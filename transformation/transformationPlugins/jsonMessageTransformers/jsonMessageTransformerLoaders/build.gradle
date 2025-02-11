@@ -18,7 +18,6 @@ buildscript {
 
 plugins {
     id 'org.opensearch.migrations.java-library-conventions'
-    id 'org.owasp.dependencycheck' version '8.2.1'
     id 'io.freefair.lombok'
 }
 
