@@ -24,37 +24,36 @@ plugins {
 }
 
 dependencies {
-    implementation group: "com.google.protobuf", name: "protobuf-java"
     implementation group: 'org.slf4j', name: 'slf4j-api'
 
-    testImplementation group: 'org.apache.logging.log4j', name: 'log4j-api'
-    testImplementation group: 'org.apache.logging.log4j', name: 'log4j-core'
-    testImplementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j2-impl'
+    testRuntimeOnly group: 'org.apache.logging.log4j', name: 'log4j-api'
+    testRuntimeOnly group: 'org.apache.logging.log4j', name: 'log4j-core'
+    testRuntimeOnly group: 'org.apache.logging.log4j', name: 'log4j-slf4j2-impl'
 
     // Log4j
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-api'
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-core'
-    implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j2-impl'
+    runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-api'
+    runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-core'
+    runtimeOnly group: 'org.apache.logging.log4j', name: 'log4j-slf4j2-impl'
 
     // JCommander
     compileOnly group: 'org.jcommander', name: 'jcommander'
 
     // OpenTelemetry core
     api group: 'io.opentelemetry', name: 'opentelemetry-api'
-    api group: 'io.opentelemetry', name: 'opentelemetry-sdk'
+    implementation group: 'io.opentelemetry', name: 'opentelemetry-sdk'
     implementation group: 'io.opentelemetry', name: 'opentelemetry-exporter-otlp'
     implementation group: 'io.opentelemetry.semconv', name: 'opentelemetry-semconv'
 
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api'
+
     testImplementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind'
-    testImplementation group: 'com.fasterxml.jackson.core', name: 'jackson-core'
+    testRuntimeOnly group: 'com.fasterxml.jackson.core', name: 'jackson-core'
 
-    testImplementation group: 'org.mockito', name: 'mockito-core'
-    testImplementation group: 'org.hamcrest', name: 'hamcrest'
+    // testImplementation group: 'org.mockito', name: 'mockito-core'
+    // testImplementation group: 'org.hamcrest', name: 'hamcrest'
 
-    testFixturesApi group: 'io.opentelemetry', name: 'opentelemetry-api'
     testFixturesApi group: 'io.opentelemetry', name: 'opentelemetry-sdk'
     testFixturesApi group: 'io.opentelemetry', name: 'opentelemetry-sdk-testing'
-    testFixturesImplementation group: 'io.opentelemetry', name: 'opentelemetry-api'
-    testFixturesImplementation group: 'io.opentelemetry', name: 'opentelemetry-sdk-testing'
+    testFixturesApi group: 'io.opentelemetry', name: 'opentelemetry-sdk-testing'
     testFixturesImplementation group: 'org.slf4j', name: 'slf4j-api'
 }
