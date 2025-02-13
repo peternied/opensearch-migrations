@@ -23,17 +23,17 @@ plugins {
 }
 
 dependencies {
-    implementation(libs.arns)
-    implementation(libs.auth)
-    implementation(libs.sdk.core)
+    implementation libs.arns
+    implementation libs.auth
+    implementation libs.sdk.core
 
-    testImplementation(libs.hamcrest)
-    testImplementation(libs.junit.jupiter.api)
-    testImplementation(libs.junit.jupiter.params)
+    testImplementation libs.hamcrest
+    testImplementation libs.junit.jupiter.api
+    testImplementation libs.junit.jupiter.params
 
-    testImplementation(libs.log4j.api)
-    testImplementation(libs.log4j.core)
-    testImplementation(libs.log4j.slf4j2.impl)
+    testImplementation libs.log4j.api
+    testImplementation libs.log4j.core
+    testImplementation libs.log4j.slf4j2.impl
 }
 
 tasks.named('test') {

@@ -24,7 +24,7 @@ plugins {
 }
 
 dependencies {
-    implementation group: "com.google.protobuf", name: "protobuf-java", version: rootProject.project("commonDependencyVersionConstraints").protobufVersion
+    implementation libs.protobuf.java
     implementation group: 'org.slf4j', name: 'slf4j-api'
 
     testImplementation group: 'org.apache.logging.log4j', name: 'log4j-api'
