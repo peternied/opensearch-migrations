@@ -1,6 +1,6 @@
 plugins {
     id 'org.opensearch.migrations.java-library-conventions'
-    id "com.avast.gradle.docker-compose" version "0.17.4"
+    id "com.avast.gradle.docker-compose" version "0.17.12"
     id 'com.bmuschko.docker-remote-api'
 }
 
@@ -9,7 +9,7 @@ import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
 
 dependencies {
     constraints {
-        implementation('software.amazon.awssdk:secretsmanager:2.25.19') {
+        implementation('software.amazon.awssdk:secretsmanager:2.30.26') {
             because 'mend security issue'
         }
     }

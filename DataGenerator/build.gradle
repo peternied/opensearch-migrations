@@ -14,7 +14,7 @@ dependencies {
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind'
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core'
 
-    implementation platform('io.projectreactor:reactor-bom:2023.0.5')
+    implementation platform('io.projectreactor:reactor-bom:2024.0.3')
     implementation 'io.projectreactor.netty:reactor-netty-core'
     implementation 'io.projectreactor.netty:reactor-netty-http'
 
