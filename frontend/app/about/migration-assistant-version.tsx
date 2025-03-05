@@ -10,7 +10,7 @@ interface MigrationAssistantVersionProps {
 
 export default function MigrationAssistantVersion({
   versionIdentifier,
-  commitSha ,
+  commitSha,
   commitDate
 }: MigrationAssistantVersionProps) {
   return (

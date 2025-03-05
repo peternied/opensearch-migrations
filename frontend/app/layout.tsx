@@ -11,7 +11,6 @@ import {
 } from '@cloudscape-design/components';
 import { I18nProvider } from '@cloudscape-design/components/i18n';
 import messages from '@cloudscape-design/components/i18n/messages/all.en';
-import Image from 'next/image';
 
 const LOCALE = 'en';
 
@@ -40,11 +39,11 @@ export default function AppLayoutPreview({
                 header={{
                   href: '#',
                   text: 'Migration Assistant',
-                  logo: { src: "migrations-icon-160x160.png", alt: '' }
+                  logo: { src: 'migrations-icon-160x160.png', alt: '' }
                 }}
                 items={[
                   { type: 'link', text: `Overview`, href: `/` },
-                  { type: 'divider'},
+                  { type: 'divider' },
                   { type: 'link', text: `Migrations`, href: `/migration` },
                   {
                     type: 'link',
@@ -52,14 +51,36 @@ export default function AppLayoutPreview({
                     href: `/migration/create`
                   },
                   { type: 'link', text: `Tear down`, href: `/teardown` },
-                  { type: 'divider'},
-                  { type: 'link', text: 'About', href: '/about'},
-                  { type: 'divider'},
-                  { type: 'section-group', title: 'Help', items:[
-                    { type: 'link', text: 'Documentation', href: 'https://opensearch.org/docs/latest/migration-assistant/', external: true, externalIconAriaLabel:'Opens in a new tab'},
-                    { type: 'link', text: 'Report an Issue', href: 'https://github.com/opensearch-project/opensearch-migrations/issues', external: true, externalIconAriaLabel:'Opens in a new tab'},
-                    { type: 'link', text: 'Source Code', href: 'https://github.com/opensearch-project/', external: true, externalIconAriaLabel:'Opens in a new tab'}
-                  ]}
+                  { type: 'divider' },
+                  { type: 'link', text: 'About', href: '/about' },
+                  { type: 'divider' },
+                  {
+                    type: 'section-group',
+                    title: 'Help',
+                    items: [
+                      {
+                        type: 'link',
+                        text: 'Documentation',
+                        href: 'https://opensearch.org/docs/latest/migration-assistant/',
+                        external: true,
+                        externalIconAriaLabel: 'Opens in a new tab'
+                      },
+                      {
+                        type: 'link',
+                        text: 'Report an Issue',
+                        href: 'https://github.com/opensearch-project/opensearch-migrations/issues',
+                        external: true,
+                        externalIconAriaLabel: 'Opens in a new tab'
+                      },
+                      {
+                        type: 'link',
+                        text: 'Source Code',
+                        href: 'https://github.com/opensearch-project/',
+                        external: true,
+                        externalIconAriaLabel: 'Opens in a new tab'
+                      }
+                    ]
+                  }
                 ]}
               />
             }

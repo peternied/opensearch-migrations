@@ -1,6 +1,6 @@
-
 ## Migration Assistant Frontend
-This project contains all the frontend components for the Migration Assistant.  Deployed alongside the Migration Assistant, this website provide a graphical user interface to customers so they can monitor, update, and complete a migration. 
+
+This project contains all the frontend components for the Migration Assistant. Deployed alongside the Migration Assistant, this website provide a graphical user interface to customers so they can monitor, update, and complete a migration.
 
 - [Migration Assistant Frontend](#migration-assistant-frontend)
 - [Start the Frontend](#start-the-frontend)
@@ -22,8 +22,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 > !Note
 > Not yet available for deployment
 
-In production scenarios the frontend is deployed with the same process as the Migration Console.  By using the [Solutions Deployment](../deployment/migration-assistant-solution/README.md) it will be deployed to the AWS Cloud.
-
+In production scenarios the frontend is deployed with the same process as the Migration Console. By using the [Solutions Deployment](../deployment/migration-assistant-solution/README.md) it will be deployed to the AWS Cloud.
 
 ## Configuration
 
