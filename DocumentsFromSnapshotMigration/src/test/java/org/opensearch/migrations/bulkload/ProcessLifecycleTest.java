@@ -1,19 +1,16 @@
 package org.opensearch.migrations.bulkload;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.opensearch.migrations.CreateSnapshot;
-import org.opensearch.migrations.bulkload.common.OpenSearchClient;
+import org.opensearch.migrations.bulkload.common.OpenSearchClientFactory;
+import org.opensearch.migrations.bulkload.common.RestClient;
 import org.opensearch.migrations.bulkload.common.http.ConnectionContextTestParams;
 import org.opensearch.migrations.bulkload.framework.SearchClusterContainer;
 import org.opensearch.migrations.data.WorkloadGenerator;
@@ -22,12 +19,15 @@ import org.opensearch.migrations.snapshot.creation.tracing.SnapshotTestContext;
 import org.opensearch.migrations.testutils.ToxiProxyWrapper;
 import org.opensearch.testcontainers.OpensearchContainer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import eu.rekawek.toxiproxy.model.ToxicDirection;
+import io.netty.handler.codec.http.HttpMethod;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -35,18 +35,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.testcontainers.containers.Network;
 
-/**
- * TODO - the code in this test was lifted from FullTest.java (now named ParallelDocumentMigrationsTest.java).
- * Some of the functionality and code are shared between the two and should be refactored.
- */
+import static org.opensearch.migrations.bulkload.CustomRfsTransformationTest.SNAPSHOT_NAME;
+
 @Slf4j
 @Tag("longTest")
 public class ProcessLifecycleTest extends SourceTestBase {
 
     public static final String TARGET_DOCKER_HOSTNAME = "target";
-    public static final String SNAPSHOT_NAME = "test_snapshot";
-    public static final List<String> INDEX_ALLOWLIST = List.of();
     public static final int OPENSEARCH_PORT = 9200;
+    public static final int RECEIVED_SIGTERM_EXIT_CODE = 143;
 
     enum FailHow {
         NEVER,
@@ -62,6 +59,8 @@ public class ProcessLifecycleTest extends SourceTestBase {
         ToxiProxyWrapper proxyContainer;
     }
 
+    // The following test expects to get an exit code of 0 (TBD_GOES_HERE) at least two times, and then an
+    // exit code of 3 (NO_WORK_LEFT) within a maximum of 21 iterations.
     @Test
     public void testExitsZeroThenThreeForSimpleSetup() throws Exception {
         testProcess(3,
@@ -124,17 +123,18 @@ public class ProcessLifecycleTest extends SourceTestBase {
             var proxyContainer = new ToxiProxyWrapper(network)
         ) {
             CompletableFuture.allOf(
-                CompletableFuture.runAsync(() -> esSourceContainer.start()),
-                CompletableFuture.runAsync(() -> osTargetContainer.start()),
+                CompletableFuture.runAsync(esSourceContainer::start),
+                CompletableFuture.runAsync(osTargetContainer::start),
                 CompletableFuture.runAsync(() -> proxyContainer.start(TARGET_DOCKER_HOSTNAME, OPENSEARCH_PORT))
             ).join();
 
             // Populate the source cluster with data
-            var client = new OpenSearchClient(ConnectionContextTestParams.builder()
-                .host(esSourceContainer.getUrl())
-                .build()
-                .toConnectionContext()
+            var clientFactory = new OpenSearchClientFactory(ConnectionContextTestParams.builder()
+                    .host(esSourceContainer.getUrl())
+                    .build()
+                    .toConnectionContext()
             );
+            var client = clientFactory.determineVersionAndCreate();
             var generator = new WorkloadGenerator(client);
             generator.generate(new WorkloadOptions());
 
@@ -169,8 +169,8 @@ public class ProcessLifecycleTest extends SourceTestBase {
         Path tempDirSnapshot,
         Path tempDirLucene,
         ToxiProxyWrapper proxyContainer,
-        FailHow failHow)
-    {
+        FailHow failHow
+    ) {
         String targetAddress = proxyContainer.getProxyUriAsString();
         var tp = proxyContainer.getProxy();
         if (failHow == FailHow.AT_STARTUP) {
@@ -180,7 +180,20 @@ public class ProcessLifecycleTest extends SourceTestBase {
         }
 
         int timeoutSeconds = 90;
-        ProcessBuilder processBuilder = setupProcess(tempDirSnapshot, tempDirLucene, targetAddress, failHow);
+        String initialLeaseDuration = failHow == FailHow.NEVER ? "PT10M" : "PT1S";
+
+        String[] additionalArgs = {
+            "--documents-per-bulk-request", "10",
+            "--max-connections", "1",
+            "--initial-lease-duration", initialLeaseDuration,
+        };
+
+        ProcessBuilder processBuilder = setupProcess(
+            tempDirSnapshot,
+            tempDirLucene,
+            targetAddress,
+            additionalArgs
+        );
 
         var process = runAndMonitorProcess(processBuilder);
         boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
@@ -197,82 +210,88 @@ public class ProcessLifecycleTest extends SourceTestBase {
         return process.exitValue();
     }
 
-
-    @NotNull
-    private static ProcessBuilder setupProcess(
-        Path tempDirSnapshot,
-        Path tempDirLucene,
-        String targetAddress,
-        FailHow failHow
-    ) {
-        String classpath = System.getProperty("java.class.path");
-        String javaHome = System.getProperty("java.home");
-        String javaExecutable = javaHome + File.separator + "bin" + File.separator + "java";
-
-        String[] args = {
-            "--snapshot-name",
-            SNAPSHOT_NAME,
-            "--snapshot-local-dir",
-            tempDirSnapshot.toString(),
-            "--lucene-dir",
-            tempDirLucene.toString(),
-            "--target-host",
-            targetAddress,
-            "--index-allowlist",
-            "geonames",
-            "--documents-per-bulk-request",
-            "10",
-            "--max-connections",
-            "1",
-            "--source-version",
-            "ES_7_10",
-            "--initial-lease-duration",
-            failHow == FailHow.NEVER ? "PT10M" : "PT1S" };
-
-        // Kick off the doc migration process
-        log.atInfo().setMessage("Running RfsMigrateDocuments with args: {}")
-            .addArgument(() -> Arrays.toString(args))
-            .log();
-        ProcessBuilder processBuilder = new ProcessBuilder(
-            javaExecutable,
-            "-cp",
-            classpath,
-            "org.opensearch.migrations.RfsMigrateDocuments"
+    @SneakyThrows
+    private static ProcessBuilder setupProcessWithSlowProxy(RunData d) {
+        var tp = d.proxyContainer.getProxy();
+        tp.toxics().latency("latency-toxic", ToxicDirection.DOWNSTREAM, 250);
+        return setupProcess(
+                d.tempDirSnapshot,
+                d.tempDirLucene,
+                d.proxyContainer.getProxyUriAsString(),
+                new String[] {"--documents-per-bulk-request", "4", "--max-connections", "1"}
         );
-        processBuilder.command().addAll(Arrays.asList(args));
-        processBuilder.redirectErrorStream(true);
-        processBuilder.redirectOutput();
-        return processBuilder;
     }
 
-    @NotNull
-    private static Process runAndMonitorProcess(ProcessBuilder processBuilder) throws IOException {
-        var process = processBuilder.start();
-
-        log.atInfo().setMessage("Process started with ID: {}").addArgument(() -> process.toHandle().pid()).log();
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        var readerThread = new Thread(() -> {
-            String line;
-            while (true) {
-                try {
-                    if ((line = reader.readLine()) == null) break;
-                } catch (IOException e) {
-                    log.atWarn().setCause(e).setMessage("Couldn't read next line from sub-process").log();
-                    return;
-                }
-                String finalLine = line;
-                log.atInfo()
-                    .setMessage("from sub-process [{}]: {}")
-                    .addArgument(() -> process.toHandle().pid())
-                    .addArgument(finalLine)
-                    .log();
+    @Test
+    void exitCleanlyFromSigtermAfterUpdatingWorkItem() {
+        testProcess(RECEIVED_SIGTERM_EXIT_CODE, d -> {
+            // The geonames shards are each 195 documents, and we need to guarantee that we're in the middle
+            // of a shard when the sigterm is sent.
+            // The slow proxy operates with up to 4 bulk requests per second, with 4 documents each, for a total
+            // rate of 16 docs/second, meaning it can finish at most 160 documents in 10 seconds (it will be less
+            // because it also has to acquire a lease and download the shard).
+            var processBuilder = setupProcessWithSlowProxy(d);
+            Process process = null;
+            try {
+                process = runAndMonitorProcess(processBuilder);
+                process.waitFor(10, TimeUnit.SECONDS);
+                process.destroy();
+                // Give it 30 seconds and then force kill if it hasn't stopped yet.
+                process.waitFor(30, TimeUnit.SECONDS);
+                Assertions.assertFalse(process.isAlive());
+                process.destroyForcibly();
+            } catch (InterruptedException | IOException e) {
+                throw new RuntimeException(e);
             }
-        });
 
-        // Kill the process and fail if we have to wait too long
-        readerThread.start();
-        return process;
+            // Check that there is a .migrations_working_state index on the target, and it has the expected values.
+            var client = new RestClient(ConnectionContextTestParams.builder()
+                    .host(d.proxyContainer.getProxyUriAsString())
+                    .build()
+                    .toConnectionContext());
+            Assertions.assertEquals(200, client.get(".migrations_working_state", null).statusCode);
+            var fullWorkingStateResponse = client.asyncRequest(HttpMethod.GET, ".migrations_working_state/_search", "{\"query\": {\"match_all\": {}}, \"size\": 1000}", null, null).block();
+            Assertions.assertNotNull(fullWorkingStateResponse);
+            Assertions.assertNotNull(fullWorkingStateResponse.body);
+            Assertions.assertEquals(200, fullWorkingStateResponse.statusCode);
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+                    var workingState = objectMapper.readValue(fullWorkingStateResponse.body, ObjectNode.class);
+                    // Check that at least one item in the workItemsList has a `successor_items` field.
+                    var workItemsList = workingState.get("hits").get("hits");
+                    Assertions.assertFalse(workItemsList.isEmpty());
+                    var successorItemsList = new ArrayList<Boolean>();
+                    workItemsList.forEach(workItem -> successorItemsList.add(workItem.get("_source").has("successor_items")));
+                    Assertions.assertTrue(successorItemsList.contains(true));
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+            return process.exitValue();
+        });
+    }
+
+    @Test
+    void exitCleanlyFromSigtermBeforeReindexingHasStarted() {
+        // This test is very similar to the one above, but does a much quicker sigterm in order to "catch" it before
+        // reindexing has started, and also does a much quicker check that it's actually terminated cleanly (it is able
+        // to shut down almost instantly because it doesn't need to make any network calls).
+        testProcess(RECEIVED_SIGTERM_EXIT_CODE, d -> {
+            var processBuilder = setupProcessWithSlowProxy(d);
+            Process process = null;
+            try {
+                process = runAndMonitorProcess(processBuilder);
+                process.waitFor(2, TimeUnit.SECONDS);
+                process.destroy();
+                // Give it 1 second before checking if it has shutdown.
+                process.waitFor(1, TimeUnit.SECONDS);
+                Assertions.assertFalse(process.isAlive());
+                // If not, forcibly kill it.
+                process.destroyForcibly();
+            } catch (InterruptedException | IOException e) {
+                throw new RuntimeException(e);
+            }
+            return process.exitValue();
+        });
     }
 
 }

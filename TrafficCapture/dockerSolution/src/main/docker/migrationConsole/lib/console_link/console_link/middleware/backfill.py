@@ -21,65 +21,43 @@ def describe(backfill: Backfill, as_json=False) -> Tuple[ExitCode, Dict]:
 handle_backfill_errors = partial(handle_errors, service_type="backfill")
 
 
-@handle_backfill_errors(
-    on_success=lambda result: (
-        ExitCode.SUCCESS,
-        "Backfill created successfully." + "\n" + result,
-    )
-)
+@handle_backfill_errors(on_success=lambda result: (ExitCode.SUCCESS,
+                                                   "Backfill created successfully." + "\n" + result))
 def create(backfill: Backfill, *args, **kwargs) -> CommandResult[str]:
     logger.info(f"Creating backfill with {args=} and {kwargs=}")
     return backfill.create(*args, **kwargs)
 
 
-@handle_errors(
-    "backfill",
-    on_success=lambda result: (
-        ExitCode.SUCCESS,
-        "Backfill started successfully." + "\n" + result,
-    ),
-)
+@handle_errors("backfill",
+               on_success=lambda result: (ExitCode.SUCCESS, "Backfill started successfully." + "\n" + result))
 def start(backfill: Backfill, *args, **kwargs) -> CommandResult[str]:
     logger.info("Starting backfill")
     return backfill.start(*args, **kwargs)
 
 
-@handle_errors(
-    "backfill",
-    on_success=lambda result: (
-        ExitCode.SUCCESS,
-        "Backfill paused successfully." + "\n" + result,
-    ),
-)
+@handle_errors("backfill",
+               on_success=lambda result: (ExitCode.SUCCESS, "Backfill paused successfully." + "\n" + result))
 def pause(backfill: Backfill, *args, **kwargs) -> CommandResult[str]:
     logger.info("Pausing backfill")
     return backfill.pause(*args, **kwargs)
 
 
-@handle_errors(
-    "backfill",
-    on_success=lambda result: (
-        ExitCode.SUCCESS,
-        "Backfill stopped successfully." + "\n" + result,
-    ),
-)
+@handle_errors("backfill",
+               on_success=lambda result: (ExitCode.SUCCESS, "Backfill stopped successfully." + "\n" + result))
 def stop(backfill: Backfill, *args, **kwargs) -> CommandResult[str]:
     logger.info("Stopping backfill")
     return backfill.stop(*args, **kwargs)
 
 
-@handle_errors(
-    "backfill",
-    on_success=lambda status: (ExitCode.SUCCESS, f"{status[0]}\n{status[1]}"),
-)
-def status(
-    backfill: Backfill, deep_check: bool, *args, **kwargs
-) -> CommandResult[Tuple[BackfillStatus, str]]:
+@handle_errors("backfill",
+               on_success=lambda status: (ExitCode.SUCCESS, f"{status[0]}\n{status[1]}"))
+def status(backfill: Backfill, deep_check: bool, *args, **kwargs) -> CommandResult[Tuple[BackfillStatus, str]]:
     logger.info(f"Getting backfill status with {deep_check=}")
     return backfill.get_status(deep_check, *args, **kwargs)
 
 
-@handle_errors("backfill", on_success=lambda status: (ExitCode.SUCCESS, status))
+@handle_errors("backfill",
+               on_success=lambda status: (ExitCode.SUCCESS, status))
 def scale(backfill: Backfill, units: int, *args, **kwargs) -> CommandResult[str]:
     logger.info(f"Scaling backfill to {units} units")
     return backfill.scale(units, *args, **kwargs)

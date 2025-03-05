@@ -12,12 +12,13 @@ RUN dnf install -y --setopt=install_weak_deps=False \
         git \
         glibc-devel \
         hostname \
-        java-11-amazon-corretto \
+        java-17-amazon-corretto \
         jq \
         less \
         make \
         openssl-devel \
         pkg-config \
+        procps-ng \
         python3.11 \
         python3.11-devel \
         python3.11-pip \
@@ -27,7 +28,6 @@ RUN dnf install -y --setopt=install_weak_deps=False \
         vim \
         wget \
         zlib-devel \
-        procps-ng \
         && \
     dnf clean all && \
     rm -rf /var/cache/dnf
@@ -41,7 +41,7 @@ RUN mkdir /tmp/hdf5 && \
 WORKDIR /tmp/hdf5
 RUN CFLAGS="-w" ./configure --prefix=/usr/local --disable-tests --disable-tools && \
     make -j$(nproc) && \
-    make install -j$(nproc) && \
+    make install && \
     rm -rf /tmp/hdf5
 
 # Define the virtual environment path to use for all pipenv runs

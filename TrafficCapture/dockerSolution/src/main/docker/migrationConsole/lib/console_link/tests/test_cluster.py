@@ -5,6 +5,8 @@ import os
 import pytest
 import re
 import json
+import datetime
+from unittest.mock import patch
 
 from base64 import b64encode
 from botocore.auth import SigV4Auth
@@ -331,7 +333,7 @@ def test_valid_cluster_api_call_with_secrets_auth(requests_mock, aws_credentials
 
 def test_valid_cluster_api_call_with_sigv4_auth(requests_mock, aws_credentials):
     valid_with_sigv4 = {
-        "endpoint": "https://opensearchtarget:9200",
+        "endpoint": "https://test.opensearchtarget.com:9200",
         "allow_insecure": True,
         "sigv4": {
             "region": "us-east-2",
@@ -356,6 +358,8 @@ def test_valid_cluster_api_call_with_sigv4_auth(requests_mock, aws_credentials):
         assert "Signature=" in auth_header
         assert "es" in auth_header
         assert "us-east-2" in auth_header
+        host_header = requests_mock.last_request.headers['Host']
+        assert "test.opensearchtarget.com" == host_header
 
 
 def test_call_api_via_middleware(requests_mock):
@@ -448,8 +452,11 @@ def test_sigv4_authentication_signature(requests_mock, method, endpoint, data, h
         requests_mock.get(url, json={'status': 'green'})
     elif method == HttpMethod.POST:
         requests_mock.post(url, json={'hits': {'total': 0, 'hits': []}})
+    # Mock datetime to return a specific timestamp
+    specific_time = datetime.datetime(2025, 1, 1, 12, 0, 0)
+    with mock_aws() and patch("datetime.datetime") as mock_datetime:
+        mock_datetime.utcnow.return_value = specific_time
 
-    with mock_aws():
         # Add default headers to the request
         headers = {
             # These headers are excluded from signing since they are in default request headers
@@ -531,6 +538,8 @@ def test_sigv4_authentication_signature(requests_mock, method, endpoint, data, h
         new_auth_header = aws_request.headers.get('Authorization')
         assert new_auth_header is not None, "Failed to generate new Authorization header"
 
+        # Compare timestamp
+        assert amz_date_header == aws_request.headers.get("x-amz-date")
         # Compare signatures
         original_signature = signature_match.group(1)
         new_signature_match = re.search(r"Signature=([a-f0-9]+)", new_auth_header)

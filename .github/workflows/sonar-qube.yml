@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  java-version: '11'
+  java-version: '17'
   gradle-version: '8.0.2'
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
 
     services:
       sonarqube:
-        image: sonarqube:community
+        image: sonarqube
         ports:
           - 9000:9000
         options: >-
@@ -32,7 +32,7 @@ jobs:
       with:
         distribution: 'corretto'
         java-version: |
-            11
+            17
     - name: Cache SonarQube Scanner
       uses: actions/cache@v3
       with:
@@ -43,6 +43,22 @@ jobs:
       with:
         gradle-version: 8.0.2
         gradle-home-cache-cleanup: true
+
+    - name: Generate SonarQube Token
+      run: |
+        echo "Generating a SonarQube token..."
+        RESPONSE=$(curl -s -X POST -u "admin:admin" "http://localhost:9000/api/user_tokens/generate" \
+          -d "name=github-action-token" -d "type=GLOBAL_ANALYSIS_TOKEN")
+
+        SONAR_TOKEN=$(echo "$RESPONSE" | jq -r '.token')
+
+        if [ "$SONAR_TOKEN" == "null" ]; then
+          echo "❌ Failed to generate SonarQube token!"
+          exit 1
+        fi
+
+        echo "::add-mask::$SONAR_TOKEN"
+        echo "SONAR_TOKEN=$SONAR_TOKEN" >> $GITHUB_ENV
     - name: Run Gradle Build
       run: ./gradlew copyDependencies
     - name: Run SonarQube Scanner
@@ -54,13 +70,12 @@ jobs:
           -Dsonar.projectKey=local_project \
           -Dsonar.sources=. \
           -Dsonar.host.url=http://localhost:9000 \
-          -Dsonar.login=admin \
-          -Dsonar.password=admin
+          -Dsonar.login=$SONAR_TOKEN
     - name: Wait for issues to be processed
       run: sleep 60
     - name: Collect issues from the server
       run: |
-        curl -s -u admin:admin "http://localhost:9000/api/issues/search?componentKeys=local_project" -o issues.json
+        curl -s -u "$SONAR_TOKEN:" "http://localhost:9000/api/issues/search?componentKeys=local_project" -o issues.json
 
         echo "::group::SonarQube Issues"
         jq -r '.issues[] | "File: \(.component):\(.line), Rule: \(.rule), Message: \(.message)"' issues.json | sort
@@ -77,7 +92,7 @@ jobs:
         done
 
         ISSUE_COUNT=$(jq '.issues | length' issues.json)
-        BASELINE_ISSUE_COUNT=89 # Baseline issue count
+        BASELINE_ISSUE_COUNT=43 # Baseline issue count
         if [ "$ISSUE_COUNT" -gt "$BASELINE_ISSUE_COUNT" ]; then
           echo "❌ Build failed: Found $ISSUE_COUNT issues, which is more than the baseline of $BASELINE_ISSUE_COUNT."
           exit 1
@@ -86,7 +101,7 @@ jobs:
         fi
     - name: Upload SonarQube Artifacts
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: sonar-reports
         path: issues.json

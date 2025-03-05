@@ -11,9 +11,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import org.opensearch.migrations.CreateSnapshot;
 import org.opensearch.migrations.bulkload.common.FileSystemRepo;
-import org.opensearch.migrations.bulkload.common.OpenSearchClient;
+import org.opensearch.migrations.bulkload.common.OpenSearchClientFactory;
 import org.opensearch.migrations.bulkload.common.http.ConnectionContextTestParams;
 import org.opensearch.migrations.bulkload.framework.SearchClusterContainer;
 import org.opensearch.migrations.data.WorkloadGenerator;
@@ -38,22 +37,16 @@ public class ParallelDocumentMigrationsTest extends SourceTestBase {
 
     public static Stream<Arguments> makeDocumentMigrationArgs() {
         var numWorkersList = List.of(1, 3, 40);
-        var compressionEnabledList = List.of(true, false);
         return numWorkersList.stream()
-                    .flatMap(numWorkers -> compressionEnabledList.stream().map(compression -> Arguments.of(
-                            numWorkers,
-                            SearchClusterContainer.OS_V2_14_0,
-                            compression
-                        ))
-                    );
+            .map(numWorkers -> Arguments.of(numWorkers, SearchClusterContainer.OS_V2_14_0)
+            );
     }
 
     @ParameterizedTest
     @MethodSource("makeDocumentMigrationArgs")
     public void testDocumentMigration(
         int numWorkers,
-        SearchClusterContainer.ContainerVersion targetVersion,
-        boolean compressionEnabled
+        SearchClusterContainer.ContainerVersion targetVersion
     ) throws Exception {
         var executorService = Executors.newFixedThreadPool(numWorkers);
         final var testSnapshotContext = SnapshotTestContext.factory().noOtelTracking();
@@ -72,22 +65,16 @@ public class ParallelDocumentMigrationsTest extends SourceTestBase {
             ).join();
 
             // Populate the source cluster with data
-            var client = new OpenSearchClient(ConnectionContextTestParams.builder()
-                .host(esSourceContainer.getUrl())
-                .build()
-                .toConnectionContext()
-            );
+            var clientFactory = new OpenSearchClientFactory(ConnectionContextTestParams.builder()
+                    .host(esSourceContainer.getUrl())
+                    .build()
+                    .toConnectionContext());
+            var client = clientFactory.determineVersionAndCreate();
             var generator = new WorkloadGenerator(client);
             generator.generate(new WorkloadOptions());
 
             // Create the snapshot from the source cluster
-            var args = new CreateSnapshot.Args();
-            args.snapshotName = "test_snapshot";
-            args.fileSystemRepoPath = SearchClusterContainer.CLUSTER_SNAPSHOT_DIR;
-            args.sourceArgs.host = esSourceContainer.getUrl();
-
-            var snapshotCreator = new CreateSnapshot(args, testSnapshotContext.createSnapshotCreateContext());
-            snapshotCreator.run();
+            createSnapshot(esSourceContainer, "test_snapshot", testSnapshotContext);
 
             final List<String> INDEX_ALLOWLIST = List.of();
             var tempDir = Files.createTempDirectory("opensearchMigrationReindexFromSnapshot_test_snapshot");
@@ -103,14 +90,14 @@ public class ParallelDocumentMigrationsTest extends SourceTestBase {
                         CompletableFuture.supplyAsync(
                             () -> migrateDocumentsSequentially(
                                 sourceRepo,
-                                args.snapshotName,
+                                "test_snapshot",
                                 INDEX_ALLOWLIST,
                                 osTargetContainer.getUrl(),
                                 runCounter,
                                 clockJitter,
                                 testDocMigrationContext,
                                 sourceVersion.getVersion(),
-                                compressionEnabled
+                                targetVersion.getVersion()
                             ),
                             executorService
                         )
@@ -197,7 +184,7 @@ public class ParallelDocumentMigrationsTest extends SourceTestBase {
         long numItemsAssigned = getMetricValueOrZero(workMetrics, "nextWorkAssignedCount");
         Assertions.assertEquals(numItemsAssigned, shardCount);
         long numCompleted = getMetricValueOrZero(workMetrics, "completeWorkCount");
-        Assertions.assertEquals(numCompleted, shardCount + 1);
+        Assertions.assertEquals(shardCount + 1, numCompleted);
     }
 
 }
