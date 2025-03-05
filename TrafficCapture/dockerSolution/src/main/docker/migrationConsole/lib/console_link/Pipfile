@@ -10,8 +10,6 @@ pyyaml = "*"
 Click = "*"
 cerberus = "*"
 awscli = "*"
-graphene = "3.4.3"
-graphene-django = "3.2.2"
 
 [dev-packages]
 pytest = "*"

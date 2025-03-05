@@ -1,7 +1,6 @@
 import 'source-map-support/register';
 import { App, DefaultStackSynthesizer } from 'aws-cdk-lib';
 import { SolutionsInfrastructureStack } from '../lib/solutions-stack';
-import { WebsiteStack } from '../lib/website-stack';
 
 const getProps = () => {
   const { CODE_BUCKET, SOLUTION_NAME, CODE_VERSION, STACK_NAME_SUFFIX } = process.env;
@@ -49,5 +48,3 @@ new SolutionsInfrastructureStack(app, "Migration-Assistant-Infra-Create-VPC", {
   createVPC: true,
   ...infraProps
 });
-
-new WebsiteStack(app, "MigrationAssistantWebsite", {})
