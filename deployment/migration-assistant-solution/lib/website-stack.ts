@@ -1,10 +1,9 @@
 import { App, CfnOutput, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
-import { AuthorizationType, AwsIntegration, CognitoUserPoolsAuthorizer, Cors, ResponseType, RestApi, TokenAuthorizer } from 'aws-cdk-lib/aws-apigateway';
+import { AuthorizationType, AwsIntegration, CognitoUserPoolsAuthorizer, Cors, ResponseType, RestApi } from 'aws-cdk-lib/aws-apigateway';
 import { OAuthScope, UserPool, UserPoolClient } from 'aws-cdk-lib/aws-cognito';
 import { Effect, PolicyDocument, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
-import path = require('path');
 
 export class WebsiteStack extends Stack {
   constructor(scope: App, id: string, props?: StackProps) {

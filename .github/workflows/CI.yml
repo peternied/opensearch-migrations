@@ -306,6 +306,13 @@ jobs:
         run: npm ci
       - name: Run CDK Jest Tests (using mocked images)
         run: npm run test
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: error
+          name: coverage-reports-node-tests-${{ matrix.npm-project }}
+          path: ${{ matrix.npm-project }}/coverage/*
+
 
   link-checker:
     runs-on: ubuntu-latest
