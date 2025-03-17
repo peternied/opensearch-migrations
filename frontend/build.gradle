@@ -22,6 +22,11 @@ The following is a list of npm commands to execute:
     }
 }
 
+tasks.register('test', NpmTask) {
+    args =  ['run', 'test']
+}
+
+
 tasks.register('lintFrontend', NpmTask) {
     args =  ['run', 'lint']
 }

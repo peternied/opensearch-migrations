@@ -108,8 +108,10 @@ spotless {
 subprojects {
     apply plugin: "com.diffplug.spotless"
     apply plugin: 'jacoco'
-    apply plugin: 'java'
+    // apply plugin: 'java'
     apply plugin: 'maven-publish'
+
+    plugins.withType(JavaPlugin) {
 
     configurations.all {
         resolutionStrategy {
@@ -333,6 +335,8 @@ subprojects {
             xml.required = true
         }
     }
+        }
+
 }
 
 tasks.register('jacocoAggregateReport', JacocoReport) {
