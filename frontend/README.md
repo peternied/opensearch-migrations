@@ -1,33 +1,40 @@
-## Migration Assistant Frontend
+# OpenSearch Migrations Frontend
 
-This project contains all the frontend components for the Migration Assistant. Deployed alongside the Migration Assistant, this website provide a graphical user interface to customers so they can monitor, update, and complete a migration.
+This is the frontend application for the OpenSearch Migrations project. It's built using Next.js and TypeScript, and integrated into the Gradle build system.
 
-- [Migration Assistant Frontend](#migration-assistant-frontend)
-- [Start the Frontend](#start-the-frontend)
-- [Deployment](#deployment)
-- [Configuration](#configuration)
+## Development
 
-## Start the Frontend
+### Prerequisites
+
+- Node.js 20.x or later
+- npm
+
+### Local Development
 
 Run the development server:
 
 ```bash
+cd frontend
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-## Deployment
+### Gradle Integration
 
-> !Note
-> Not yet available for deployment
+This Next.js project is integrated with Gradle through a custom plugin. You can use the following Gradle tasks:
 
-In production scenarios the frontend is deployed with the same process as the Migration Console. By using the [Solutions Deployment](../deployment/migration-assistant-solution/README.md) it will be deployed to the AWS Cloud.
+- `./gradlew :frontend:buildFrontend` - Build the Next.js application
+- `./gradlew :frontend:lintFrontend` - Run linters
+- `./gradlew :frontend:testFrontend` - Run test cases with coverage
+- `./gradlew :frontend:helpFrontend` - Show all of the scripts available for local development with npm
 
-## Configuration
+### Project Structure
 
-To communicate with the backend systems the endpoint needs to be known before starting the development server, it is set through the environment variable
+- `app/` - Next.js app router files, React components, utility functions, and TypeScript types
+- `public/` - Static assets
+- `pages/` - Static assets
 
-```bash
-set MA_CONSOLE_API_URL=https://localhost:8000
-```
+## Integration with the Main Build
+
+This frontend project is integrated with the main OpenSearch Migrations build system. Running `./gradlew build` at the root level will also build the frontend application.

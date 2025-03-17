@@ -12,10 +12,7 @@ export async function getStaticProps() {
   const commitDate = process.env.COMMIT_DATE || 'unknown';
 
   return {
-    props: {
-      commitSha,
-      commitDate
-    }
+    props: { commitSha, commitDate }
   };
 }
 

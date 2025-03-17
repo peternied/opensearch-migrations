@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "serve": "next start",
     "lint": "next lint && npx prettier . --check || (echo '\\n❌ Some files need fixing. Run \"npm run lint:fix\" to fix them automatically.\\n' && exit 1)",
     "lint:fix": "next lint --fix && npx prettier . --write"
   },
