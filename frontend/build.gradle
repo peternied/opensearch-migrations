@@ -8,10 +8,32 @@ node {
     download = true
 }
 
+def buildInputs = [
+    'package.json',
+    'package-lock.json',
+    'next-config.ts',
+    'postcss.config.mjs',
+    'tailwind.config.ts',
+    'tsconfig.json',
+    'src/**',
+    'public/**'
+]
+
+def buildExclusions = [
+    '.gradle',
+    '.next',
+    'node_modules',
+]
+
+def buildOutputs = [
+    '.next',
+    'build/site'
+]
+
 tasks.register('buildFrontend', NpmTask) {
     args = ['run', 'build']
-    inputs.files fileTree(dir: '.', include: ['package.json', 'package-lock.json', 'app/**', 'pages/**', 'public/**'])
-    outputs.dir 'out'
+    inputs.files fileTree(dir: '.', include: buildInputs, exclude: buildExclusions)
+    outputs.files fileTree(dir: '.', include: buildOutputs, exclude: buildExclusions)
 }
 
 tasks.register('helpFrontend', NpmTask) {
@@ -24,17 +46,13 @@ The following is a list of npm commands to execute:
     }
 }
 
-tasks.register('test', NpmTask) {
-    args =  ['run', 'test']
-}
-
-
 tasks.register('lintFrontend', NpmTask) {
     args =  ['run', 'lint']
+    inputs.files fileTree(dir: '.', include: buildInputs, exclude: buildExclusions)
 }
 
 tasks.register('cleanFrontend', Delete) {
-    delete '.next', 'out', 'node_modules'
+    delete buildOutputs
 }
 
 assemble.dependsOn 'buildFrontend'

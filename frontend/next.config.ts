@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
     COMMIT_SHA: getGitCommitHash(),
     COMMIT_DATE: getGitCommitDate()
   },
-  distDir: 'build/site',
+  distDir: 'build/site'
 };
 
 export default nextConfig;
