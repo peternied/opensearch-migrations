@@ -10,6 +10,8 @@ node {
 
 tasks.register('buildFrontend', NpmTask) {
     args = ['run', 'build']
+    inputs.files fileTree(dir: '.', include: ['package.json', 'package-lock.json', 'app/**', 'pages/**', 'public/**'])
+    outputs.dir 'out'
 }
 
 tasks.register('helpFrontend', NpmTask) {

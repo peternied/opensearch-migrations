@@ -31,9 +31,8 @@ This Next.js project is integrated with Gradle through a custom plugin. You can 
 
 ### Project Structure
 
-- `app/` - Next.js app router files, React components, utility functions, and TypeScript types
+- `src/app/` - Next.js app router files, React components, utility functions, and TypeScript types
 - `public/` - Static assets
-- `pages/` - Static assets
 
 ## Integration with the Main Build
 

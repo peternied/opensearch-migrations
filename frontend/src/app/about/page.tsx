@@ -4,11 +4,9 @@ import Header from '@cloudscape-design/components/header';
 import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import MigrationAssistantVersion from './migration-assistant-version';
+import {COMMIT_RECENT_TAG, COMMIT_SHA, COMMIT_DATE} from '@/lib/env';
 
 export default function Page() {
-  const commitRecentTag = process.env.COMMIT_RECENT_TAG!;
-  const commitSha = process.env.COMMIT_SHA!;
-  const commitDate = new Date(process.env.COMMIT_DATE!);
 
   return (
     <SpaceBetween size="m">
@@ -17,9 +15,9 @@ export default function Page() {
       <Container>
         <SpaceBetween size="s">
           <MigrationAssistantVersion
-            versionIdentifier={commitRecentTag}
-            commitSha={commitSha}
-            commitDate={commitDate}
+            versionIdentifier={COMMIT_RECENT_TAG}
+            commitSha={COMMIT_SHA}
+            commitDate={new Date(COMMIT_DATE)}
           />
         </SpaceBetween>
       </Container>
