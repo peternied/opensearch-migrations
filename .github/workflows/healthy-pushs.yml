@@ -1,0 +1,85 @@
+name: Weekly PR Check Runs Summary
+
+on:
+  schedule:
+    - cron: '0 12 * * 1' # Runs every Monday at 12:00 UTC
+  workflow_dispatch:   # Allows manual triggering
+  push:
+    branches: [main]
+
+jobs:
+  pr-check-summary:
+    runs-on: ubuntu-latest
+
+    env:
+      REPO_OWNER: opensearch-project
+      REPO_NAME: opensearch-migrations
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Analyze PR check runs for the past week
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          START_DATE: ${{ github.event.schedule || '' }}
+        run: |
+          START_DATE=$(date -u -d '7 days ago' +"%Y-%m-%dT%H:%M:%SZ")
+          echo "Using START_DATE=$START_DATE"
+
+          MERGED_PRS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/pulls?state=closed&sort=updated&direction=desc&per_page=100" \
+            | jq -r --arg date "$START_DATE" '[ .[] | select(.merged_at != null and .merged_at >= $date) | {merged_at, number, merge_commit_sha}] | sort_by(.merged_at) | reverse | .[]')
+
+          if [ -z "$MERGED_PRS" ]; then
+            echo "No merged PRs found since $START_DATE"
+            exit 0
+          fi
+
+          results_file=$(mktemp)
+          total_prs=0
+          prs_with_failures=0
+
+          for PR in $(echo "$MERGED_PRS" | jq -c '.'); do
+            PR_NUMBER=$(echo "$PR" | jq -r '.number')
+            MERGE_COMMIT_SHA=$(echo "$PR" | jq -r '.merge_commit_sha')
+
+            echo "Analyzing PR #$PR_NUMBER commit: $MERGE_COMMIT_SHA"
+
+            pr_has_failure=false
+            pr_checks="{}"
+
+            CHECKS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/commits/$MERGE_COMMIT_SHA/check-runs" \
+              | jq -r '.check_runs | map({(.name | gsub(" "; "-")): .conclusion}) | add')
+
+            pr_checks=$(jq -s '.[0] * .[1]' <(echo "$pr_checks") <(echo "$CHECKS"))
+
+            if echo "$CHECKS" | jq -e 'to_entries[] | select(.value != "success")' > /dev/null; then
+              pr_has_failure=true
+            fi
+
+            echo "$pr_checks" | jq -r .
+
+            total_prs=$((total_prs + 1))
+            if [ "$pr_has_failure" = true ]; then
+              prs_with_failures=$((prs_with_failures + 1))
+            fi
+
+            for check in $(echo "$pr_checks" | jq -r 'keys[]'); do
+              result=$(echo "$pr_checks" | jq -r --arg check "$check" '.[$check]')
+              if [ -n "$check" ] && [ -n "$result" ]; then
+                echo "$check $result" >> "$results_file"
+              fi
+            done
+          done
+
+          echo "Summary:"
+          echo "Total PRs: $total_prs"
+          echo "PRs with some failures: $prs_with_failures"
+          echo "Check counts:"
+          sort "$results_file" | uniq -c || true
+          rm "$results_file"
