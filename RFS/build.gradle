@@ -1,6 +1,5 @@
 plugins {
     id 'org.opensearch.migrations.java-library-conventions'
-    id 'java'
     id 'io.freefair.lombok'
     id 'java-test-fixtures'
     id 'me.champeau.jmh'
@@ -59,7 +58,6 @@ dependencies {
 
     implementation project(':transformation:transformationPlugins:jsonMessageTransformers:jsonMessageTransformerInterface')
     runtimeOnly project(':transformation:transformationPlugins:jsonMessageTransformers:jsonJMESPathMessageTransformerProvider')
-    runtimeOnly project(':transformation:transformationPlugins:jsonMessageTransformers:jsonJinjavaTransformerProvider')
     runtimeOnly project(':transformation:transformationPlugins:jsonMessageTransformers:jsonJoltMessageTransformerProvider')
     runtimeOnly project(':transformation:transformationPlugins:jsonMessageTransformers:jsonTypeMappingsSanitizationTransformerProvider')
 
