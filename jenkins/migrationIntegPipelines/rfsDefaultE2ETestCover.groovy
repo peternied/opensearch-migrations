@@ -6,4 +6,4 @@ library identifier: "migrations-lib@${gitBranch}", retriever: modernSCM(
          remote: "${gitUrl}"])
 
 // Shared library function (location from root: vars/rfsDefaultE2ETest.groovy)
-rfsDefaultE2ETest()
+rfsDefaultE2ETest([stageId: params.STAGE])

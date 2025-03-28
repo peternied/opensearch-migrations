@@ -3,7 +3,7 @@
 def call(Map config = [:]) {
     def sourceContextId = 'source-single-node-ec2'
     def migrationContextId = 'migration-rfs'
-    def stageId = params.STAGE ?: 'rfs-integ'
+    def stageId = config.stageId ?: 'rfs-integ'
     
     def source_cdk_context = """
         {
