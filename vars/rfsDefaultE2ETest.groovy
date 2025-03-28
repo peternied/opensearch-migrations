@@ -6,14 +6,12 @@ def call(Map config = [:]) {
     def stageId = config.stageId ?: 'rfs-integ'
     // Get the lock resource name from config or default to the stageId
     def lockResourceName = config.lockResourceName ?: stageId
-    // Get the actual stage to be used in the CDK context
-    def deploymentStage = config.deploymentStage ?: stageId
     
     def source_cdk_context = """
         {
           "source-single-node-ec2": {
-            "suffix": "ec2-source-${deploymentStage}",
-            "networkStackSuffix": "ec2-source-${deploymentStage}",
+            "suffix": "ec2-source-<STAGE>",
+            "networkStackSuffix": "ec2-source-<STAGE>",
             "distVersion": "7.10.2",
             "distributionUrl": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-oss-7.10.2-linux-x86_64.tar.gz",
             "captureProxyEnabled": false,
@@ -33,10 +31,10 @@ def call(Map config = [:]) {
     def migration_cdk_context = """
         {
           "migration-rfs": {
-            "stage": "${deploymentStage}",
+            "stage": "<STAGE>",
             "vpcId": "<VPC_ID>",
             "engineVersion": "OS_2.11",
-            "domainName": "os-cluster-${deploymentStage}",
+            "domainName": "os-cluster-<STAGE>",
             "dataNodeCount": 2,
             "openAccessPolicyEnabled": true,
             "domainRemovalPolicy": "DESTROY",
@@ -65,7 +63,7 @@ def call(Map config = [:]) {
             migrationContext: migration_cdk_context,
             sourceContextId: sourceContextId,
             migrationContextId: migrationContextId,
-            defaultStageId: deploymentStage,  // Use the actual deployment stage here
+            defaultStageId: stageId,
             lockResourceName: lockResourceName,  // Use the lock resource name for Jenkins locks
             skipCaptureProxyOnNodeSetup: true,
             jobName: 'rfs-default-e2e-test',
