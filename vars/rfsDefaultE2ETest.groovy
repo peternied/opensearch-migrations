@@ -3,11 +3,13 @@
 def call(Map config = [:]) {
     def sourceContextId = 'source-single-node-ec2'
     def migrationContextId = 'migration-rfs'
+    def stageId = params.STAGE ?: 'rfs-integ'
+    
     def source_cdk_context = """
         {
           "source-single-node-ec2": {
-            "suffix": "ec2-source-<STAGE>",
-            "networkStackSuffix": "ec2-source-<STAGE>",
+            "suffix": "ec2-source-${stageId}",
+            "networkStackSuffix": "ec2-source-${stageId}",
             "distVersion": "7.10.2",
             "distributionUrl": "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-oss-7.10.2-linux-x86_64.tar.gz",
             "captureProxyEnabled": false,
@@ -27,10 +29,10 @@ def call(Map config = [:]) {
     def migration_cdk_context = """
         {
           "migration-rfs": {
-            "stage": "<STAGE>",
+            "stage": "${stageId}",
             "vpcId": "<VPC_ID>",
             "engineVersion": "OS_2.11",
-            "domainName": "os-cluster-<STAGE>",
+            "domainName": "os-cluster-${stageId}",
             "dataNodeCount": 2,
             "openAccessPolicyEnabled": true,
             "domainRemovalPolicy": "DESTROY",
@@ -59,7 +61,7 @@ def call(Map config = [:]) {
             migrationContext: migration_cdk_context,
             sourceContextId: sourceContextId,
             migrationContextId: migrationContextId,
-            defaultStageId: 'rfs-integ',
+            defaultStageId: stageId,
             skipCaptureProxyOnNodeSetup: true,
             jobName: 'rfs-default-e2e-test',
             integTestCommand: '/root/lib/integ_test/integ_test/backfill_tests.py'
