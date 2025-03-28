@@ -24,18 +24,21 @@ def call(Map config = [:]) {
     def testUniqueId = config.testUniqueId ?: "integ_full_${time}_${currentBuild.number}"
     def testDir = "/root/lib/integ_test/integ_test"
     def integTestCommand = config.integTestCommand ?: "${testDir}/replayer_tests.py"
+    // Use a custom lock resource name if provided, otherwise use the stage parameter
+    def lockResourceName = config.lockResourceName ?: params.STAGE
+    
     pipeline {
         agent { label config.workerAgent ?: 'Jenkins-Default-Agent-X64-C5xlarge-Single-Host' }
 
         parameters {
-            string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/opensearch-project/opensearch-migrations.git', description: 'Git repository url')
-            string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch to use for repository')
+            string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/AndreKurait/opensearch-migrations.git', description: 'Git repository url')
+            string(name: 'GIT_BRANCH', defaultValue: 'JenkinsLargeSnapshotMigration', description: 'Git branch to use for repository')
             string(name: 'STAGE', defaultValue: "${defaultStageId}", description: 'Stage name for deployment environment')
         }
 
         options {
-            // Acquire lock on a given deployment stage
-            lock(label: params.STAGE, quantity: 1, variable: 'stage')
+            // Acquire lock on a given deployment stage, use lockResourceName if provided
+            lock(label: lockResourceName, quantity: 1, variable: 'stage')
             timeout(time: 3, unit: 'HOURS')
             buildDiscarder(logRotator(daysToKeepStr: '30'))
         }

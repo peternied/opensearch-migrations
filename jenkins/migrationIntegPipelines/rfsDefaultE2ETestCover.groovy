@@ -6,4 +6,8 @@ library identifier: "migrations-lib@${gitBranch}", retriever: modernSCM(
          remote: "${gitUrl}"])
 
 // Shared library function (location from root: vars/rfsDefaultE2ETest.groovy)
-rfsDefaultE2ETest([stageId: params.STAGE])
+// Always use rfs-integ as the lock resource name regardless of the stage parameter
+rfsDefaultE2ETest([
+    stageId: params.STAGE,
+    lockResourceName: 'rfs-integ'  // This will be passed to the pipeline to use as the lock resource
+])
