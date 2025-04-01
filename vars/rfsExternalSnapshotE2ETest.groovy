@@ -20,6 +20,15 @@ def call(Map config = [:]) {
     def migration_cdk_context = """
         {
           "migration-rfs-external-snapshot": {
+            "sourceCluster" : {
+              "endpoint": "https://vpc-os-cluster-rfs-akurait-av2nwb2dagx7u3zf235z354xna.us-east-1.es.amazonaws.com",
+              "version": "ES_7.10",
+              "auth": {
+                "type": "sigv4",
+                "region": "us-east-1",
+                "serviceSigningName": "es"
+              },
+            },
             "stage": "<STAGE>",
             "vpcId": "<VPC_ID>",
             "engineVersion": "OS_2.11",
@@ -47,10 +56,6 @@ def call(Map config = [:]) {
           }
         }
     """
-
-    // Get external snapshot args from params or use default
-    def rfsExtraArgs = params.EXTERNAL_SNAPSHOT_ARGS ?: "--ext-snapshot-bucket my-test-snapshot-bucket --ext-snapshot-prefix snapshots/my-test-snapshot"
-
     defaultIntegPipeline(
             sourceContext: source_cdk_context,
             migrationContext: migration_cdk_context,
@@ -61,7 +66,6 @@ def call(Map config = [:]) {
             skipCaptureProxyOnNodeSetup: true,
             jobName: 'rfs-external-snapshot-e2e-test',
             integTestCommand: '/root/lib/integ_test/integ_test/s3_snapshot_tests.py',
-            rfsExtraArgs: rfsExtraArgs,
             // Override the deploy step to use --skip-source-deploy flag
             deployStep: {
                 // Use the actual stage parameter for deployment, not the lock variable
