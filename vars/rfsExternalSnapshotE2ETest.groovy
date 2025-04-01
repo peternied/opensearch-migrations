@@ -41,10 +41,15 @@ def call(Map config = [:]) {
             "migrationAssistanceEnabled": true,
             "replayerOutputEFSRemovalPolicy": "DESTROY",
             "migrationConsoleServiceEnabled": true,
-            "otelCollectorEnabled": true
+            "otelCollectorEnabled": true,
+            "sourceClusterDisabled": true,
+            "sourceClusterEndpoint": "dummy-endpoint-not-used"
           }
         }
     """
+
+    // Get external snapshot args from params or use default
+    def rfsExtraArgs = params.EXTERNAL_SNAPSHOT_ARGS ?: "--ext-snapshot-bucket my-test-snapshot-bucket --ext-snapshot-prefix snapshots/my-test-snapshot"
 
     defaultIntegPipeline(
             sourceContext: source_cdk_context,
@@ -56,6 +61,7 @@ def call(Map config = [:]) {
             skipCaptureProxyOnNodeSetup: true,
             jobName: 'rfs-external-snapshot-e2e-test',
             integTestCommand: '/root/lib/integ_test/integ_test/s3_snapshot_tests.py',
+            rfsExtraArgs: rfsExtraArgs,
             // Override the deploy step to use --skip-source-deploy flag
             deployStep: {
                 // Use the actual stage parameter for deployment, not the lock variable
