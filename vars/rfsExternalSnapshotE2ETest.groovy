@@ -5,6 +5,7 @@ def call(Map config = [:]) {
     def stageId = config.stageId ?: 'rfs-external-snapshot-integ'
     // Get the lock resource name from config or default to the stageId
     def lockResourceName = config.lockResourceName ?: stageId
+    def sourceContextId = 'source-empty'
     
     // Empty source context to satisfy defaultIntegPipeline requirements
     def source_cdk_context = """
@@ -45,20 +46,16 @@ def call(Map config = [:]) {
         }
     """
 
-    // Get external snapshot args from params or use default
-    def rfsExtraArgs = params.EXTERNAL_SNAPSHOT_ARGS ?: "--ext-snapshot-bucket my-test-snapshot-bucket --ext-snapshot-prefix snapshots/my-test-snapshot"
-
     defaultIntegPipeline(
             sourceContext: source_cdk_context,
             migrationContext: migration_cdk_context,
-            sourceContextId: 'source-empty',
+            sourceContextId: sourceContextId,
             migrationContextId: migrationContextId,
             defaultStageId: stageId,
             lockResourceName: lockResourceName,
             skipCaptureProxyOnNodeSetup: true,
             jobName: 'rfs-external-snapshot-e2e-test',
             integTestCommand: '/root/lib/integ_test/integ_test/s3_snapshot_tests.py',
-            rfsExtraArgs: rfsExtraArgs,
             // Override the deploy step to use --skip-source-deploy flag
             deployStep: {
                 // Use the actual stage parameter for deployment, not the lock variable
@@ -67,10 +64,15 @@ def call(Map config = [:]) {
                 echo "Deploying with stage: ${deployStage}"
                 sh 'sudo usermod -aG docker $USER'
                 sh 'sudo newgrp docker'
-                def baseCommand = "sudo --preserve-env ./awsE2ESolutionSetup.sh --source-context-file './$source_context_file_name' " +
-                        "--migration-context-file './$migration_context_file_name' " +
-                        "--source-context-id $source_context_id " +
-                        "--migration-context-id $migration_context_id " +
+                
+                // Use hardcoded file names and context IDs
+                def sourceContextFileName = 'sourceJenkinsContext.json'
+                def migrationContextFileName = 'migrationJenkinsContext.json'
+                
+                def baseCommand = "sudo --preserve-env ./awsE2ESolutionSetup.sh --source-context-file './${sourceContextFileName}' " +
+                        "--migration-context-file './${migrationContextFileName}' " +
+                        "--source-context-id ${sourceContextId} " +
+                        "--migration-context-id ${migrationContextId} " +
                         "--stage ${deployStage} " +
                         "--migrations-git-url ${params.GIT_REPO_URL} " +
                         "--migrations-git-branch ${params.GIT_BRANCH} " +
