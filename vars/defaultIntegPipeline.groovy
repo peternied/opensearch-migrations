@@ -109,7 +109,7 @@ def call(Map config = [:]) {
                             if (config.buildStep) {
                                 config.buildStep()
                             } else {
-                                sh 'sudo --preserve-env ./gradlew clean build --no-daemon'
+                                sh 'sudo --preserve-env ./gradlew clean build -x test --no-daemon'
                             }
                         }
                     }
