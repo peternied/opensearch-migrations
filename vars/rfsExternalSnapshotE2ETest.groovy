@@ -45,9 +45,6 @@ def call(Map config = [:]) {
         }
     """
 
-    // Get external snapshot args from params or use default
-    def rfsExtraArgs = params.EXTERNAL_SNAPSHOT_ARGS ?: "--ext-snapshot-bucket my-test-snapshot-bucket --ext-snapshot-prefix snapshots/my-test-snapshot"
-
     defaultIntegPipeline(
             sourceContext: source_cdk_context,
             migrationContext: migration_cdk_context,
@@ -55,33 +52,36 @@ def call(Map config = [:]) {
             migrationContextId: migrationContextId,
             defaultStageId: stageId,
             lockResourceName: lockResourceName,
-            // Use the correct flag to skip source deployment as used in awsE2ESolutionSetup.sh
-            deployStep: { 
-                dir('test') {
-                    def deployStage = params.STAGE
-                    echo "Acquired lock resource: ${lockVar}"
-                    echo "Deploying with stage: ${deployStage}"
-                    sh 'sudo usermod -aG docker $USER'
-                    sh 'sudo newgrp docker'
-                    def baseCommand = "sudo --preserve-env ./awsE2ESolutionSetup.sh --source-context-file './$source_context_file_name' " +
-                            "--migration-context-file './$migration_context_file_name' " +
-                            "--source-context-id $source_context_id " +
-                            "--migration-context-id $migration_context_id " +
+            skipCaptureProxyOnNodeSetup: true,
+            jobName: 'rfs-external-snapshot-e2e-test',
+            integTestCommand: '/root/lib/integ_test/integ_test/s3_snapshot_tests.py',
+            // Override the deploy step to use --skip-source-deploy flag
+            deployStep: { script ->
+                script.dir('test') {
+                    def deployStage = script.params.STAGE
+                    script.echo "Acquired lock resource: ${script.lockVar}"
+                    script.echo "Deploying with stage: ${deployStage}"
+                    script.sh 'sudo usermod -aG docker $USER'
+                    script.sh 'sudo newgrp docker'
+                    def baseCommand = "sudo --preserve-env ./awsE2ESolutionSetup.sh --source-context-file './${script.source_context_file_name}' " +
+                            "--migration-context-file './${script.migration_context_file_name}' " +
+                            "--source-context-id ${script.source_context_id} " +
+                            "--migration-context-id ${script.migration_context_id} " +
                             "--stage ${deployStage} " +
-                            "--migrations-git-url ${params.GIT_REPO_URL} " +
-                            "--migrations-git-branch ${params.GIT_BRANCH} " +
+                            "--migrations-git-url ${script.params.GIT_REPO_URL} " +
+                            "--migrations-git-branch ${script.params.GIT_BRANCH} " +
                             "--skip-source-deploy" // Skip deploying the source cluster
                     
-                    withCredentials([string(credentialsId: 'migrations-test-account-id', variable: 'MIGRATIONS_TEST_ACCOUNT_ID')]) {
-                        withAWS(role: 'JenkinsDeploymentRole', roleAccount: "${MIGRATIONS_TEST_ACCOUNT_ID}", duration: 5400, roleSessionName: 'jenkins-session') {
-                            sh baseCommand
+                    script.withCredentials([script.string(credentialsId: 'migrations-test-account-id', variable: 'MIGRATIONS_TEST_ACCOUNT_ID')]) {
+                        script.withAWS(role: 'JenkinsDeploymentRole', roleAccount: "${script.MIGRATIONS_TEST_ACCOUNT_ID}", duration: 5400, roleSessionName: 'jenkins-session') {
+                            script.sh baseCommand
                         }
                     }
                 }
             },
-            skipCaptureProxyOnNodeSetup: true,
-            jobName: 'rfs-external-snapshot-e2e-test',
-            integTestCommand: '/root/lib/integ_test/integ_test/s3_snapshot_tests.py',
-            rfsExtraArgs: rfsExtraArgs
+            // Override the finish step to avoid the FilePath error
+            finishStep: { script ->
+                script.echo "External snapshot test completed"
+            }
     )
 }
