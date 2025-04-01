@@ -5,7 +5,7 @@ library identifier: "migrations-lib@${gitBranch}", retriever: modernSCM(
         [$class: 'GitSCMSource',
          remote: "${gitUrl}"])
 
-// Shared library function that uses an external S3 snapshot rather than a source cluster
+// Shared library function (location from root: vars/rfsExternalSnapshotE2ETest.groovy)
 // Always use rfs-external-snapshot as the lock resource name regardless of the stage parameter
 // But use the actual STAGE parameter as the deployment stage for CDK context
 rfsExternalSnapshotE2ETest([

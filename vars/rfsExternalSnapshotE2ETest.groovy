@@ -1,4 +1,4 @@
-// E2E test for RFS using an external S3 snapshot instead of deploying a source cluster
+// Note: This integ test uses an external S3 snapshot instead of deploying a source cluster
 
 def call(Map config = [:]) {
     def migrationContextId = 'migration-rfs-external-snapshot'
@@ -6,7 +6,15 @@ def call(Map config = [:]) {
     // Get the lock resource name from config or default to the stageId
     def lockResourceName = config.lockResourceName ?: stageId
     
-    // No source_cdk_context as we're using an external S3 snapshot instead
+    // Empty source context to satisfy defaultIntegPipeline requirements
+    def source_cdk_context = """
+        {
+          "source-empty": {
+            "suffix": "ec2-source-<STAGE>",
+            "networkStackSuffix": "ec2-source-<STAGE>"
+          }
+        }
+    """
     
     def migration_cdk_context = """
         {
@@ -37,16 +45,43 @@ def call(Map config = [:]) {
         }
     """
 
+    // Get external snapshot args from params or use default
+    def rfsExtraArgs = params.EXTERNAL_SNAPSHOT_ARGS ?: "--ext-snapshot-bucket my-test-snapshot-bucket --ext-snapshot-prefix snapshots/my-test-snapshot"
+
     defaultIntegPipeline(
-            // No sourceContext as we're not deploying a source cluster
+            sourceContext: source_cdk_context,
             migrationContext: migration_cdk_context,
-            // No sourceContextId as we're not deploying a source cluster
+            sourceContextId: 'source-empty',
             migrationContextId: migrationContextId,
             defaultStageId: stageId,
-            lockResourceName: lockResourceName,  // Use the lock resource name for Jenkins locks
-            skipSourceDeployment: true, // Skip deploying a source cluster
+            lockResourceName: lockResourceName,
+            // Use the correct flag to skip source deployment as used in awsE2ESolutionSetup.sh
+            deployStep: { 
+                dir('test') {
+                    def deployStage = params.STAGE
+                    echo "Acquired lock resource: ${lockVar}"
+                    echo "Deploying with stage: ${deployStage}"
+                    sh 'sudo usermod -aG docker $USER'
+                    sh 'sudo newgrp docker'
+                    def baseCommand = "sudo --preserve-env ./awsE2ESolutionSetup.sh --source-context-file './$source_context_file_name' " +
+                            "--migration-context-file './$migration_context_file_name' " +
+                            "--source-context-id $source_context_id " +
+                            "--migration-context-id $migration_context_id " +
+                            "--stage ${deployStage} " +
+                            "--migrations-git-url ${params.GIT_REPO_URL} " +
+                            "--migrations-git-branch ${params.GIT_BRANCH} " +
+                            "--skip-source-deploy" // Skip deploying the source cluster
+                    
+                    withCredentials([string(credentialsId: 'migrations-test-account-id', variable: 'MIGRATIONS_TEST_ACCOUNT_ID')]) {
+                        withAWS(role: 'JenkinsDeploymentRole', roleAccount: "${MIGRATIONS_TEST_ACCOUNT_ID}", duration: 5400, roleSessionName: 'jenkins-session') {
+                            sh baseCommand
+                        }
+                    }
+                }
+            },
             skipCaptureProxyOnNodeSetup: true,
             jobName: 'rfs-external-snapshot-e2e-test',
             integTestCommand: '/root/lib/integ_test/integ_test/s3_snapshot_tests.py',
+            rfsExtraArgs: rfsExtraArgs
     )
 }
