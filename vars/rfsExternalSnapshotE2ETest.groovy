@@ -27,7 +27,7 @@ def call(Map config = [:]) {
                 "type": "sigv4",
                 "region": "us-east-1",
                 "serviceSigningName": "es"
-              },
+              }
             },
             "stage": "<STAGE>",
             "vpcId": "<VPC_ID>",
