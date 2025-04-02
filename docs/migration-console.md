@@ -34,7 +34,7 @@ The source cluster connection is optional.  A customer can configure the `cdk.co
 
 #### Target Cluster
 
-The target cluster is also populated in the `cdk.context.json` and the Migration Console uses the connection details to make http requests directly, as well as passing them to the `MetadataMigration` tool. Direct HTTP requests are used during an Reindex-from-Snapshot (RFS) migration to query the `.migrations_working_state` index and inform the user about the progress of the backfill.
+The target cluster is also populated in the `cdk.context.json` and the Migration Console uses the connection details to make http requests directly, as well as passing them to the `MetadataMigration` tool. Direct HTTP requests are used during an Reindex-from-Snapshot (RFS) migration to query the `migrations_working_state` index and inform the user about the progress of the backfill.
 
 #### Kafka
 

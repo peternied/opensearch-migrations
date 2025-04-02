@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
 import org.opensearch.migrations.bulkload.common.SnapshotRepo;
 import org.opensearch.migrations.bulkload.common.SourceRepo;
 
+@Slf4j
 public class SnapshotRepoProvider_ES_7_10 implements SnapshotRepo.Provider {
     private final SourceRepo repo;
     private SnapshotRepoData_ES_7_10 repoData = null;
@@ -37,9 +39,12 @@ public class SnapshotRepoProvider_ES_7_10 implements SnapshotRepo.Provider {
             .findFirst()
             .orElse(null);
 
+        log.error(" snapshot {}", snapshotName);
+
         if (targetSnapshot != null) {
             targetSnapshot.getIndexMetadataLookup().keySet().forEach(indexId ->
                 getRepoData().getIndices().forEach((indexName, rawIndex) -> {
+                    log.error("Index {} not matching snapshot {}", indexName, snapshotName);
                     if (indexId.equals(rawIndex.getId())) {
                         matchedIndices.add(SnapshotRepoData_ES_7_10.Index.fromRawIndex(indexName, rawIndex));
                     }

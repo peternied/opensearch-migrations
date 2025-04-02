@@ -34,7 +34,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
     // Create a stable logger that descendants can use, and we can predictably read from in tests
     protected static final Logger log = LoggerFactory.getLogger(OpenSearchWorkCoordinator.class);
 
-    public static final String INDEX_NAME = ".migrations_working_state";
+    public static final String INDEX_NAME = "migrations_working_state";
     public static final int MAX_REFRESH_RETRIES = 6;
     public static final int MAX_SETUP_RETRIES = 6;
     static final long ACQUIRE_WORK_RETRY_BASE_MS = 10;
@@ -287,7 +287,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
             + "    },\n"
             + "    \"source\": \""
             + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
-            + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx.source.scriptVersion);"
+            + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx._source.scriptVersion);"
             + "      } "
             + "      long serverTimeSeconds = System.currentTimeMillis() / 1000;"
             + "      if (Math.abs(params.clientTimestamp - serverTimeSeconds) > {CLOCK_DEVIATION_SECONDS_THRESHOLD}) {"
@@ -366,6 +366,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
     }
 
     @Override
+    @SneakyThrows
     public boolean createUnassignedWorkItem(
         String workItemId,
         Supplier<IWorkCoordinationContexts.ICreateUnassignedWorkItemContext> contextSupplier
@@ -447,7 +448,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
                 + "    },\n"
                 + "    \"source\": \""
                 + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
-                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx.source.scriptVersion);"
+                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx._source.scriptVersion);"
                 + "      } "
                 + "      if (ctx._source." + LEASE_HOLDER_ID_FIELD_NAME + " != params.workerId) {"
                 + "        throw new IllegalArgumentException(\\\"work item was owned by \\\" + ctx._source."
@@ -552,86 +553,115 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
      * @param expirationWindowSeconds How long the initial lease should be for
      * @throws IOException if the request couldn't be made
      */
+    /**
+     * @param expirationWindowSeconds How long the initial lease should be for
+     * @throws IOException if the request couldn't be made
+     */
+    @SneakyThrows
     UpdateResult assignOneWorkItem(long expirationWindowSeconds) throws IOException {
-        // the random_score reduces the number of version conflicts from ~1200 for 40 concurrent requests
-        // to acquire 40 units of work to around 800
-        final var queryUpdateTemplate = "{\n"
-            + "\"query\": {"
-            + "  \"function_score\": {\n" + QUERY_INCOMPLETE_EXPIRED_ITEMS_STR + ","
-            + "    \"random_score\": {},\n"
-            + "    \"boost_mode\": \"replace\"\n" + // Try to avoid the workers fighting for the same work items
-            "  }"
-            + "},"
-            + "\"size\": 1,\n"
-            + "\"script\": {"
-            + "  \"params\": { \n"
-            + "    \"clientTimestamp\": " + CLIENT_TIMESTAMP_TEMPLATE + ",\n"
-            + "    \"expirationWindow\": " + EXPIRATION_WINDOW_TEMPLATE + ",\n"
-            + "    \"workerId\": \"" + WORKER_ID_TEMPLATE + "\",\n"
-            + "    \"counter\": 0\n"
-            + "  },\n"
-            + "  \"source\": \""
-            + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
-            + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx.source.scriptVersion);"
-            + "      } "
-            + "      long serverTimeSeconds = System.currentTimeMillis() / 1000;"
-            + "      if (Math.abs(params.clientTimestamp - serverTimeSeconds) > {CLOCK_DEVIATION_SECONDS_THRESHOLD}) {"
-            + "        throw new IllegalArgumentException(\\\"The current times indicated between the client and server are too different.\\\");"
-            + "      }"
-            + "      long newExpiration = params.clientTimestamp + (((long)Math.pow(2, ctx._source.nextAcquisitionLeaseExponent)) * params.expirationWindow);"
-            + "      if (ctx._source." + EXPIRATION_FIELD_NAME + " < serverTimeSeconds && " + // is expired
-            "          ctx._source." + EXPIRATION_FIELD_NAME + " < newExpiration) {" +        // sanity check
-            "        ctx._source." + EXPIRATION_FIELD_NAME + " = newExpiration;"
-            + "        ctx._source." + LEASE_HOLDER_ID_FIELD_NAME + " = params.workerId;"
-            + "        ctx._source.nextAcquisitionLeaseExponent += 1;"
-            + "      } else {"
-            + "        ctx.op = \\\"noop\\\";"
-            + "      }"
-            + "\" "
-            +  // end of source script contents
-            "}"
-            +    // end of script block
-            "}";
+        // --- Step 1: Search for a candidate document ---
+        final var searchQueryTemplate = "{\n"
+                + "  \"query\": {\n"
+                + "    \"function_score\": {\n"
+                + "      " + QUERY_INCOMPLETE_EXPIRED_ITEMS_STR + ",\n"
+                + "      \"random_score\": {},\n"
+                + "      \"boost_mode\": \"replace\"\n"
+                + "    }\n"
+                + "  },\n"
+                + "  \"size\": 1\n"
+                + "}";
+        final var searchBody = searchQueryTemplate
+                .replace(OLD_EXPIRATION_THRESHOLD_TEMPLATE, String.valueOf(
+                        Instant.now().toEpochMilli() / 1000));
+
+
+        var searchResponse = httpClient.makeJsonRequest(
+                AbstractedHttpClient.POST_METHOD,
+                getPathForSearches(),
+                null,
+                searchBody
+        );
+        var searchResultTree = objectMapper.readTree(searchResponse.getPayloadBytes());
+
+        log.warn("Response: {}",
+                new String(searchResponse.getPayloadBytes(), StandardCharsets.UTF_8));
+        long totalHits = searchResultTree.path("hits").path("total").findValue("value").asLong(0);
+        if (totalHits == 0) {
+            return UpdateResult.NOTHING_TO_ACQUIRE;
+        }
+        var hit = searchResultTree.path("hits").path("hits").get(0);
+        String docId = hit.path("_id").asText();
+        // --- Step 2: Update the found document using the _update API ---
+        final var updateQueryTemplate = "{\n"
+                + "  \"script\": {\n"
+                + "    \"params\": { \n"
+                + "      \"clientTimestamp\": " + CLIENT_TIMESTAMP_TEMPLATE + ",\n"
+                + "      \"expirationWindow\": " + EXPIRATION_WINDOW_TEMPLATE + ",\n"
+                + "      \"workerId\": \"" + WORKER_ID_TEMPLATE + "\",\n"
+                + "      \"counter\": 0\n"
+                + "    },\n"
+                + "    \"source\": \""
+                + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
+                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx._source.scriptVersion);"
+                + "      } "
+                + "      long serverTimeSeconds = System.currentTimeMillis() / 1000;"
+                + "      if (Math.abs(params.clientTimestamp - serverTimeSeconds) > " + CLOCK_DEVIATION_SECONDS_THRESHOLD_TEMPLATE + ") {"
+                + "        throw new IllegalArgumentException(\\\"The current times indicated between the client and server are too different.\\\");"
+                + "      }"
+                + "      long newExpiration = params.clientTimestamp + (((long)Math.pow(2, ctx._source.nextAcquisitionLeaseExponent)) * params.expirationWindow);"
+                + "      if (ctx._source." + EXPIRATION_FIELD_NAME + " < serverTimeSeconds && ctx._source." + EXPIRATION_FIELD_NAME + " < newExpiration) {"
+                + "        ctx._source." + EXPIRATION_FIELD_NAME + " = newExpiration;"
+                + "        ctx._source." + LEASE_HOLDER_ID_FIELD_NAME + " = params.workerId;"
+                + "        ctx._source.nextAcquisitionLeaseExponent += 1;"
+                + "      } else {"
+                + "        ctx.op = \\\"noop\\\";"
+                + "      }"
+                + "\"\n"
+                + "  }\n"
+                + "}";
 
         final var timestampEpochSeconds = clock.instant().toEpochMilli() / 1000;
-        final var body = queryUpdateTemplate.replace(SCRIPT_VERSION_TEMPLATE, "2.0")
-            .replace(WORKER_ID_TEMPLATE, workerId)
-            .replace(CLIENT_TIMESTAMP_TEMPLATE, Long.toString(timestampEpochSeconds))
-            .replace(OLD_EXPIRATION_THRESHOLD_TEMPLATE, Long.toString(timestampEpochSeconds))
-            .replace(EXPIRATION_WINDOW_TEMPLATE, Long.toString(expirationWindowSeconds))
-            .replace(
-                CLOCK_DEVIATION_SECONDS_THRESHOLD_TEMPLATE,
-                Long.toString(tolerableClientServerClockDifferenceSeconds)
-            );
+        final var updateBody = updateQueryTemplate.replace(SCRIPT_VERSION_TEMPLATE, "2.0")
+                .replace(WORKER_ID_TEMPLATE, workerId)
+                .replace(CLIENT_TIMESTAMP_TEMPLATE, Long.toString(timestampEpochSeconds))
+                .replace(EXPIRATION_WINDOW_TEMPLATE, Long.toString(expirationWindowSeconds))
+                .replace(
+                        CLOCK_DEVIATION_SECONDS_THRESHOLD_TEMPLATE,
+                        Long.toString(tolerableClientServerClockDifferenceSeconds)
+                );
 
-        var response = httpClient.makeJsonRequest(
-            AbstractedHttpClient.POST_METHOD,
-            getPathForSingleDocumentUpdateByQuery(),
-            null,
-            body
+        var updateResponse = httpClient.makeJsonRequest(
+                AbstractedHttpClient.POST_METHOD,
+                getPathForUpdates(docId),
+                null,
+                updateBody
         );
-        if (response.getStatusCode() == 409) {
+
+        log.warn("Response: {}", updateResponse.getStatusCode());
+        log.warn("Response: {}", updateResponse.getStatusText());
+
+
+        log.warn("Response: {}",
+                new String(updateResponse.getPayloadBytes(), StandardCharsets.UTF_8));
+
+        if (updateResponse.getStatusCode() == 409) {
             return UpdateResult.VERSION_CONFLICT;
         }
-        var resultTree = objectMapper.readTree(response.getPayloadBytes());
-        final var numUpdated = resultTree.path(UPDATED_COUNT_FIELD_NAME).longValue();
-        final var noops = resultTree.path("noops").longValue();
-        if (numUpdated > 1) {
-            throw new IllegalStateException("Updated leases for " + numUpdated + " work items instead of 0 or 1");
-        }
-        if (numUpdated > 0) {
-            return UpdateResult.SUCCESSFUL_ACQUISITION;
-        } else if (resultTree.path(VERSION_CONFLICTS_FIELD_NAME).longValue() > 0) {
-            return UpdateResult.VERSION_CONFLICT;
-        } else if (resultTree.path("total").longValue() == 0) {
+        if (updateResponse.getStatusCode() == 404) {
             return UpdateResult.NOTHING_TO_ACQUIRE;
-        } else if (noops > 0) {
+        }
+        var updateResultTree = objectMapper.readTree(updateResponse.getPayloadBytes());
+        String result = updateResultTree.path("result").asText();
+        Thread.sleep(15000);
+        if ("noop".equals(result)) {
             throw new PotentialClockDriftDetectedException(
-                "Found " + noops + " noop values in response with no successful updates",
-                timestampEpochSeconds
+                    "No update performed (noop) on document update for docId: " + docId,
+                    timestampEpochSeconds
             );
+        } else if ("updated".equals(result)) {
+            return UpdateResult.SUCCESSFUL_ACQUISITION;
         } else {
-            throw new IllegalStateException("Unexpected response for update: " + resultTree);
+            throw new IllegalStateException("Unexpected update result: " + updateResultTree);
         }
     }
 
@@ -742,7 +772,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
                 + "    },\n"
                 + "    \"source\": \""
                 + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
-                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx.source.scriptVersion);"
+                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx._source.scriptVersion);"
                 + "      }"
                 + "      if (ctx._source." + LEASE_HOLDER_ID_FIELD_NAME + " != params.workerId) {"
                 + "        throw new IllegalArgumentException(\\\"work item was owned by \\\" + ctx._source."
@@ -869,6 +899,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
             throw new IllegalArgumentException("successorWorkItemIds can not contain the delimiter: " + SUCCESSOR_ITEM_DELIMITER);
         }
         try (var ctx = contextSupplier.get()) {
+            refresh(ctx::getRefreshContext);
             // It is extremely valuable to try hard to get the work item updated with successor item ids. If it fails without
             // completing this step, the next worker to pick up this lease will rerun all of the work. If it fails after this
             // step, the next worker to pick it up will see this update and resume the work of creating the successor work items,
@@ -1012,22 +1043,23 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
 
     private void refresh(Supplier<IWorkCoordinationContexts.IRefreshContext> contextSupplier) throws IOException,
         InterruptedException {
-        try {
-            doUntil("refresh", 100, MAX_REFRESH_RETRIES, contextSupplier::get, () -> {
-                try {
-                    return httpClient.makeJsonRequest(
-                        AbstractedHttpClient.POST_METHOD,
-                        INDEX_NAME + "/_refresh",
-                        null,
-                        null
-                    );
-                } catch (IOException e) {
-                    throw Lombok.sneakyThrow(e);
-                }
-            }, AbstractedHttpClient.AbstractHttpResponse::getStatusCode, (r, statusCode) -> statusCode == 200);
-        } catch (MaxTriesExceededException e) {
-            throw new IOException(e);
-        }
+        Thread.sleep(15000);
+//        try {
+//            doUntil("refresh", 100, MAX_REFRESH_RETRIES, contextSupplier::get, () -> {
+//                try {
+//                    return httpClient.makeJsonRequest(
+//                        AbstractedHttpClient.POST_METHOD,
+//                        INDEX_NAME + "/_refresh",
+//                        null,
+//                        null
+//                    );
+//                } catch (IOException e) {
+//                    throw Lombok.sneakyThrow(e);
+//                }
+//            }, AbstractedHttpClient.AbstractHttpResponse::getStatusCode, (r, statusCode) -> statusCode == 200);
+//        } catch (MaxTriesExceededException e) {
+//            throw new IOException(e);
+//        }
     }
 
     /**
@@ -1047,11 +1079,13 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
         throws RetriesExceededException, IOException, InterruptedException
     {
         try (var ctx = contextSupplier.get()) {
+            refresh(ctx::getRefreshContext);
             final var leaseChecker = new LeaseChecker(leaseDuration, System.nanoTime());
             int driftRetries = 0;
             while (true) {
                 Duration sleepBeforeNextRetryDuration;
                 try {
+                    refresh(ctx::getRefreshContext);
                     final var obtainResult = assignOneWorkItem(leaseDuration.toSeconds());
                     switch (obtainResult) {
                         case SUCCESSFUL_ACQUISITION:

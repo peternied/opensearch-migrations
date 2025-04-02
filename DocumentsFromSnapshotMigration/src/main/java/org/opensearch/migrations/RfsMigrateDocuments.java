@@ -63,7 +63,7 @@ import org.slf4j.MDC;
 public class RfsMigrateDocuments {
     public static final int PROCESS_TIMED_OUT_EXIT_CODE = 2;
     public static final int NO_WORK_LEFT_EXIT_CODE = 3;
-    public static final int TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS = 5;
+    public static final int TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS = 30;
     public static final String LOGGING_MDC_WORKER_ID = "workerId";
 
     // Decrease successor nextAcquisitionLeaseExponent if shard setup takes less than 2.5% of total lease time

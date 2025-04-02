@@ -14,7 +14,7 @@ env:
 # Prevent multiple simultaneous runs
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !(github.event_name == 'push' && github.repository == 'opensearch-project/opensearch-migrations') }}
 
 jobs:
   workflow-info:

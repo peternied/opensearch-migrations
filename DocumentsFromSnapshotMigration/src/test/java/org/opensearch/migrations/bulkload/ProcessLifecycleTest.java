@@ -244,13 +244,13 @@ public class ProcessLifecycleTest extends SourceTestBase {
                 throw new RuntimeException(e);
             }
 
-            // Check that there is a .migrations_working_state index on the target, and it has the expected values.
+            // Check that there is a migrations_working_state index on the target, and it has the expected values.
             var client = new RestClient(ConnectionContextTestParams.builder()
                     .host(d.proxyContainer.getProxyUriAsString())
                     .build()
                     .toConnectionContext());
-            Assertions.assertEquals(200, client.get(".migrations_working_state", null).statusCode);
-            var fullWorkingStateResponse = client.asyncRequest(HttpMethod.GET, ".migrations_working_state/_search", "{\"query\": {\"match_all\": {}}, \"size\": 1000}", null, null).block();
+            Assertions.assertEquals(200, client.get("migrations_working_state", null).statusCode);
+            var fullWorkingStateResponse = client.asyncRequest(HttpMethod.GET, "migrations_working_state/_search", "{\"query\": {\"match_all\": {}}, \"size\": 1000}", null, null).block();
             Assertions.assertNotNull(fullWorkingStateResponse);
             Assertions.assertNotNull(fullWorkingStateResponse.body);
             Assertions.assertEquals(200, fullWorkingStateResponse.statusCode);

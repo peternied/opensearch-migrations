@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.opensearch.migrations.bulkload.common.RestClient;
@@ -47,6 +48,17 @@ public class CoordinateWorkHttpClient implements AbstractedHttpClient {
         HttpMethod httpMethod = HttpMethod.valueOf(method);
         var response = restClient.asyncRequestWithFlatHeaderValues(httpMethod, path, payload, headers, null).block();
         assert response != null;
+        log.atWarn().setMessage("Requesst {} \n{} \n{} \n {}")
+                .addArgument(method)
+                .addArgument(path)
+                .addArgument(headers.entrySet().stream().map(e -> e.getKey() + ":" + e.getValue())
+                        .collect(Collectors.joining("\n")))
+                .addArgument(payload)
+                .log();
+
+        log.atWarn().setMessage("Response {}")
+                .addArgument(response.statusText)
+                .log();
         return new Response(
             response.statusCode,
             response.statusText,

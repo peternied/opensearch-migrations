@@ -9,6 +9,7 @@ import com.beust.jcommander.ParametersDelegate;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 
 /**
@@ -17,6 +18,7 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 @Getter
 @EqualsAndHashCode(exclude={"requestTransformer"})
 @ToString(exclude={"requestTransformer"})
+@Slf4j
 public class ConnectionContext {
     public enum Protocol {
         HTTP,
@@ -68,6 +70,7 @@ public class ConnectionContext {
             requestTransformer = new BasicAuthTransformer(params.getUsername(), params.getPassword());
         }
         else if (sigv4Enabled) {
+            log.error("Sigv4 enabled with {}", DefaultCredentialsProvider.create().resolveCredentials().toString());
             requestTransformer = new SigV4AuthTransformer(
                 DefaultCredentialsProvider.create(),
                 params.getAwsServiceSigningName(),

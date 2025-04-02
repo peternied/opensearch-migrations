@@ -20,7 +20,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-WORKING_STATE_INDEX = ".migrations_working_state"
+WORKING_STATE_INDEX = "migrations_working_state"
 
 DOCKER_RFS_SCHEMA = {
     "type": "dict",
@@ -237,7 +237,7 @@ class ECSRFSBackfill(RFSBackfill):
 def get_detailed_status(target_cluster: Cluster) -> Optional[str]:
     # Check whether the working state index exists. If not, we can't run queries.
     try:
-        target_cluster.call_api("/.migrations_working_state")
+        target_cluster.call_api("/migrations_working_state")
     except requests.exceptions.RequestException:
         logger.warning("Working state index does not yet exist, deep status checks can't be performed.")
         return None
@@ -355,7 +355,7 @@ def backup_working_state_index(cluster: Cluster, index_name: str, backup_path: s
 
 def parse_query_response(query: dict, cluster: Cluster, label: str) -> Optional[int]:
     try:
-        response = cluster.call_api("/.migrations_working_state/_search", data=json.dumps(query),
+        response = cluster.call_api("/migrations_working_state/_search", data=json.dumps(query),
                                     headers={'Content-Type': 'application/json'})
     except Exception as e:
         logger.error(f"Failed to execute query: {e}")

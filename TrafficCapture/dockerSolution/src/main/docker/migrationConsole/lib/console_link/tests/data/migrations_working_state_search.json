@@ -7,7 +7,7 @@
     "max_score": 1.0,
     "hits": [
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-211998__2",
         "_score": 1.0,
         "_source": {
@@ -18,7 +18,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-211998__3",
         "_score": 1.0,
         "_source": {
@@ -29,7 +29,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-211998__4",
         "_score": 1.0,
         "_source": {
@@ -40,7 +40,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-221998__0",
         "_score": 1.0,
         "_source": {
@@ -51,7 +51,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-221998__1",
         "_score": 1.0,
         "_source": {
@@ -62,7 +62,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-221998__2",
         "_score": 1.0,
         "_source": {
@@ -73,7 +73,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-221998__3",
         "_score": 1.0,
         "_source": {
@@ -84,7 +84,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-221998__4",
         "_score": 1.0,
         "_source": {
@@ -95,7 +95,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-201998__0",
         "_score": 1.0,
         "_source": {
@@ -106,7 +106,7 @@
         }
       },
       {
-        "_index": ".migrations_working_state",
+        "_index": "migrations_working_state",
         "_id": "logs-201998__1",
         "_score": 1.0,
         "_source": {

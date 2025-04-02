@@ -158,8 +158,8 @@ def test_k8s_rfs_get_status_deep_check(k8s_rfs_backfill, mocker):
         data = json.load(f)
         total_shards = data['hits']['total']['value']
     with requests_mock.Mocker() as rm:
-        rm.get(f"{target.endpoint}/.migrations_working_state", status_code=200)
-        rm.get(f"{target.endpoint}/.migrations_working_state/_search",
+        rm.get(f"{target.endpoint}/migrations_working_state", status_code=200)
+        rm.get(f"{target.endpoint}/migrations_working_state/_search",
                status_code=200,
                json=data)
         value = k8s_rfs_backfill.get_status(deep_check=True)
@@ -211,7 +211,7 @@ def test_k8s_rfs_backfill_archive_as_expected(k8s_rfs_backfill, mocker, tmpdir):
         assert json.load(f) == mocked_docs
 
     mock_api.assert_called_once_with(
-        ANY, "/.migrations_working_state", method=HttpMethod.DELETE,
+        ANY, "/migrations_working_state", method=HttpMethod.DELETE,
         params={"ignore_unavailable": "true"}
     )
 

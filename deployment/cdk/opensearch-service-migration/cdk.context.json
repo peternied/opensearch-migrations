@@ -1,34 +1,47 @@
 {
   "default": {
-    "stage": "<STAGE>",
+    "stage": "serverless",
     "targetCluster": {
-      "endpoint": "<TARGET_CLUSTER_ENDPOINT>",
+      "endpoint": "https://REDACTED.us-east-1.aoss.amazonaws.com",
       "auth": {
-        "type": "none | basic | sigv4",
-        "// basic auth documentation": "The next two lines are relevant for basic auth only",
-        "username": "<USERNAME>",
-        "passwordFromSecretArn": "<ARN_OF_SECRET_CONTAINING_PASSWORD>",
-        "// sigv4 documentation": "The next two lines are relevant for sigv4 only",
-        "region": "<REGION>",
-        "serviceSigningName": "es | aoss"
+        "type": "sigv4",
+        "region": "us-east-1",
+        "serviceSigningName": "aoss"
       }
     },
     "sourceCluster": {
-      "endpoint": "<SOURCE_CLUSTER_ENDPOINT>",
-      "version": "<SOURCE_CLUSTER_VERSION, ES_7.10 or OS_1.3>",
+      "version": "ES_7.10",
+      "endpoint": "https://REDACTED.us-east-1.aoss.amazonaws.com",
       "auth": {
-        "type": "none | basic | sigv4",
-        "// basic auth documentation": "The next two lines are relevant for basic auth only",
-        "username": "<USERNAME>",
-        "passwordFromSecretArn": "<ARN_OF_SECRET_CONTAINING_PASSWORD>",
-        "// sigv4 documentation": "The next two lines are relevant for sigv4 only",
-        "region": "<REGION>",
-        "serviceSigningName": "es | aoss"
+        "type": "sigv4",
+        "region": "us-east-1",
+        "serviceSigningName": "aoss"
       }
     },
-    "vpcId": "<VPC_ID>",
     "reindexFromSnapshotServiceEnabled": true,
-    "reindexFromSnapshotMaxShardSizeGiB": 80,
-    "trafficReplayerServiceEnabled": true
-  }
+    "reindexFromSnapshotMaxShardSizeGiB": 200,
+    "trafficReplayerServiceEnabled": false,
+    "reindexFromSnapshotWorkerSize": "maximum",
+    "reindexFromSnapshotExtraArgs": "--documents-per-bulk-request 1000 --max-connections 1000 --s3-repo-uri s3://REDACTED/rfs-snapshot-repo --s3-region us-east-1"
+  },
+  "availability-zones:account=740797759474:region=us-west-1": [
+    "us-west-1a",
+    "us-west-1c"
+  ],
+  "availability-zones:account=740797759474:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ],
+  "availability-zones:account=767398060394:region=us-east-1": [
+    "us-east-1a",
+    "us-east-1b",
+    "us-east-1c",
+    "us-east-1d",
+    "us-east-1e",
+    "us-east-1f"
+  ]
 }
