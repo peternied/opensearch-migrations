@@ -16,29 +16,29 @@ const RequestPlaybackTimeline = dynamic(() => import('@/component/playback'), { 
 const stepLabels = ['Select Source', 'Traffic Capture', 'Select Target', 'Metadata', 'Backfill', 'Traffic Replay', 'Completion'];
 
 const stepComponents = [
-  <Box variant="p" key="source">
+  <Box key="source">
     <Header>Select Source Content</Header>
     <SourceSelector/>
   </Box>,
-  <Box variant="p" key="capture">
+  <Box key="capture">
     <Header>Traffic Capture</Header>
     <RequestPlaybackTimeline />
   </Box>,
-  <Box variant="p" key="target">
+  <Box key="target">
     <Header>Select Target</Header>
     <TargetConnection />
   </Box>,
-  <Box variant="p" key="metadata">
+  <Box key="metadata">
     <Header>Metadata</Header>
     <MetadataWorkflowControl />
   </Box>,
-  <Box variant="p" key="backfill">
+  <Box key="backfill">
     <Header>Backfill</Header>
   </Box>,
-  <Box variant="p" key="replay">
+  <Box key="replay">
     <Header>Replayer</Header>
   </Box>,
-  <Box variant="p" key="review">
+  <Box key="review">
     <Header>Review</Header>
   </Box>,
 ];
