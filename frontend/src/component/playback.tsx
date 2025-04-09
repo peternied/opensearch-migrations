@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import LineChart, { LineChartProps } from '@cloudscape-design/components/line-chart';
-import { MixedLineBarChartProps } from '@cloudscape-design/components';
+import { Container, MixedLineBarChartProps } from '@cloudscape-design/components';
 
 export interface RequestPoint {
   timestamp: number; // Unix ms
@@ -15,16 +15,24 @@ export interface PlaybackMarker {
 }
 
 interface RequestPlaybackTimelineProps {
-  data: RequestPoint[]; // Array of request data
-  playbackMarkers: PlaybackMarker[]; // Playback markers
-  firstRequestTimestamp: number; // ms
+  // data: RequestPoint[];
+  // playbackMarkers: PlaybackMarker[];
 }
 
 export default function RequestPlaybackTimeline({
-  data,
-  playbackMarkers,
-  firstRequestTimestamp
+  // data,
+  // playbackMarkers
 }: RequestPlaybackTimelineProps) {
+  const data= [
+    { timestamp: Date.parse("2025-04-02"), requestCount: 30 },
+    { timestamp: Date.parse("2025-04-03"), requestCount: 400 },
+    { timestamp: Date.parse("2025-04-04"), requestCount: 8000 },
+    { timestamp: Date.parse("2025-04-05"), requestCount: 43000 },
+    { timestamp: Date.parse("2025-04-06"), requestCount: 4100 },
+    { timestamp: Date.parse("2025-04-07"), requestCount: 200 },
+  ]
+  const playbackMarkers=[{label: 'Event', timestamp: Date.parse("2025-04-04")}]
+
   const [now, setNow] = useState(Date.now());
 
   // Update current time every 5 seconds
@@ -41,7 +49,7 @@ export default function RequestPlaybackTimeline({
   const annotations = {
     x: [
       {
-        x: new Date(firstRequestTimestamp),
+        x: xDomain[0],
         label: 'First Request',
         color: 'blue'
       },
@@ -66,6 +74,7 @@ export default function RequestPlaybackTimeline({
     ];
 
   return (
+    <Container>
         <LineChart
           series={series}          
           xDomain={xDomain}
@@ -80,7 +89,7 @@ export default function RequestPlaybackTimeline({
             legendAriaLabel: 'Chart legend',
           }}
           xTickFormatter= {e => {
-            if (!e) {return "0"; }
+            if (!e || !e.toLocaleDateString) {return "0"; }
             return e.toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -93,5 +102,6 @@ export default function RequestPlaybackTimeline({
             }
           yTickFormatter={e => e.toString()}
         />
+    </Container>
   );
 }

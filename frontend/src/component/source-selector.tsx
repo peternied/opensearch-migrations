@@ -13,7 +13,7 @@ import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
 import TemplateUploadViewer from '@/component/template/template-upload-viewer';
 
-export default function SourceSelector() {
+export default function SourceSelectionPage() {
   const [sourceType, setSourceType] = useState('connection');
 
   // S3 snapshot state
@@ -21,9 +21,6 @@ export default function SourceSelector() {
   const [snapshotName, setSnapshotName] = useState('');
 
   return (
-    <SpaceBetween size="m">
-      <Header variant="h1">Select Source for Migration</Header>
-
       <Container>
         <SpaceBetween size="l">
           <RadioGroup
@@ -67,6 +64,5 @@ export default function SourceSelector() {
           )}
         </SpaceBetween>
       </Container>
-    </SpaceBetween>
   );
 }

@@ -64,12 +64,13 @@ export default function AppLayoutPreview({
                 items={[
                   { type: 'link', text: `Overview`, href: `/` },
                   { type: 'divider' },
-                  { type: 'link', text: `Migrations`, href: `/migration` },
-                  {
-                    type: 'link',
-                    text: `Create Migration`,
-                    href: `/migration/create`
-                  },
+                  { type: 'link', text: `Select Source`, href: `/step-page?step=0` },
+                  { type: 'link', text: `Traffic Capture`, href: `/step-page?step=1` },
+                  { type: 'link', text: `Select Target`, href: `/step-page?step=2` },
+                  { type: 'link', text: `Metadata`, href: `/step-page?step=3` },
+                  { type: 'link', text: `Backfill`, href: `/step-page?step=4` },
+                  { type: 'link', text: `Traffic Replay`, href: `/step-page?step=5` },
+                  { type: 'link', text: `Migration Review`, href: `/step-page?step=6` },
                   { type: 'link', text: `Tear down`, href: `/teardown` },
                   { type: 'divider' },
                   { type: 'link', text: 'About', href: '/about' },

@@ -17,21 +17,8 @@ export default function SourceConnection() {
   const [awsServiceSigningName, setAwsServiceSigningName] = useState('');
   const [insecure, setInsecure] = useState(false);
 
-  const handleSubmit = () => {
-    console.log({
-      host,
-      username,
-      password,
-      awsRegion,
-      awsServiceSigningName,
-      insecure,
-    });
-  };
-
   return (
     <SpaceBetween size="m">
-      <Header variant="h1">Source Connection Settings</Header>
-
       <Container>
         <SpaceBetween size="l">
           <FormField label="Source Host (e.g. http://localhost:9200)" description="The source host and port">

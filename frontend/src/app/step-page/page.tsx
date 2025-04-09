@@ -8,17 +8,39 @@ import Box from '@cloudscape-design/components/box';
 import StepIndicator from '@/component/step-indicator';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import SourceSelector from '@/component/source-selector';
+import TargetConnection from '@/component/connection/target';
+import MetadataWorkflowControl from '@/component/metadata/selection';
 const RequestPlaybackTimeline = dynamic(() => import('@/component/playback'), { ssr: false });
 
-const stepLabels = ['Select Source', 'Select Target', 'Metadata', 'Backfill', 'Replay', 'Completion'];
+const stepLabels = ['Select Source', 'Traffic Capture', 'Select Target', 'Metadata', 'Backfill', 'Traffic Replay', 'Completion'];
 
 const stepComponents = [
-  <Box variant="p" key="source">Select Source Content</Box>,
-  <Box variant="p" key="target">Select Target Content</Box>,
-  <Box variant="p" key="metadata">Metadata Content</Box>,
-  <Box variant="p" key="backfill">Backfill Content</Box>,
-  <Box variant="p" key="replay">Replayer Content</Box>,
-  <Box variant="p" key="review">Review Content</Box>,
+  <Box variant="p" key="source">
+    <Header>Select Source Content</Header>
+    <SourceSelector/>
+  </Box>,
+  <Box variant="p" key="capture">
+    <Header>Traffic Capture</Header>
+    <RequestPlaybackTimeline />
+  </Box>,
+  <Box variant="p" key="target">
+    <Header>Select Target</Header>
+    <TargetConnection />
+  </Box>,
+  <Box variant="p" key="metadata">
+    <Header>Metadata</Header>
+    <MetadataWorkflowControl />
+  </Box>,
+  <Box variant="p" key="backfill">
+    <Header>Backfill</Header>
+  </Box>,
+  <Box variant="p" key="replay">
+    <Header>Replayer</Header>
+  </Box>,
+  <Box variant="p" key="review">
+    <Header>Review</Header>
+  </Box>,
 ];
 
 
@@ -51,26 +73,7 @@ export default function StepPage() {
 
       <Container>
         <SpaceBetween size="l">
-          <Box variant="p">
-            This is content for: <strong>{stepLabels[stepIndex]}</strong>
-          </Box>
-
-          {stepIndex == 2 && (
-              <RequestPlaybackTimeline
-                data={[
-                  { timestamp: Date.parse("2025-04-02"), requestCount: 30 },
-                  { timestamp: Date.parse("2025-04-03"), requestCount: 400 },
-                  { timestamp: Date.parse("2025-04-04"), requestCount: 8000 },
-                  { timestamp: Date.parse("2025-04-05"), requestCount: 43000 },
-                  { timestamp: Date.parse("2025-04-06"), requestCount: 4100 },
-                  { timestamp: Date.parse("2025-04-07"), requestCount: 200 },
-                ]}
-                playbackMarkers={[{label: 'a', timestamp: Date.parse("2025-04-04")}]}
-                firstRequestTimestamp={Date.parse("2025-04-02")}
-              />
-            )}
-
-
+          {stepComponents[stepIndex]}
           <Box textAlign="right">
             <SpaceBetween direction="horizontal" size="s">
               <Button onClick={handleBack} disabled={stepIndex === 0}>Back</Button>

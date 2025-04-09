@@ -17,21 +17,7 @@ export default function TargetConnection() {
   const [awsServiceSigningName, setAwsServiceSigningName] = useState('');
   const [insecure, setInsecure] = useState(false);
 
-  const handleSubmit = () => {
-    console.log({
-      host,
-      username,
-      password,
-      awsRegion,
-      awsServiceSigningName,
-      insecure,
-    });
-  };
-
   return (
-    <SpaceBetween size="m">
-      <Header variant="h1">Target Connection Settings</Header>
-
       <Container>
         <SpaceBetween size="l">
           <FormField label="Target Host (e.g. http://localhost:9200)" description="The target host and port">
@@ -61,6 +47,5 @@ export default function TargetConnection() {
           </FormField>
         </SpaceBetween>
       </Container>
-    </SpaceBetween>
   );
 }
