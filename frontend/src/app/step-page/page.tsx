@@ -11,14 +11,24 @@ import dynamic from 'next/dynamic';
 import SourceSelector from '@/component/source-selector';
 import TargetConnection from '@/component/connection/target';
 import MetadataWorkflowControl from '@/component/metadata/selection';
-const RequestPlaybackTimeline = dynamic(() => import('@/component/playback'), { ssr: false });
+const RequestPlaybackTimeline = dynamic(() => import('@/component/playback'), {
+  ssr: false
+});
 
-const stepLabels = ['Select Source', 'Traffic Capture', 'Select Target', 'Metadata', 'Backfill', 'Traffic Replay', 'Completion'];
+const stepLabels = [
+  'Select Source',
+  'Traffic Capture',
+  'Select Target',
+  'Metadata',
+  'Backfill',
+  'Traffic Replay',
+  'Completion'
+];
 
 const stepComponents = [
   <Box key="source">
     <Header>Select Source Content</Header>
-    <SourceSelector/>
+    <SourceSelector />
   </Box>,
   <Box key="capture">
     <Header>Traffic Capture</Header>
@@ -40,9 +50,8 @@ const stepComponents = [
   </Box>,
   <Box key="review">
     <Header>Review</Header>
-  </Box>,
+  </Box>
 ];
-
 
 export default function StepPage() {
   const router = useRouter();
@@ -66,17 +75,16 @@ export default function StepPage() {
     <SpaceBetween size="m">
       <Header variant="h1">Example Multi-Step Flow</Header>
 
-      <StepIndicator
-        currentStep={stepIndex}
-        steps={stepLabels}
-      />
+      <StepIndicator currentStep={stepIndex} steps={stepLabels} />
 
       <Container>
         <SpaceBetween size="l">
           {stepComponents[stepIndex]}
           <Box textAlign="right">
             <SpaceBetween direction="horizontal" size="s">
-              <Button onClick={handleBack} disabled={stepIndex === 0}>Back</Button>
+              <Button onClick={handleBack} disabled={stepIndex === 0}>
+                Back
+              </Button>
               <Button
                 variant="primary"
                 onClick={handleContinue}

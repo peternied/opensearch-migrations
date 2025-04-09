@@ -4,11 +4,8 @@ import {
   AppLayout,
   BreadcrumbGroup,
   ContentLayout,
-  Flashbar,
   HelpPanel,
-  Link,
-  SideNavigation,
-  SplitPanel
+  SideNavigation
 } from '@cloudscape-design/components';
 import { I18nProvider } from '@cloudscape-design/components/i18n';
 import messages from '@cloudscape-design/components/i18n/messages/all.en';
@@ -20,25 +17,6 @@ export default function AppLayoutPreview({
 }: {
   children: React.ReactNode;
 }) {
-  const [items, setItems] = React.useState([
-    // {
-    //   type: "info",
-    //   dismissible: true,
-    //   dismissLabel: "Dismiss message",
-    //   onDismiss: () => setItems([]),
-    //   content: (
-    //     <>
-    //       This is an info flash message. It contains{" "}
-    //       <Link color="inverted" href="#">
-    //         a link to another page
-    //       </Link>
-    //       .
-    //     </>
-    //   ),
-    //   id: "message_1"
-    // } 
-  ]);
-
   return (
     <html>
       <body>
@@ -64,13 +42,33 @@ export default function AppLayoutPreview({
                 items={[
                   { type: 'link', text: `Overview`, href: `/` },
                   { type: 'divider' },
-                  { type: 'link', text: `Select Source`, href: `/step-page?step=0` },
-                  { type: 'link', text: `Traffic Capture`, href: `/step-page?step=1` },
-                  { type: 'link', text: `Select Target`, href: `/step-page?step=2` },
+                  {
+                    type: 'link',
+                    text: `Select Source`,
+                    href: `/step-page?step=0`
+                  },
+                  {
+                    type: 'link',
+                    text: `Traffic Capture`,
+                    href: `/step-page?step=1`
+                  },
+                  {
+                    type: 'link',
+                    text: `Select Target`,
+                    href: `/step-page?step=2`
+                  },
                   { type: 'link', text: `Metadata`, href: `/step-page?step=3` },
                   { type: 'link', text: `Backfill`, href: `/step-page?step=4` },
-                  { type: 'link', text: `Traffic Replay`, href: `/step-page?step=5` },
-                  { type: 'link', text: `Migration Review`, href: `/step-page?step=6` },
+                  {
+                    type: 'link',
+                    text: `Traffic Replay`,
+                    href: `/step-page?step=5`
+                  },
+                  {
+                    type: 'link',
+                    text: `Migration Review`,
+                    href: `/step-page?step=6`
+                  },
                   { type: 'link', text: `Tear down`, href: `/teardown` },
                   { type: 'divider' },
                   { type: 'link', text: 'About', href: '/about' },
@@ -103,11 +101,6 @@ export default function AppLayoutPreview({
                     ]
                   }
                 ]}
-              />
-            }
-            notifications={
-              <Flashbar
-                items={items}
               />
             }
             tools={

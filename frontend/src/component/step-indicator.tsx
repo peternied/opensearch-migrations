@@ -3,15 +3,17 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Box, { BoxProps } from '@cloudscape-design/components/box';
-import { Button, Link } from '@cloudscape-design/components';
+import { Link } from '@cloudscape-design/components';
 
 interface StepIndicatorProps {
   currentStep: number;
   steps: string[];
 }
 
-export default function StepIndicator({ currentStep, steps }: StepIndicatorProps) {
-
+export default function StepIndicator({
+  currentStep,
+  steps
+}: StepIndicatorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -34,7 +36,7 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
             color={color}
             fontWeight={index === currentStep ? 'bold' : 'normal'}
           >
-             <Link onFollow={() => handleStepClick(index)} variant="secondary">
+            <Link onFollow={() => handleStepClick(index)} variant="secondary">
               {label}
             </Link>
           </Box>

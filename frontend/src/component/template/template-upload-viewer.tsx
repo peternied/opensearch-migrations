@@ -40,7 +40,9 @@ export default function TemplateUploadViewer() {
         setError(null);
       } catch (err) {
         setSourceConfig(null);
-        setError('Failed to parse JSON template. Please check the file format.');
+        setError(
+          'Failed to parse JSON template. Please check the file format.' + err
+        );
       }
     };
     reader.readAsText(file);
@@ -58,10 +60,11 @@ export default function TemplateUploadViewer() {
               onChange={({ detail }) => handleFileUpload(detail.value)}
               value={uploadedFile ? [uploadedFile] : []}
               i18nStrings={{
-                uploadButtonText: _ => 'Upload file',
-                dropzoneText: _ => 'Drop template JSON file here or choose one',
+                uploadButtonText: () => 'Upload file',
+                dropzoneText: () =>
+                  'Drop template JSON file here or choose one',
                 removeFileAriaLabel: (e) => `Remove file ${e}`,
-                errorIconAriaLabel: 'Error',
+                errorIconAriaLabel: 'Error'
               }}
             />
           </FormField>
@@ -69,13 +72,26 @@ export default function TemplateUploadViewer() {
           {error && <Alert type="error">{error}</Alert>}
 
           {sourceConfig && (
-            <Container header={<Header variant="h2">Source Details from Template</Header>}>
+            <Container
+              header={
+                <Header variant="h2">Source Details from Template</Header>
+              }
+            >
               <SpaceBetween size="s">
                 <Box variant="code">Host: {sourceConfig.host || 'N/A'}</Box>
-                <Box variant="code">Username: {sourceConfig.username || 'N/A'}</Box>
-                <Box variant="code">AWS Region: {sourceConfig.awsRegion || 'N/A'}</Box>
-                <Box variant="code">AWS Service Signing Name: {sourceConfig.awsServiceSigningName || 'N/A'}</Box>
-                <Box variant="code">Insecure SSL: {sourceConfig.insecure ? 'Yes' : 'No'}</Box>
+                <Box variant="code">
+                  Username: {sourceConfig.username || 'N/A'}
+                </Box>
+                <Box variant="code">
+                  AWS Region: {sourceConfig.awsRegion || 'N/A'}
+                </Box>
+                <Box variant="code">
+                  AWS Service Signing Name:{' '}
+                  {sourceConfig.awsServiceSigningName || 'N/A'}
+                </Box>
+                <Box variant="code">
+                  Insecure SSL: {sourceConfig.insecure ? 'Yes' : 'No'}
+                </Box>
               </SpaceBetween>
             </Container>
           )}

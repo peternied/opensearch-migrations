@@ -24,18 +24,23 @@ export default function MigrationEntityTable({
   items,
   label,
   pageSize = 5,
-  mode,
+  mode
 }: MigrationEntityTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(items.length / pageSize);
-  const pagedItems = items.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pagedItems = items.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   if (items.length === 0) {
     return (
-      <Box padding={{ vertical: 'l' }}> <SpaceBetween size='m'>
-        <Header variant='h3'>{label}</Header>
-        <StatusIndicator type="info">None found</StatusIndicator>
+      <Box padding={{ vertical: 'l' }}>
+        {' '}
+        <SpaceBetween size="m">
+          <Header variant="h3">{label}</Header>
+          <StatusIndicator type="info">None found</StatusIndicator>
         </SpaceBetween>
       </Box>
     );
@@ -47,41 +52,47 @@ export default function MigrationEntityTable({
         {
           id: 'name',
           header: 'Name',
-          cell: item => item.name,
+          cell: (item) => item.name,
           width: '70%'
         },
         {
-            id: 'status',
-            header: 'Status',
-            cell: item =>
-              item.status === 'success' ? (
-                <StatusIndicator type={mode === 'evaluation' ? 'info' : 'success' }>
-                    {mode === 'evaluation' ? 'Ready for migration' : 'Successfully migrated'}
-                </StatusIndicator>
-              ) : item.status === 'error' ? (
-                <Popover
-                  dismissButton={false}
-                  position="top"
-                  size="small"
-                  triggerType="custom"
-                  content={item.message}
-                >
-                  <StatusIndicator type="error">Failed</StatusIndicator>
-                </Popover>
-              ) : null,
-            minWidth: 120,
-            maxWidth: 140,
-          },
+          id: 'status',
+          header: 'Status',
+          cell: (item) =>
+            item.status === 'success' ? (
+              <StatusIndicator
+                type={mode === 'evaluation' ? 'info' : 'success'}
+              >
+                {mode === 'evaluation'
+                  ? 'Ready for migration'
+                  : 'Successfully migrated'}
+              </StatusIndicator>
+            ) : item.status === 'error' ? (
+              <Popover
+                dismissButton={false}
+                position="top"
+                size="small"
+                triggerType="custom"
+                content={item.message}
+              >
+                <StatusIndicator type="error">Failed</StatusIndicator>
+              </Popover>
+            ) : null,
+          minWidth: 120,
+          maxWidth: 140
+        }
       ]}
       items={pagedItems}
       variant="embedded"
-      header={<Header variant='h3'>{label}</Header>}
+      header={<Header variant="h3">{label}</Header>}
       pagination={
-        totalPages > 1 ? <Pagination
-          currentPageIndex={currentPage}
-          pagesCount={totalPages}
-          onChange={({ detail }) => setCurrentPage(detail.currentPageIndex)}
-        /> : undefined
+        totalPages > 1 ? (
+          <Pagination
+            currentPageIndex={currentPage}
+            pagesCount={totalPages}
+            onChange={({ detail }) => setCurrentPage(detail.currentPageIndex)}
+          />
+        ) : undefined
       }
     />
   );
