@@ -7,6 +7,8 @@ import Button from '@cloudscape-design/components/button';
 import Box from '@cloudscape-design/components/box';
 import StepIndicator from '@/component/step-indicator';
 import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
+const RequestPlaybackTimeline = dynamic(() => import('@/component/playback'), { ssr: false });
 
 const stepLabels = ['Select Source', 'Select Target', 'Metadata', 'Backfill', 'Replay', 'Completion'];
 
@@ -52,6 +54,22 @@ export default function StepPage() {
           <Box variant="p">
             This is content for: <strong>{stepLabels[stepIndex]}</strong>
           </Box>
+
+          {stepIndex == 2 && (
+              <RequestPlaybackTimeline
+                data={[
+                  { timestamp: Date.parse("2025-04-02"), requestCount: 30 },
+                  { timestamp: Date.parse("2025-04-03"), requestCount: 400 },
+                  { timestamp: Date.parse("2025-04-04"), requestCount: 8000 },
+                  { timestamp: Date.parse("2025-04-05"), requestCount: 43000 },
+                  { timestamp: Date.parse("2025-04-06"), requestCount: 4100 },
+                  { timestamp: Date.parse("2025-04-07"), requestCount: 200 },
+                ]}
+                playbackMarkers={[{label: 'a', timestamp: Date.parse("2025-04-04")}]}
+                firstRequestTimestamp={Date.parse("2025-04-02")}
+              />
+            )}
+
 
           <Box textAlign="right">
             <SpaceBetween direction="horizontal" size="s">

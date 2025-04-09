@@ -23,7 +23,6 @@ export default function StepIndicator({ currentStep, steps }: StepIndicatorProps
             fontWeight={index === currentStep ? 'bold' : 'normal'}
           >
             {label}
-            {index < steps.length - 1 && <span style={{ margin: '0 8px' }}>|</span>}
           </Box>
         );
       })}

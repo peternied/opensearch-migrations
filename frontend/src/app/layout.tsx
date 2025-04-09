@@ -6,6 +6,7 @@ import {
   ContentLayout,
   Flashbar,
   HelpPanel,
+  Link,
   SideNavigation,
   SplitPanel
 } from '@cloudscape-design/components';
@@ -19,6 +20,25 @@ export default function AppLayoutPreview({
 }: {
   children: React.ReactNode;
 }) {
+  const [items, setItems] = React.useState([
+    // {
+    //   type: "info",
+    //   dismissible: true,
+    //   dismissLabel: "Dismiss message",
+    //   onDismiss: () => setItems([]),
+    //   content: (
+    //     <>
+    //       This is an info flash message. It contains{" "}
+    //       <Link color="inverted" href="#">
+    //         a link to another page
+    //       </Link>
+    //       .
+    //     </>
+    //   ),
+    //   id: "message_1"
+    // } 
+  ]);
+
   return (
     <html>
       <body>
@@ -86,15 +106,7 @@ export default function AppLayoutPreview({
             }
             notifications={
               <Flashbar
-                items={[
-                  {
-                    type: 'info',
-                    dismissible: true,
-                    onDismiss: () => true,
-                    content: 'This is an info flash message.',
-                    id: 'message_1'
-                  }
-                ]}
+                items={items}
               />
             }
             tools={
@@ -105,11 +117,11 @@ export default function AppLayoutPreview({
                 <div className="contentPlaceholder">{children}</div>
               </ContentLayout>
             }
-            splitPanel={
-              <SplitPanel header="Migration Status">
-                Migration status details
-              </SplitPanel>
-            }
+            // splitPanel={
+            //   <SplitPanel header="Migration Status">
+            //     Migration status details
+            //   </SplitPanel>
+            // }
           />
         </I18nProvider>
       </body>

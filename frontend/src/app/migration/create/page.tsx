@@ -1,6 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
+
+const SourceConnectionForm = dynamic(() => import('@/component/connection/source'), { ssr: false });
+
 import Header from '@cloudscape-design/components/header';
 import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -9,7 +13,6 @@ import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
 import Select from '@cloudscape-design/components/select';
 import Button from '@cloudscape-design/components/button';
-import SourceConnectionForm from '@/component/connection/source';
 import TemplateUploadViewer from '@/component/template/template-upload-viewer';
 
 export default function SourceSelectionPage() {
@@ -32,6 +35,7 @@ export default function SourceSelectionPage() {
             value={sourceType}
             onChange={({ detail }) => setSourceType(detail.value)}
             items={[
+              { value: 'later', label: 'Select a source later' },
               { value: 'connection', label: 'Connect to Source Cluster' },
               { value: 's3snapshot', label: 'Use S3 Snapshot Repository' },
               { value: 'jsontemplate', label: 'Load from Migration Template' },
@@ -39,6 +43,13 @@ export default function SourceSelectionPage() {
           />
 
           {/* Render based on selection */}
+
+          {sourceType === 'later' && (
+            <SpaceBetween size="m">
+              <Header variant="h1">Select a source later</Header>
+            </SpaceBetween>
+          )}
+
           {sourceType === 'connection' && <SourceConnectionForm />}
 
           {sourceType === 's3snapshot' && (
