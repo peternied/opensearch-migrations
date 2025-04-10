@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import SourceSelector from '@/component/source-selector';
 import TargetConnection from '@/component/connection/target';
 import MetadataWorkflowControl from '@/component/metadata/selection';
+import BackfillStatusDashboard from '@/component/backfill/status';
 const RequestPlaybackTimeline = dynamic(() => import('@/component/playback'), {
   ssr: false
 });
@@ -44,6 +45,7 @@ const stepComponents = [
   </Box>,
   <Box key="backfill">
     <Header>Backfill</Header>
+    <BackfillStatusDashboard />
   </Box>,
   <Box key="replay">
     <Header>Replayer</Header>
@@ -73,7 +75,7 @@ export default function StepPage() {
 
   return (
     <SpaceBetween size="m">
-      <Header variant="h1">Example Multi-Step Flow</Header>
+      <Header variant="h1">Migration Workflow</Header>
 
       <StepIndicator currentStep={stepIndex} steps={stepLabels} />
 
