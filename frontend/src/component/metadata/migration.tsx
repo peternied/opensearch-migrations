@@ -31,7 +31,7 @@ const aliases: MigrationEntity[] = [{ name: 'logs-all', status: 'success' }];
 export default function MetadataMigration() {
   return (
     <SpaceBetween size="l">
-      <Container header={<Header variant="h2">Migrated Items</Header>}>
+      <Container header={<Header variant="h2">Cluster Metadata Migration</Header>}>
         <SpaceBetween size="m">
           <MigrationEntityTable
             items={indexes}
