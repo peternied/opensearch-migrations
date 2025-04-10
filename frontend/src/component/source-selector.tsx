@@ -41,7 +41,7 @@ export default function SourceSelectionPage() {
 
         {sourceType === 'later' && (
           <SpaceBetween size="m">
-            <Header variant="h1">Select a source later</Header>
+            <Header variant="h3">Select a source later</Header>
           </SpaceBetween>
         )}
 

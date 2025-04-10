@@ -49,54 +49,43 @@ export default function TemplateUploadViewer() {
   };
 
   return (
-    <SpaceBetween size="m">
-      <Header variant="h1">Upload Migration Template</Header>
+    <SpaceBetween size="l">
+      <FormField label="Upload Template JSON">
+        <FileUpload
+          accept=".json"
+          onChange={({ detail }) => handleFileUpload(detail.value)}
+          value={uploadedFile ? [uploadedFile] : []}
+          i18nStrings={{
+            uploadButtonText: () => 'Upload file',
+            dropzoneText: () => 'Drop template JSON file here or choose one',
+            removeFileAriaLabel: (e) => `Remove file ${e}`,
+            errorIconAriaLabel: 'Error'
+          }}
+        />
+      </FormField>
 
-      <Container>
-        <SpaceBetween size="l">
-          <FormField label="Upload Template JSON">
-            <FileUpload
-              accept=".json"
-              onChange={({ detail }) => handleFileUpload(detail.value)}
-              value={uploadedFile ? [uploadedFile] : []}
-              i18nStrings={{
-                uploadButtonText: () => 'Upload file',
-                dropzoneText: () =>
-                  'Drop template JSON file here or choose one',
-                removeFileAriaLabel: (e) => `Remove file ${e}`,
-                errorIconAriaLabel: 'Error'
-              }}
-            />
-          </FormField>
+      {error && <Alert type="error">{error}</Alert>}
 
-          {error && <Alert type="error">{error}</Alert>}
-
-          {sourceConfig && (
-            <Container
-              header={
-                <Header variant="h2">Source Details from Template</Header>
-              }
-            >
-              <SpaceBetween size="s">
-                <Box variant="code">Host: {sourceConfig.host || 'N/A'}</Box>
-                <Box variant="code">
-                  Username: {sourceConfig.username || 'N/A'}
-                </Box>
-                <Box variant="code">
-                  AWS Region: {sourceConfig.awsRegion || 'N/A'}
-                </Box>
-                <Box variant="code">
-                  AWS Service Signing Name:{' '}
-                  {sourceConfig.awsServiceSigningName || 'N/A'}
-                </Box>
-                <Box variant="code">
-                  Insecure SSL: {sourceConfig.insecure ? 'Yes' : 'No'}
-                </Box>
-              </SpaceBetween>
-            </Container>
-          )}
-        </SpaceBetween>
-      </Container>
+      {sourceConfig && (
+        <Container
+          header={<Header variant="h2">Source Details from Template</Header>}
+        >
+          <SpaceBetween size="s">
+            <Box variant="code">Host: {sourceConfig.host || 'N/A'}</Box>
+            <Box variant="code">Username: {sourceConfig.username || 'N/A'}</Box>
+            <Box variant="code">
+              AWS Region: {sourceConfig.awsRegion || 'N/A'}
+            </Box>
+            <Box variant="code">
+              AWS Service Signing Name:{' '}
+              {sourceConfig.awsServiceSigningName || 'N/A'}
+            </Box>
+            <Box variant="code">
+              Insecure SSL: {sourceConfig.insecure ? 'Yes' : 'No'}
+            </Box>
+          </SpaceBetween>
+        </Container>
+      )}
     </SpaceBetween>
   );
 }

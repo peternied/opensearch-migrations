@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import SpaceBetween from '@cloudscape-design/components/space-between';
-import Box, { BoxProps } from '@cloudscape-design/components/box';
 import { Link } from '@cloudscape-design/components';
 
 interface StepIndicatorProps {
@@ -26,20 +25,14 @@ export default function StepIndicator({
   return (
     <SpaceBetween direction="horizontal" size="s">
       {steps.map((label, index) => {
-        let color: BoxProps.Color = 'inherit';
-        if (index < currentStep) color = 'text-status-inactive';
-        else if (index === currentStep) color = 'text-status-info';
-
         return (
-          <Box
+          <Link
             key={index}
-            color={color}
-            fontWeight={index === currentStep ? 'bold' : 'normal'}
+            onFollow={() => handleStepClick(index)}
+            variant={index === currentStep ? 'primary' : 'secondary'}
           >
-            <Link onFollow={() => handleStepClick(index)} variant="secondary">
-              {label}
-            </Link>
-          </Box>
+            {label}
+          </Link>
         );
       })}
     </SpaceBetween>

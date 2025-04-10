@@ -114,7 +114,7 @@ export default function RequestPlaybackTimeline() {
     const maxIncrement = Math.max(500, Math.floor((maxRequests - last) / 10));
     return Math.min(
       maxRequests,
-      last + Math.floor(Math.random() * maxIncrement)
+      last + Math.floor((Math.random() - 0.25) * maxIncrement)
     );
   };
 
@@ -126,16 +126,10 @@ export default function RequestPlaybackTimeline() {
         const virtualTime =
           threshold.startTime + elapsed * threshold.multiplier;
         const thresholdTime = virtualTime < now ? virtualTime : now;
-
-        const requests = data
-          .filter((r) => r.timestamp < thresholdTime)
-          .reduce((sum, r) => sum + r.requestCount, 0);
         return {
           type: 'threshold',
           x: new Date(thresholdTime),
-          title:
-            `x${threshold.multiplier} Replayer - sent requests ` +
-            requests.toLocaleString(),
+          title: `x${threshold.multiplier} Replayer`,
           color: 'purple'
         };
       })
@@ -186,7 +180,7 @@ export default function RequestPlaybackTimeline() {
                 hour: 'numeric',
                 minute: 'numeric',
                 second: 'numeric',
-                hour12: false
+                hour12: true
               })
               .split(',')
               .join('\n');
@@ -215,6 +209,39 @@ export default function RequestPlaybackTimeline() {
           style={{ width: '60px' }}
         />
       </SpaceBetween>
+      {movingThresholds.map((threshold) => {
+        const elapsed = now - threshold.addedAt;
+        const virtualTime =
+          threshold.startTime + elapsed * threshold.multiplier;
+        const thresholdTime = Math.min(virtualTime, now);
+
+        const requests = data
+          .filter((r) => r.timestamp < thresholdTime)
+          .reduce((sum, r) => sum + r.requestCount, 0);
+
+        const totalRequests = data.reduce((sum, r) => sum + r.requestCount, 0);
+        const requestDelta = totalRequests - requests;
+        const rateDiff = threshold.multiplier - 1;
+
+        let etaDisplay: string;
+
+        if (rateDiff <= 0) {
+          etaDisplay = '❌ Will never catch up';
+        } else {
+          const seconds = Math.round(requestDelta / rateDiff);
+          const hours = Math.floor(seconds / 3600);
+          const minutes = Math.floor((seconds % 3600) / 60);
+          const secs = seconds % 60;
+          etaDisplay = `ETA: ${hours}h ${minutes}m ${secs}s`;
+        }
+
+        return (
+          <div key={threshold.id}>
+            <strong>x{threshold.multiplier} Replayer</strong> - Sent:{' '}
+            {requests.toLocaleString()} – {etaDisplay}
+          </div>
+        );
+      })}
     </SpaceBetween>
   );
 }
