@@ -9,18 +9,22 @@ import Box from '@cloudscape-design/components/box';
 import Slider from '@cloudscape-design/components/slider';
 import LineChart from '@cloudscape-design/components/line-chart';
 import Cards from '@cloudscape-design/components/cards';
+import Table from '@cloudscape-design/components/table';
 import { StatusIndicator } from '@cloudscape-design/components';
 
-type Worker = {
+type IndexStatus = 'not-started' | 'in-progress' | 'completed';
+
+type Index = {
   id: string;
   progress: number;
   eta: string;
+  status: IndexStatus;
 };
 
-const workers: Worker[] = [
-  { id: 'worker-1', progress: 75, eta: '5m' },
-  { id: 'worker-2', progress: 40, eta: '12m' },
-  { id: 'worker-3', progress: 90, eta: '2m' }
+const indices: Index[] = [
+  { id: 'index-1', progress: 0, eta: '20m', status: 'not-started' },
+  { id: 'index-2', progress: 45, eta: '10m', status: 'in-progress' },
+  { id: 'index-3', progress: 100, eta: '0m', status: 'completed' }
 ];
 
 const mockMetrics = [
@@ -59,37 +63,70 @@ const mockMetrics = [
   }
 ];
 
-function calculateMaxEta(workers: Worker[]) {
-  const times = workers.map((w) => parseInt(w.eta.replace(/[^0-9]/g, '')));
+function calculateMaxEta(workers: Index[]) {
+  const times = workers.map((w) => parseInt(w.eta.replace(/[^0-9]/g, '')) || 0);
   const maxTime = Math.max(...times);
   return `${maxTime}m`;
 }
 
 export default function Page() {
   const [workerCount, setWorkerCount] = useState(3);
-  const overallEta = calculateMaxEta(workers);
+  const overallEta = calculateMaxEta(indices);
 
   return (
     <SpaceBetween size="l">
       <Container>
         <SpaceBetween size="m">
           <Box>
-            During the backfill data from the source will be copied onto the target cluster as quickly as possible.  Dynamical scaling will be used to increase the number of workers, or it can be manually controlled at the bottom of the page.
+            During the backfill data from the source will be copied onto the target cluster as quickly as possible. Dynamical scaling will be used to increase the number of workers, or it can be manually controlled at the bottom of the page.
           </Box>
           <StatusIndicator type="in-progress">
             Estimated Time to Completion: {overallEta}
           </StatusIndicator>
-          <SpaceBetween size="s">
-            {workers.map((worker) => (
-              <Box key={worker.id}>
-                <strong>{worker.id}</strong>
-                <ProgressBar
-                  value={worker.progress}
-                  label={`ETA: ${worker.eta}`}
-                />
-              </Box>
-            ))}
-          </SpaceBetween>
+
+          <Table
+            columnDefinitions={[
+              {
+                id: 'id',
+                header: 'Index ID',
+                cell: (item: Index) => <strong>{item.id}</strong>,
+                sortingField: 'id'
+              },
+              {
+                id: 'status',
+                header: 'Status',
+                cell: (item: Index) => (
+                  <StatusIndicator
+                    type={
+                      item.status === 'not-started'
+                        ? 'pending'
+                        : item.status === 'in-progress'
+                        ? 'in-progress'
+                        : 'success'
+                    }
+                  >
+                    {item.status.replace('-', ' ')}
+                  </StatusIndicator>
+                ),
+                sortingField: 'status'
+              },
+              {
+                id: 'progress',
+                header: 'Progress',
+                cell: (item: Index) => (
+                  <ProgressBar
+                    value={item.progress}
+                    label={`ETA: ${item.eta}`}
+                  />
+                )
+              }
+            ]}
+            items={indices}
+            trackBy="id"
+            header={<Header variant="h2">Index Backfill Status</Header>}
+            variant="borderless"
+            stickyHeader={true}
+          />
         </SpaceBetween>
       </Container>
 
@@ -106,8 +143,8 @@ export default function Page() {
                       item.status === 'red'
                         ? 'error'
                         : item.status === 'warn'
-                          ? 'warning'
-                          : 'success'
+                        ? 'warning'
+                        : 'success'
                     }
                   />
                 </SpaceBetween>
