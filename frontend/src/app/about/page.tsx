@@ -3,7 +3,7 @@
 import Header from '@cloudscape-design/components/header';
 import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
-import MigrationAssistantVersion from './migration-assistant-version';
+import MigrationAssistantVersion from '../../component/migration-assistant-version';
 import { COMMIT_RECENT_TAG, COMMIT_SHA, COMMIT_DATE } from '@/lib/env';
 
 export default function Page() {
