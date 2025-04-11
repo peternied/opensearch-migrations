@@ -12,6 +12,7 @@ import SourceSelector from '@/component/source-selector';
 import TargetConnection from '@/component/connection/target';
 import MetadataWorkflowControl from '@/component/metadata/selection';
 import BackfillStatusDashboard from '@/component/backfill/status';
+import SnapshotCreation from '@/component/snapshot/creation';
 const RequestPlaybackTimeline = dynamic(() => import('@/component/playback'), {
   ssr: false
 });
@@ -20,6 +21,7 @@ const stepLabels = [
   'Select Source',
   'Traffic Capture',
   'Select Target',
+  'Create Snapshot',
   'Metadata',
   'Backfill',
   'Traffic Replay',
@@ -28,7 +30,7 @@ const stepLabels = [
 
 const stepComponents = [
   <Box key="source">
-    <Header>Select Source Content</Header>
+    <Header>Select Source</Header>
     <SourceSelector />
   </Box>,
   <Box key="capture">
@@ -38,6 +40,10 @@ const stepComponents = [
   <Box key="target">
     <Header>Select Target</Header>
     <TargetConnection />
+  </Box>,
+  <Box key="snapshot">
+    <Header>Create Snapshot</Header>
+    <SnapshotCreation />
   </Box>,
   <Box key="metadata">
     <Header>Metadata</Header>

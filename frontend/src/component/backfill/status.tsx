@@ -73,6 +73,9 @@ export default function Page() {
     <SpaceBetween size="l">
       <Container>
         <SpaceBetween size="m">
+          <Box>
+            During the backfill data from the source will be copied onto the target cluster as quickly as possible.  Dynamical scaling will be used to increase the number of workers, or it can be manually controlled at the bottom of the page.
+          </Box>
           <StatusIndicator type="in-progress">
             Estimated Time to Completion: {overallEta}
           </StatusIndicator>

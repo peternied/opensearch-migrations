@@ -21,6 +21,9 @@ export default function MetadataWorkflowControl() {
 
   return (
     <SpaceBetween size="l">
+      <Box>
+        Cluster metadata includes indices, index templates, and aliases.  This process provides feedback in near real-time to allow for modifications to the includes items.
+      </Box>
       {phase === 'evaluate' && (
         <SpaceBetween size="l">
           <MetadataEvaluation />

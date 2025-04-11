@@ -57,17 +57,22 @@ export default function AppLayoutPreview({
                     text: `Select Target`,
                     href: `/step-page?step=2`
                   },
-                  { type: 'link', text: `Metadata`, href: `/step-page?step=3` },
-                  { type: 'link', text: `Backfill`, href: `/step-page?step=4` },
+                  {
+                    type: 'link',
+                    text: `Create Snapshot`,
+                    href: `/step-page?step=3`
+                  },
+                  { type: 'link', text: `Metadata`, href: `/step-page?step=4` },
+                  { type: 'link', text: `Backfill`, href: `/step-page?step=5` },
                   {
                     type: 'link',
                     text: `Traffic Replay`,
-                    href: `/step-page?step=5`
+                    href: `/step-page?step=6`
                   },
                   {
                     type: 'link',
                     text: `Migration Review`,
-                    href: `/step-page?step=6`
+                    href: `/step-page?step=7`
                   },
                   { type: 'link', text: `Tear down`, href: `/teardown` },
                   { type: 'divider' },
