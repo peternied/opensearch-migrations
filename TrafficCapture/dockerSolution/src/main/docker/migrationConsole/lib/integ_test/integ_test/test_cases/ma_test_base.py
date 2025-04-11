@@ -23,12 +23,12 @@ class ClusterVersionCombinationUnsupported(Exception):
 
 
 class MATestBase:
-    def __init__(self, console_config_path: str, console_link_env: Environment, unique_id: str,
+    def __init__(self, console_config_path: str, console_link_env: Environment, unique_id: str, description: str,
                  migrations_required=[MigrationType.METADATA, MigrationType.BACKFILL, MigrationType.CAPTURE_AND_REPLAY],
-                 allow_source_target_combinations=None, run_isolated=False, short_description="MA base test case"):
+                 allow_source_target_combinations=None, run_isolated=False):
         self.allow_source_target_combinations = allow_source_target_combinations or []
         self.run_isolated = run_isolated
-        self.short_description = short_description
+        self.description = description
         self.console_link_env = console_link_env
         self.migrations_required = migrations_required
         if ((not console_link_env.source_cluster or not console_link_env.target_cluster) or
@@ -91,10 +91,14 @@ class MATestBase:
 
     def backfill_start(self):
         if MigrationType.BACKFILL in self.migrations_required:
-            backfill_start_result: CommandResult = self.backfill.start()
-            assert backfill_start_result.success
-            backfill_scale_result: CommandResult = self.backfill.scale(units=1)
-            assert backfill_scale_result.success
+            # Flip this bool to only use one worker otherwise use the default worker count (5), useful for debugging
+            single_worker_mode = False
+            if not single_worker_mode:
+                backfill_start_result: CommandResult = self.backfill.start()
+                assert backfill_start_result.success
+            else:
+                backfill_scale_result: CommandResult = self.backfill.scale(units=1)
+                assert backfill_scale_result.success
             wait_for_service_status(status_func=lambda: self.backfill.get_status(),
                                     desired_status=BackfillStatus.RUNNING)
 
