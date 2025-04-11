@@ -18,6 +18,15 @@ updates:
         patterns:
           - "*"
 
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    groups:
+      frontend:
+        patterns:
+          - "*"
+
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
