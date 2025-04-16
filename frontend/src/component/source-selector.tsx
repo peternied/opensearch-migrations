@@ -28,7 +28,9 @@ export default function SourceSelectionPage() {
     <Container>
       <SpaceBetween size="l">
         <Box>
-          Migration Assistant needs details to help determine the complexity of the migration, please select the source so these can be reviews through this workflow.
+          Migration Assistant needs details to help determine the complexity of
+          the migration, please select the source so these can be reviews
+          through this workflow.
         </Box>
         <RadioGroup
           value={sourceType}
@@ -37,7 +39,7 @@ export default function SourceSelectionPage() {
             { value: 'connection', label: 'Connect to Source Cluster' },
             { value: 's3snapshot', label: 'Use S3 Snapshot Repository' },
             { value: 'jsontemplate', label: 'Load from Migration Template' },
-            { value: 'later', label: 'Select a source later' },
+            { value: 'later', label: 'Select a source later' }
           ]}
         />
 

@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Table from '@cloudscape-design/components/table';
 import Button from '@cloudscape-design/components/button';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Header from '@cloudscape-design/components/header';
-import Box from '@cloudscape-design/components/box';
+import type { TableProps } from '@cloudscape-design/components/table';
 
+type NonCancelableEventHandler<Detail> = (event: { detail: Detail }) => void;
 interface IndexEntry {
   name: string;
   documents: number;
@@ -30,12 +31,17 @@ function calculateEstimatedTime(items: IndexEntry[]) {
 }
 
 export default function SnapshotCreation() {
-  const [selectedItems, setSelectedItems] = useState<IndexEntry[]>(MOCK_INDICES);
+  const [selectedItems, setSelectedItems] =
+    useState<IndexEntry[]>(MOCK_INDICES);
   const [isSnapshotting, setIsSnapshotting] = useState(false);
   const [snapshotComplete, setSnapshotComplete] = useState(false);
-  const [estimatedTime, setEstimatedTime] = useState<number>(calculateEstimatedTime(MOCK_INDICES));
+  const [estimatedTime, setEstimatedTime] = useState<number>(
+    calculateEstimatedTime(MOCK_INDICES)
+  );
 
-  const handleSelectionChange = ({ detail }: any) => {
+  const handleSelectionChange: NonCancelableEventHandler<
+    TableProps.SelectionChangeDetail<IndexEntry>
+  > = ({ detail }) => {
     const items = detail.selectedItems;
     setSelectedItems(items);
     setEstimatedTime(calculateEstimatedTime(items));
@@ -59,7 +65,7 @@ export default function SnapshotCreation() {
     {
       id: 'sizeGb',
       header: 'Size',
-      cell: (item: IndexEntry) => item.sizeGb.toFixed(2) + " GB"
+      cell: (item: IndexEntry) => item.sizeGb.toFixed(2) + ' GB'
     }
   ];
 
@@ -67,7 +73,11 @@ export default function SnapshotCreation() {
     <Container>
       <SpaceBetween size="m">
         <Table
-          header={<Header variant="h2">Select indices to include in the snapshot</Header>}
+          header={
+            <Header variant="h2">
+              Select indices to include in the snapshot
+            </Header>
+          }
           columnDefinitions={columnDefinitions}
           items={MOCK_INDICES}
           selectedItems={selectedItems}
@@ -82,7 +92,7 @@ export default function SnapshotCreation() {
         {!isSnapshotting && !snapshotComplete && (
           <SpaceBetween size="m">
             <StatusIndicator type="pending">
-            Estimated Time to Completion: {estimatedTime} minutes
+              Estimated Time to Completion: {estimatedTime} minutes
             </StatusIndicator>
             <Button
               onClick={handleTakeSnapshot}

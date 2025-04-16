@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import Header from '@cloudscape-design/components/header';
 import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
@@ -7,15 +8,12 @@ import Button from '@cloudscape-design/components/button';
 import Box from '@cloudscape-design/components/box';
 import StepIndicator from '@/component/step-indicator';
 import { useRouter, useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import SourceSelector from '@/component/source-selector';
 import TargetConnection from '@/component/connection/target';
 import MetadataWorkflowControl from '@/component/metadata/selection';
 import BackfillStatusDashboard from '@/component/backfill/status';
 import SnapshotCreation from '@/component/snapshot/creation';
-const RequestPlaybackTimeline = dynamic(() => import('@/component/playback'), {
-  ssr: false
-});
+import RequestPlaybackTimeline from '@/component/playback';
 
 const stepLabels = [
   'Select Source',
@@ -61,7 +59,7 @@ const stepComponents = [
   </Box>
 ];
 
-export default function StepPage() {
+function StepPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const stepIndex = parseInt(searchParams.get('step') || '0');
@@ -105,5 +103,13 @@ export default function StepPage() {
         </SpaceBetween>
       </Container>
     </SpaceBetween>
+  );
+}
+
+export default function StepPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <StepPageContent />
+    </Suspense>
   );
 }

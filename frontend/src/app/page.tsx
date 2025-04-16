@@ -16,16 +16,19 @@ export default function MigrationAssistantStatusPage() {
   return (
     <SpaceBetween size="m">
       <Header variant="h1">
-        {isReady ? 'Migration Assistant Ready' : 'Migration Assistant is Deploying'}
+        {isReady
+          ? 'Migration Assistant Ready'
+          : 'Migration Assistant is Deploying'}
       </Header>
 
       <Container>
         <SpaceBetween size="l">
           {isReady ? (
             <>
-              <Box variant="h3">You're all set to begin a migration</Box>
+              <Box variant="h3">You are all set to begin a migration</Box>
               <Alert statusIconAriaLabel="info" header="Before you begin">
-                Review the following tips to ensure you're ready for a smooth migration.
+                Review the following tips to ensure you are ready for a smooth
+                migration.
               </Alert>
             </>
           ) : (
@@ -40,20 +43,22 @@ export default function MigrationAssistantStatusPage() {
           <SpaceBetween size="s">
             <Box variant="h4">1. Get source cluster connection details</Box>
             <Box>
-              Identify the URL and authentication credentials for your source OpenSearch cluster.
-              These will be required to begin the migration process.
+              Identify the URL and authentication credentials for your source
+              OpenSearch cluster. These will be required to begin the migration
+              process.
             </Box>
 
             <Box variant="h4">2. Prepare your target cluster</Box>
             <Box>
-              You can configure a fresh target OpenSearch cluster or let Migration Assistant reuse your existing
-              managed OpenSearch cluster by providing its ARN.
+              You can configure a fresh target OpenSearch cluster or let
+              Migration Assistant reuse your existing managed OpenSearch cluster
+              by providing its ARN.
             </Box>
 
             <Box variant="h4">3. Plan your migration strategy</Box>
             <Box>
-              Decide if you will use a snapshot to backfill data, or set up capture and replay to
-              ensure continuity during migration.
+              Decide if you will use a snapshot to backfill data, or set up
+              capture and replay to ensure continuity during migration.
             </Box>
           </SpaceBetween>
 

@@ -78,7 +78,10 @@ export default function Page() {
       <Container>
         <SpaceBetween size="m">
           <Box>
-            During the backfill data from the source will be copied onto the target cluster as quickly as possible. Dynamical scaling will be used to increase the number of workers, or it can be manually controlled at the bottom of the page.
+            During the backfill data from the source will be copied onto the
+            target cluster as quickly as possible. Dynamical scaling will be
+            used to increase the number of workers, or it can be manually
+            controlled at the bottom of the page.
           </Box>
           <StatusIndicator type="in-progress">
             Estimated Time to Completion: {overallEta}
@@ -101,8 +104,8 @@ export default function Page() {
                       item.status === 'not-started'
                         ? 'pending'
                         : item.status === 'in-progress'
-                        ? 'in-progress'
-                        : 'success'
+                          ? 'in-progress'
+                          : 'success'
                     }
                   >
                     {item.status.replace('-', ' ')}
@@ -143,8 +146,8 @@ export default function Page() {
                       item.status === 'red'
                         ? 'error'
                         : item.status === 'warn'
-                        ? 'warning'
-                        : 'success'
+                          ? 'warning'
+                          : 'success'
                     }
                   />
                 </SpaceBetween>
