@@ -8,6 +8,7 @@ import {
   SpaceBetween
 } from '@cloudscape-design/components';
 import type { MixedLineBarChartProps } from '@cloudscape-design/components';
+import EstimateCompletionTime from './time/eta';
 
 export interface RequestPoint {
   timestamp: number; // Unix ms
@@ -223,22 +224,16 @@ export default function RequestPlaybackTimeline() {
         const requestDelta = totalRequests - requests;
         const rateDiff = threshold.multiplier - 1;
 
-        let etaDisplay: string;
-
-        if (rateDiff <= 0) {
-          etaDisplay = '❌ Will never catch up';
-        } else {
-          const seconds = Math.round(requestDelta / rateDiff);
-          const hours = Math.floor(seconds / 3600);
-          const minutes = Math.floor((seconds % 3600) / 60);
-          const secs = seconds % 60;
-          etaDisplay = `ETA: ${hours}h ${minutes}m ${secs}s`;
-        }
-
         return (
           <div key={threshold.id}>
             <strong>x{threshold.multiplier} Replayer</strong> - Sent:{' '}
-            {requests.toLocaleString()} – {etaDisplay}
+            {requests.toLocaleString()} –{' '}
+            <EstimateCompletionTime
+              etaSeconds={Math.round(requestDelta / rateDiff)}
+              variant="inline"
+              status="in-progress"
+              percentage={requests / totalRequests}
+            />
           </div>
         );
       })}

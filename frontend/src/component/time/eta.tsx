@@ -1,0 +1,95 @@
+'use client';
+
+import Box from '@cloudscape-design/components/box';
+import Container from '@cloudscape-design/components/container';
+import Header from '@cloudscape-design/components/header';
+import ProgressBar from '@cloudscape-design/components/progress-bar';
+import SpaceBetween from '@cloudscape-design/components/space-between';
+import StatusIndicator from '@cloudscape-design/components/status-indicator';
+
+export type Variant = 'overall' | 'inline';
+export type Status = 'in-progress' | 'pending' | 'success' | 'error';
+
+interface EstimateCompletionTimeProps {
+  variant: Variant;
+  etaSeconds: number;
+  percentage?: number;
+  status?: Status;
+  label?: string;
+  errorMessage?: string;
+}
+
+function formatETA(seconds: number): string {
+  if (seconds <= 0) return 'less than a second';
+
+  const units = [
+    { label: 'day', value: Math.floor(seconds / 86400) },
+    { label: 'hr', value: Math.floor((seconds % 86400) / 3600) },
+    { label: 'min', value: Math.floor((seconds % 3600) / 60) },
+    { label: 'sec', value: seconds % 60 }
+  ];
+
+  const significant = units.filter((u) => u.value > 0).slice(0, 2);
+
+  return significant
+    .map((u) => `${u.value} ${u.label}${u.value > 1 ? 's' : ''}`)
+    .join(' ');
+}
+
+function formatPercent(value: number): string {
+  return value.toFixed(2);
+}
+
+export default function EstimateCompletionTime({
+  variant,
+  etaSeconds,
+  percentage,
+  status = 'in-progress',
+  label = 'Estimated Completion Time',
+  errorMessage: error
+}: EstimateCompletionTimeProps) {
+  const formattedETA = formatETA(etaSeconds);
+  const progressLabel =
+    percentage !== undefined ? `${formatPercent(percentage)}%` : 'In Progress';
+
+  if (variant === 'overall') {
+    return (
+      <Container header={<Header variant="h2">{label}</Header>}>
+        <SpaceBetween size="m">
+          <ProgressBar
+            value={percentage}
+            label={`Progress: ${progressLabel}`}
+            additionalInfo={`Estimated time remaining: ${formattedETA}`}
+            status={
+              status === 'success'
+                ? 'success'
+                : status === 'error'
+                  ? 'error'
+                  : 'in-progress'
+            }
+          />
+          <StatusIndicator type={status}>
+            {error !== undefined
+              ? error
+              : status === 'in-progress'
+                ? 'In Progress'
+                : status === 'success'
+                  ? 'Completed'
+                  : status}
+          </StatusIndicator>
+        </SpaceBetween>
+      </Container>
+    );
+  }
+
+  // Variant === 'inline'
+  return (
+    <Box>
+      <StatusIndicator type={status}>
+        {percentage !== undefined
+          ? `${formatPercent(percentage)}% • ETA: ${formattedETA}`
+          : `ETA: ${formattedETA}`}
+      </StatusIndicator>
+    </Box>
+  );
+}
