@@ -1,19 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
-
-const SourceConnectionForm = dynamic(
-  () => import('@/component/connection/source'),
-  { ssr: false }
-);
-
+import { Suspense, useState } from 'react';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import RadioGroup from '@cloudscape-design/components/radio-group';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
 import TemplateUploadViewer from '@/component/template/template-upload-viewer';
+import SourceConnection from '@/component/connection/source';
 
 export default function SourceSelector() {
   const [sourceType, setSourceType] = useState('connection');
@@ -46,7 +40,11 @@ export default function SourceSelector() {
           </SpaceBetween>
         )}
 
-        {sourceType === 'connection' && <SourceConnectionForm />}
+        {sourceType === 'connection' && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <SourceConnection />
+          </Suspense>
+        )}
 
         {sourceType === 's3snapshot' && (
           <SpaceBetween size="m">

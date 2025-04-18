@@ -1,20 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
-
-const SourceConnectionForm = dynamic(
-  () => import('@/component/connection/source'),
-  { ssr: false }
-);
-
-import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import RadioGroup from '@cloudscape-design/components/radio-group';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
 import TemplateUploadViewer from '@/component/template/template-upload-viewer';
 import { Box } from '@cloudscape-design/components';
+import SourceConnectionForm from './connection/source';
 
 export default function SourceSelectionPage() {
   const [sourceType, setSourceType] = useState('connection');
@@ -36,18 +29,9 @@ export default function SourceSelectionPage() {
         items={[
           { value: 'connection', label: 'Connect to Source Cluster' },
           { value: 's3snapshot', label: 'Use S3 Snapshot Repository' },
-          { value: 'jsontemplate', label: 'Load from Migration Template' },
-          { value: 'later', label: 'Select a source later' }
+          { value: 'template', label: 'Load from Migration Template' }
         ]}
       />
-
-      {/* Render based on selection */}
-
-      {sourceType === 'later' && (
-        <SpaceBetween size="m">
-          <Header variant="h3">Select a source later</Header>
-        </SpaceBetween>
-      )}
 
       {sourceType === 'connection' && <SourceConnectionForm />}
 
@@ -74,7 +58,7 @@ export default function SourceSelectionPage() {
         </SpaceBetween>
       )}
 
-      {sourceType === 'jsontemplate' && (
+      {sourceType === 'template' && (
         <SpaceBetween size="m">
           <TemplateUploadViewer></TemplateUploadViewer>
         </SpaceBetween>
