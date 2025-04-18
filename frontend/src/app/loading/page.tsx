@@ -36,7 +36,7 @@ export default function MigrationAssistantStatusPage() {
     return () => clearInterval(interval);
   }, [isReady]);
 
-  const progressFlash: FlashbarProps.MessageDefinition[]  = !isReady
+  const progressFlash: FlashbarProps.MessageDefinition[] = !isReady
     ? [
         {
           type: 'in-progress',
@@ -45,15 +45,13 @@ export default function MigrationAssistantStatusPage() {
               value={Math.min(progress, 100)}
               label="Deploying Migration Assistant"
               description="This can take up to 30 minutes. Migration Assistant will become available once deployment is complete."
-              // additionalInfo={`Progress: ${Math.floor(progress)}%`}
               status={progress < 100 ? 'in-progress' : 'success'}
-              variant='flash'
+              variant="flash"
             />
-          )
+          ),
         },
       ]
-    : [
-    ];
+    : [];
 
   return (
     <SpaceBetween size="m">
@@ -62,10 +60,15 @@ export default function MigrationAssistantStatusPage() {
       <Header variant="h1">
         {isReady
           ? 'Migration Assistant is Ready'
-          : 'While waiting review the following'}
+          : 'Preparing Migration Assistant'}
       </Header>
 
       <SpaceBetween size="l">
+        <Box>
+          Take a moment to review the following tips. These steps will help
+          ensure you're ready to start migrating once the tool becomes available.
+        </Box>
+
         <SpaceBetween size="s">
           <Box variant="h4">1. Get source cluster connection details</Box>
           <Box>
@@ -91,13 +94,13 @@ export default function MigrationAssistantStatusPage() {
         <Box>
           {isReady ? (
             <Link href="/dashboard">
-              <Button variant="primary">Dashboard</Button>
+              <Button variant="primary">Go to Dashboard</Button>
             </Link>
           ) : (
             <DemoWrapper>
-            <Button variant="normal" onClick={() => setIsReady(true)}>
-              Mark as Ready for Testing
-            </Button>
+              <Button variant="normal" onClick={() => setIsReady(true)}>
+                Mark as Ready for Testing
+              </Button>
             </DemoWrapper>
           )}
         </Box>
