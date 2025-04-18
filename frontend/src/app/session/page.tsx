@@ -1,0 +1,61 @@
+'use client';
+
+import { Suspense } from 'react';
+import Header from '@cloudscape-design/components/header';
+import SourceSelector from '@/component/source-selector';
+import TargetConnection from '@/component/connection/target';
+import MetadataWorkflowControl from '@/component/metadata/selection';
+import BackfillStatusDashboard from '@/component/backfill/status';
+import RequestPlaybackTimeline from '@/component/playback';
+import { Wizard } from '@cloudscape-design/components';
+
+function StepPageContent() {
+  return (
+    <Wizard
+      steps={[
+        {
+          title: 'Select Source',
+          content: <SourceSelector />,
+          isOptional: true
+        },
+        {
+          title: 'Traffic Capture',
+          content: <RequestPlaybackTimeline />,
+          isOptional: true
+        },
+        {
+          title: 'Select Target',
+          content: <TargetConnection />
+        },
+        {
+          title: 'Metadata',
+          content: <MetadataWorkflowControl />
+        },
+        {
+          title: 'Backfill',
+          content: <BackfillStatusDashboard />,
+          isOptional: true
+        },
+        {
+          title: 'Traffic Replay',
+          content: <RequestPlaybackTimeline />,
+          isOptional: true
+        },
+        {
+          title: 'Review',
+          content: <Header>Review Migration</Header>
+        }
+      ]}
+      submitButtonText="Mark Complete"
+      allowSkipTo
+    ></Wizard>
+  );
+}
+
+export default function StepPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <StepPageContent />
+    </Suspense>
+  );
+}

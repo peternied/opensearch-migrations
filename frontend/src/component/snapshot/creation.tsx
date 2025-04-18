@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Table from '@cloudscape-design/components/table';
 import Button from '@cloudscape-design/components/button';
-import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Header from '@cloudscape-design/components/header';
 import type { TableProps } from '@cloudscape-design/components/table';
+import EstimateCompletionTime from '../time/eta';
+import DemoWrapper from '../demoWrapper';
 
 type NonCancelableEventHandler<Detail> = (event: { detail: Detail }) => void;
 interface IndexEntry {
@@ -27,7 +27,7 @@ const MOCK_INDICES: IndexEntry[] = [
 
 function calculateEstimatedTime(items: IndexEntry[]) {
   const totalSize = items.reduce((acc, item) => acc + item.sizeGb, 0);
-  return Math.ceil(totalSize * 5); // 5 mins per GB
+  return Math.ceil(totalSize * 5 * 60);
 }
 
 export default function SnapshotCreation() {
@@ -70,30 +70,40 @@ export default function SnapshotCreation() {
   ];
 
   return (
-    <Container>
-      <SpaceBetween size="m">
-        <Table
-          header={
-            <Header variant="h2">
-              Select indices to include in the snapshot
-            </Header>
-          }
-          columnDefinitions={columnDefinitions}
-          items={MOCK_INDICES}
-          selectedItems={selectedItems}
-          onSelectionChange={handleSelectionChange}
-          selectionType="multi"
-          trackBy="name"
-          isItemDisabled={() => isSnapshotting || snapshotComplete}
-          variant="embedded"
-          stickyHeader
-        />
+    <SpaceBetween size="m">
+      <Table
+        header={
+          <Header variant="h2">
+            Select indices to include in the snapshot
+          </Header>
+        }
+        columnDefinitions={columnDefinitions}
+        items={MOCK_INDICES}
+        selectedItems={selectedItems}
+        onSelectionChange={handleSelectionChange}
+        selectionType="multi"
+        trackBy="name"
+        isItemDisabled={() => isSnapshotting || snapshotComplete}
+        variant="embedded"
+        stickyHeader
+      />
 
-        {!isSnapshotting && !snapshotComplete && (
+      <EstimateCompletionTime
+        etaSeconds={estimatedTime}
+        variant="overall"
+        label="Snapshot creation time"
+        status={
+          !isSnapshotting && !snapshotComplete
+            ? 'pending'
+            : isSnapshotting
+              ? 'in-progress'
+              : 'success'
+        }
+      ></EstimateCompletionTime>
+
+      {!isSnapshotting && !snapshotComplete && (
+        <DemoWrapper>
           <SpaceBetween size="m">
-            <StatusIndicator type="pending">
-              Estimated Time to Completion: {estimatedTime} minutes
-            </StatusIndicator>
             <Button
               onClick={handleTakeSnapshot}
               disabled={selectedItems.length === 0}
@@ -102,18 +112,8 @@ export default function SnapshotCreation() {
               Take Snapshot
             </Button>
           </SpaceBetween>
-        )}
-
-        {isSnapshotting && (
-          <StatusIndicator type="in-progress">
-            Taking snapshot... Estimated time: {estimatedTime} minutes
-          </StatusIndicator>
-        )}
-
-        {snapshotComplete && (
-          <StatusIndicator type="success">Snapshot successful</StatusIndicator>
-        )}
-      </SpaceBetween>
-    </Container>
+        </DemoWrapper>
+      )}
+    </SpaceBetween>
   );
 }

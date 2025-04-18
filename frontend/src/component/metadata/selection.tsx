@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import Button from '@cloudscape-design/components/button';
-import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Box from '@cloudscape-design/components/box';
 import Spinner from '@cloudscape-design/components/spinner';
 import MetadataEvaluation from './evaulation';
 import MetadataMigration from './migration';
+import DemoWrapper from '../demoWrapper';
 
 export default function MetadataWorkflowControl() {
   const [phase, setPhase] = useState<'evaluate' | 'executing' | 'completed'>(
@@ -29,25 +29,25 @@ export default function MetadataWorkflowControl() {
       {phase === 'evaluate' && (
         <SpaceBetween size="l">
           <MetadataEvaluation />
-          <Box textAlign="center">
-            <Button variant="primary" onClick={handleRunMigration}>
-              Run Migration
-            </Button>
-          </Box>
+          <DemoWrapper>
+            <Box>
+              <Button variant="primary" onClick={handleRunMigration}>
+                Run Migration
+              </Button>
+            </Box>
+          </DemoWrapper>
         </SpaceBetween>
       )}
 
       {phase === 'executing' && (
-        <Container>
-          <Box textAlign="center">
-            <SpaceBetween size="l">
-              <Spinner size="large" />
-              <Box variant="strong" margin={{ top: 's' }}>
-                Migrating indexes and templates...
-              </Box>
-            </SpaceBetween>
-          </Box>
-        </Container>
+        <Box textAlign="center">
+          <SpaceBetween size="l">
+            <Spinner size="large" />
+            <Box variant="strong" margin={{ top: 's' }}>
+              Migrating indexes and templates...
+            </Box>
+          </SpaceBetween>
+        </Box>
       )}
 
       {phase === 'completed' && <MetadataMigration />}

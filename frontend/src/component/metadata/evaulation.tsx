@@ -1,6 +1,5 @@
 'use client';
 
-import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
@@ -30,54 +29,43 @@ const aliases: MigrationEntity[] = [{ name: 'logs-all', status: 'success' }];
 export default function MetadataEvaluation() {
   return (
     <SpaceBetween size="l">
-      <Container
-        header={<Header variant="h2">Cluster Evaluation Results</Header>}
-      >
-        <SpaceBetween size="m">
-          <MigrationEntityTable
-            items={indexes}
-            label="Indexes"
-            mode="evaluation"
-          />
-          <MigrationEntityTable
-            items={indexTemplates}
-            label="Index Templates"
-            mode="evaluation"
-          />
-          <MigrationEntityTable
-            items={componentTemplates}
-            label="Component Templates"
-            mode="evaluation"
-          />
-          <MigrationEntityTable
-            items={aliases}
-            label="Aliases"
-            mode="evaluation"
-          />
-        </SpaceBetween>
-      </Container>
-
-      <Container header={<Header variant="h2">Result</Header>}>
+      <Header variant="h2">Issues</Header>
+      <SpaceBetween size="s">
         <StatusIndicator type="error">
-          1 migration issues detected
+          <strong>logs-181998:</strong> IndexMappingTypeRemoval unsupported —{' '}
+          <em>
+            No multi type resolution behavior declared, specify
+            --multi-type-behavior to process
+          </em>
         </StatusIndicator>
-      </Container>
-
-      <Container header={<Header variant="h2">Issues</Header>}>
-        <SpaceBetween size="s">
-          <StatusIndicator type="error">
-            <strong>logs-181998:</strong> IndexMappingTypeRemoval unsupported —{' '}
-            <em>
-              No multi type resolution behavior declared, specify
-              --multi-type-behavior to process
-            </em>
-          </StatusIndicator>
-          <StatusIndicator type="warning">
-            Elasticsearch 7.10.2 is not specifically supported, attempting
-            migration as if 7.17.22
-          </StatusIndicator>
-        </SpaceBetween>
-      </Container>
+        <StatusIndicator type="warning">
+          Elasticsearch 7.10.2 is not specifically supported, attempting
+          migration as if 7.17.22
+        </StatusIndicator>
+      </SpaceBetween>
+      <Header variant="h2">Individual Item Results</Header>
+      <SpaceBetween size="m">
+        <MigrationEntityTable
+          items={indexes}
+          label="Indexes"
+          mode="evaluation"
+        />
+        <MigrationEntityTable
+          items={indexTemplates}
+          label="Index Templates"
+          mode="evaluation"
+        />
+        <MigrationEntityTable
+          items={componentTemplates}
+          label="Component Templates"
+          mode="evaluation"
+        />
+        <MigrationEntityTable
+          items={aliases}
+          label="Aliases"
+          mode="evaluation"
+        />
+      </SpaceBetween>
     </SpaceBetween>
   );
 }

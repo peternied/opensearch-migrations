@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Button,
-  Container,
   MixedLineBarChart,
   SpaceBetween
 } from '@cloudscape-design/components';
 import type { MixedLineBarChartProps } from '@cloudscape-design/components';
 import EstimateCompletionTime from './time/eta';
+import DemoWrapper from './demoWrapper';
 
 export interface RequestPoint {
   timestamp: number; // Unix ms
@@ -161,55 +161,56 @@ export default function RequestPlaybackTimeline() {
 
   return (
     <SpaceBetween size="m">
-      <Container>
-        <MixedLineBarChart
-          hideFilter={true}
-          series={series}
-          // xDomain={xDomain}
-          yTitle="Request Count"
-          xTitle="Time"
-          height={300}
-          statusType="finished"
-          xScaleType="time"
-          i18nStrings={{}}
-          xTickFormatter={(e) => {
-            if (!e || !e.toLocaleDateString) return '0';
-            return e
-              .toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: 'numeric',
-                second: 'numeric',
-                hour12: true
-              })
-              .split(',')
-              .join('\n');
-          }}
-          yTickFormatter={(e) => e.toString()}
-        />
-      </Container>
+      <MixedLineBarChart
+        hideFilter={true}
+        series={series}
+        // xDomain={xDomain}
+        yTitle="Request Count"
+        xTitle="Time"
+        height={300}
+        statusType="finished"
+        xScaleType="time"
+        i18nStrings={{}}
+        xTickFormatter={(e) => {
+          if (!e || !e.toLocaleDateString) return '0';
+          return e
+            .toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: 'numeric',
+              second: 'numeric',
+              hour12: true
+            })
+            .split(',')
+            .join('\n');
+        }}
+        yTickFormatter={(e) => e.toString()}
+      />
 
-      <SpaceBetween size="xs" direction="horizontal">
-        <Button onClick={start} disabled={isRunning}>
-          Start
-        </Button>
-        <Button onClick={pause} disabled={!isRunning}>
-          Pause
-        </Button>
-        <Button onClick={restart}>Restart</Button>
-      </SpaceBetween>
-      <SpaceBetween size="xs" direction="horizontal">
-        <Button onClick={addMovingThreshold}>Start Replayer</Button>
-        <input
-          type="number"
-          min="0.1"
-          step="0.1"
-          value={multiplierInput}
-          onChange={(e) => setMultiplierInput(e.target.value)}
-          style={{ width: '60px' }}
-        />
-      </SpaceBetween>
+      <DemoWrapper>
+        <SpaceBetween size="xs" direction="horizontal">
+          <Button onClick={start} disabled={isRunning}>
+            Start
+          </Button>
+          <Button onClick={pause} disabled={!isRunning}>
+            Pause
+          </Button>
+          <Button onClick={restart}>Restart</Button>
+        </SpaceBetween>
+        <SpaceBetween size="xs" direction="horizontal">
+          <Button onClick={addMovingThreshold}>Start Replayer</Button>
+          <input
+            type="number"
+            min="0.1"
+            step="0.1"
+            value={multiplierInput}
+            onChange={(e) => setMultiplierInput(e.target.value)}
+            style={{ width: '60px' }}
+          />
+        </SpaceBetween>
+      </DemoWrapper>
+
       {movingThresholds.map((threshold) => {
         const elapsed = now - threshold.addedAt;
         const virtualTime =
