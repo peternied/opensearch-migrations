@@ -1,5 +1,4 @@
-import {
-  SideNavigation} from '@cloudscape-design/components';
+import { SideNavigation } from '@cloudscape-design/components';
 
 export default function MigrationNavItems() {
   return (

@@ -6,7 +6,9 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Box from '@cloudscape-design/components/box';
 import Button from '@cloudscape-design/components/button';
 import Link from 'next/link';
-import Flashbar, { FlashbarProps } from '@cloudscape-design/components/flashbar';
+import Flashbar, {
+  FlashbarProps
+} from '@cloudscape-design/components/flashbar';
 import ProgressBar from '@cloudscape-design/components/progress-bar';
 import DemoWrapper from '@/component/demoWrapper';
 
@@ -22,8 +24,8 @@ export default function MigrationAssistantStatusPage() {
     if (isReady) return;
 
     const interval = setInterval(() => {
-      setProgress(prev => {
-        const next = prev + (100 / (TOTAL_SECONDS / INTERVAL_SECONDS));
+      setProgress((prev) => {
+        const next = prev + 100 / (TOTAL_SECONDS / INTERVAL_SECONDS);
         if (next >= 100) {
           clearInterval(interval);
           setIsReady(true);
@@ -48,8 +50,8 @@ export default function MigrationAssistantStatusPage() {
               status={progress < 100 ? 'in-progress' : 'success'}
               variant="flash"
             />
-          ),
-        },
+          )
+        }
       ]
     : [];
 
@@ -66,7 +68,8 @@ export default function MigrationAssistantStatusPage() {
       <SpaceBetween size="l">
         <Box>
           Take a moment to review the following tips. These steps will help
-          ensure you're ready to start migrating once the tool becomes available.
+          ensure you&apos;re ready to start migrating once the tool becomes
+          available.
         </Box>
 
         <SpaceBetween size="s">

@@ -8,7 +8,10 @@ import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Table from '@cloudscape-design/components/table';
 import Link from 'next/link';
 import EstimateCompletionTime from '@/component/time/eta';
-import { MigrationSession, useMigrationSessions } from '@/context/migration-session';
+import {
+  MigrationSession,
+  useMigrationSessions
+} from '@/context/migration-session';
 
 export type StatusType = 'success' | 'in-progress' | 'pending' | 'error';
 
@@ -44,13 +47,9 @@ export default function MigrationDashboardPage() {
       <Header
         variant="h1"
         actions={
-          <Link href='/session'>
-          <Button
-            variant="primary"
-          >
-            Create Migration Session
-          </Button>
-        </Link>
+          <Link href="/session">
+            <Button variant="primary">Create Migration Session</Button>
+          </Link>
         }
       >
         Migration Sessions Dashboard
@@ -124,7 +123,10 @@ export default function MigrationDashboardPage() {
             {
               id: 'size',
               header: 'Estimated Size',
-              cell: (item) => item.sizeBytes != 0 ? (item.sizeBytes / (1024 * 1024 * 1024)).toFixed(2) + " Gb" : 'N/A'
+              cell: (item) =>
+                item.sizeBytes != 0
+                  ? (item.sizeBytes / (1024 * 1024 * 1024)).toFixed(2) + ' Gb'
+                  : 'N/A'
             }
           ]}
           stickyHeader

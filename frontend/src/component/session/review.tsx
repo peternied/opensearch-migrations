@@ -8,6 +8,7 @@ import {
   KeyValuePairs,
   LineChart,
   Link,
+  MixedLineBarChartProps,
   StatusIndicator
 } from '@cloudscape-design/components';
 
@@ -27,21 +28,19 @@ function generateSeries(
   durationSeconds: number,
   average: number,
   label: string
-): any {
+): MixedLineBarChartProps.LineDataSeries<number>[] {
   const interval = 300;
   const points = Math.floor(durationSeconds / interval);
   const data = Array.from({ length: points }, (_, i) => ({
     x: new Date(session.createdAt.getTime() + i * interval * 1000).getTime(),
-    y: (average + (Math.random() - 0.5) * average * 0.3).toFixed(2)
+    y: average + (Math.random() - 0.5) * average * 0.3
   }));
-  const result = [
-    {
-      title: label,
-      type: 'line',
-      data
-    }
-  ];
-  return result;
+  const result: MixedLineBarChartProps.LineDataSeries<number> = {
+    title: label,
+    type: 'line',
+    data: data
+  };
+  return [result];
 }
 
 // Dummy data – replace with real props or data fetching
@@ -64,7 +63,7 @@ const session: MigrationSession = {
     durationSeconds: 7200,
     throughputMbPerSec: 75.5,
     sizeBytes: 10884901888,
-    docs: "23,420,233"
+    docs: '23,420,233'
   },
   replay: 'success',
   replayDetails: {
@@ -76,19 +75,18 @@ const session: MigrationSession = {
   }
 };
 const backfillData = generateSeries(
-    session.backfillDetails.durationSeconds,
-    session.backfillDetails.throughputMbPerSec,
-    'Throughput'
-  );
+  session.backfillDetails!.durationSeconds,
+  session.backfillDetails!.throughputMbPerSec,
+  'Throughput'
+);
 
-  const replayData = generateSeries(
-    session.replayDetails.toSingularitySeconds +
-      session.replayDetails.toCutoverSeconds,
-    500 + Math.random() * 100,
-    'Replay RPS'
-  );
+const replayData = generateSeries(
+  session.replayDetails!.toSingularitySeconds +
+    session.replayDetails!.toCutoverSeconds,
+  500 + Math.random() * 100,
+  'Replay RPS'
+);
 export default function MigrationSessionReviewPage() {
-
   return (
     <SpaceBetween size="l">
       <Container header={<Header variant="h2">Session Overview</Header>}>
@@ -122,19 +120,23 @@ export default function MigrationSessionReviewPage() {
             },
             {
               label: 'Indices',
-              value: session.metadataDetails.indices
+              value: session.metadataDetails!.indices
             },
             {
               label: 'Templates',
-              value: session.metadataDetails.templates
+              value: session.metadataDetails!.templates
             },
             {
               label: 'Aliases',
-              value: session.metadataDetails.aliases
+              value: session.metadataDetails!.aliases
             },
             {
               label: 'Raw Logs',
-              value: <Link href="#non-existent" external>Metadata migration logs</Link>
+              value: (
+                <Link href="#non-existent" external>
+                  Metadata migration logs
+                </Link>
+              )
             }
           ]}
         />
@@ -154,23 +156,27 @@ export default function MigrationSessionReviewPage() {
               },
               {
                 label: 'Transferred',
-                value: formatBytes(session.backfillDetails.sizeBytes)
+                value: formatBytes(session.backfillDetails!.sizeBytes)
               },
               {
                 label: 'Documents',
-                value: session.backfillDetails.docs
+                value: session.backfillDetails!.docs
               },
               {
                 label: 'Duration',
-                value: formatDuration(session.backfillDetails.durationSeconds)
+                value: formatDuration(session.backfillDetails!.durationSeconds)
               },
               {
                 label: 'Throughput (MB/sec)',
-                value: session.backfillDetails.throughputMbPerSec.toFixed(2)
+                value: session.backfillDetails!.throughputMbPerSec.toFixed(2)
               },
               {
                 label: 'Raw Logs',
-                value: <Link href="#non-existent" external>96 worker logs</Link>
+                value: (
+                  <Link href="#non-existent" external>
+                    96 worker logs
+                  </Link>
+                )
               }
             ]}
           />
@@ -183,19 +189,19 @@ export default function MigrationSessionReviewPage() {
             hideLegend={true}
             hideFilter={true}
             xTickFormatter={(e) => {
-                const d = new Date(e);
-                return d
-                  .toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: 'numeric',
-                    second: 'numeric',
-                    hour12: true
-                  })
-                  .split(',')
-                  .join('\n');
-              }}
+              const d = new Date(e);
+              return d
+                .toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: 'numeric',
+                  second: 'numeric',
+                  hour12: true
+                })
+                .split(',')
+                .join('\n');
+            }}
           />
         </SpaceBetween>
       </Container>
@@ -212,29 +218,37 @@ export default function MigrationSessionReviewPage() {
               },
               {
                 label: 'Transferred',
-                value: formatBytes(session.replayDetails.sizeBytes)
+                value: formatBytes(session.replayDetails!.sizeBytes)
               },
               {
                 label: 'Replayed Requests',
-                value: session.replayDetails.requests
+                value: session.replayDetails!.requests
               },
               {
                 label: 'Start to Singularity',
                 value: formatDuration(
-                  session.replayDetails.toSingularitySeconds
+                  session.replayDetails!.toSingularitySeconds
                 )
               },
               {
                 label: 'Singularity to Cutover',
-                value: formatDuration(session.replayDetails.toCutoverSeconds)
+                value: formatDuration(session.replayDetails!.toCutoverSeconds)
               },
               {
                 label: 'Tuple Logs',
-                value: <Link href="#non-existent" external>342,232,322 tuples entries</Link>
+                value: (
+                  <Link href="#non-existent" external>
+                    342,232,322 tuples entries
+                  </Link>
+                )
               },
               {
                 label: 'Raw Logs',
-                value: <Link href="#non-existent" external>Replayer process logs</Link>
+                value: (
+                  <Link href="#non-existent" external>
+                    Replayer process logs
+                  </Link>
+                )
               }
             ]}
           />
@@ -247,19 +261,19 @@ export default function MigrationSessionReviewPage() {
             hideLegend={true}
             hideFilter={true}
             xTickFormatter={(e) => {
-                const d = new Date(e);
-                return d
-                  .toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: 'numeric',
-                    second: 'numeric',
-                    hour12: true
-                  })
-                  .split(',')
-                  .join('\n');
-              }}
+              const d = new Date(e);
+              return d
+                .toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: 'numeric',
+                  second: 'numeric',
+                  hour12: true
+                })
+                .split(',')
+                .join('\n');
+            }}
           />
         </SpaceBetween>
       </Container>

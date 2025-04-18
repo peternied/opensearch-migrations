@@ -3,16 +3,37 @@
 import { Status } from '@/component/time/eta';
 import { createContext, useContext, useState, ReactNode } from 'react';
 
+export interface MetadataDetails {
+  status: string;
+  indices: number;
+  templates: number;
+  aliases: number;
+}
+export interface BackfillDetails {
+  status: string;
+  durationSeconds: number;
+  throughputMbPerSec: number;
+  sizeBytes: number;
+  docs: string;
+}
+export interface ReplayDetails {
+  status: string;
+  toSingularitySeconds: number;
+  toCutoverSeconds: number;
+  sizeBytes: number;
+  requests: string;
+}
+
 export interface MigrationSession {
   id: string;
   name: string;
   createdAt: Date;
   metadata: Status;
-  metadataDetails?: any;
+  metadataDetails?: MetadataDetails;
   backfill: Status;
-  backfillDetails?: any;
+  backfillDetails?: BackfillDetails;
   replay: Status;
-  replayDetails?: any;
+  replayDetails?: ReplayDetails;
   etaSeconds: number | null;
   sizeBytes: number;
 }
