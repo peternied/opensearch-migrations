@@ -1,47 +1,71 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Box from '@cloudscape-design/components/box';
-import Spinner from '@cloudscape-design/components/spinner';
-import Alert from '@cloudscape-design/components/alert';
 import Button from '@cloudscape-design/components/button';
 import Link from 'next/link';
+import Flashbar, { FlashbarProps } from '@cloudscape-design/components/flashbar';
+import ProgressBar from '@cloudscape-design/components/progress-bar';
+import DemoWrapper from '@/component/demoWrapper';
+
+const TOTAL_SECONDS = 30 * 60;
+const INTERVAL_SECONDS = 1;
 
 export default function MigrationAssistantStatusPage() {
   const [isReady, setIsReady] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  // Simulate deployment progress
+  useEffect(() => {
+    if (isReady) return;
+
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        const next = prev + (100 / (TOTAL_SECONDS / INTERVAL_SECONDS));
+        if (next >= 100) {
+          clearInterval(interval);
+          setIsReady(true);
+          return 100;
+        }
+        return next;
+      });
+    }, INTERVAL_SECONDS * 1000);
+
+    return () => clearInterval(interval);
+  }, [isReady]);
+
+  const progressFlash: FlashbarProps.MessageDefinition[]  = !isReady
+    ? [
+        {
+          type: 'in-progress',
+          content: (
+            <ProgressBar
+              value={Math.min(progress, 100)}
+              label="Deploying Migration Assistant"
+              description="This can take up to 30 minutes. Migration Assistant will become available once deployment is complete."
+              // additionalInfo={`Progress: ${Math.floor(progress)}%`}
+              status={progress < 100 ? 'in-progress' : 'success'}
+              variant='flash'
+            />
+          )
+        },
+      ]
+    : [
+    ];
 
   return (
     <SpaceBetween size="m">
+      <Flashbar items={progressFlash} />
+
       <Header variant="h1">
         {isReady
-          ? 'Migration Assistant Ready'
-          : 'Migration Assistant is Deploying'}
+          ? 'Migration Assistant is Ready'
+          : 'While waiting review the following'}
       </Header>
-      {isReady ? (
-        <>
-          <Box variant="h3">You are all set to begin a migration</Box>
-          <Alert statusIconAriaLabel="info" header="Before you begin">
-            Review the following tips to ensure you are ready for a smooth
-            migration.
-          </Alert>
-        </>
-      ) : (
-        <></>
-      )}
-      <SpaceBetween size="l">
-        {isReady ? (
-          <></>
-        ) : (
-          <Box textAlign="center">
-            <Spinner size="large" />
-            <Box variant="h3" margin={{ top: 's' }}>
-              Hang tight — Migration Assistant is currently being deployed.
-            </Box>
-          </Box>
-        )}
 
+      <SpaceBetween size="l">
         <SpaceBetween size="s">
           <Box variant="h4">1. Get source cluster connection details</Box>
           <Box>
@@ -70,9 +94,11 @@ export default function MigrationAssistantStatusPage() {
               <Button variant="primary">Dashboard</Button>
             </Link>
           ) : (
+            <DemoWrapper>
             <Button variant="normal" onClick={() => setIsReady(true)}>
               Mark as Ready for Testing
             </Button>
+            </DemoWrapper>
           )}
         </Box>
       </SpaceBetween>
