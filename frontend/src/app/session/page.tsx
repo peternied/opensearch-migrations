@@ -8,6 +8,8 @@ import MetadataWorkflowControl from '@/component/metadata/selection';
 import BackfillStatusDashboard from '@/component/backfill/status';
 import RequestPlaybackTimeline from '@/component/playback';
 import { Wizard } from '@cloudscape-design/components';
+import SnapshotCreation from '@/component/snapshot/creation';
+import MigrationSessionReviewPage from '@/component/session/review';
 
 function StepPageContent() {
   return (
@@ -25,11 +27,18 @@ function StepPageContent() {
         },
         {
           title: 'Select Target',
-          content: <TargetConnection />
+          content: <TargetConnection />,
+          isOptional: true
+        },
+        {
+          title: 'Create Snapshot',
+          content: <SnapshotCreation />,
+          isOptional: true
         },
         {
           title: 'Metadata',
-          content: <MetadataWorkflowControl />
+          content: <MetadataWorkflowControl />,
+          isOptional: true
         },
         {
           title: 'Backfill',
@@ -43,7 +52,7 @@ function StepPageContent() {
         },
         {
           title: 'Review',
-          content: <Header>Review Migration</Header>
+          content: <MigrationSessionReviewPage />
         }
       ]}
       submitButtonText="Mark Complete"

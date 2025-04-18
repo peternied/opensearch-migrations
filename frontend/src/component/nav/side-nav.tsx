@@ -1,21 +1,7 @@
-import { useMigrationSessions } from '@/context/migration-session';
 import {
-  SideNavigation,
-  SideNavigationProps
-} from '@cloudscape-design/components';
+  SideNavigation} from '@cloudscape-design/components';
 
 export default function MigrationNavItems() {
-  const { sessions } = useMigrationSessions();
-  const sessionNavLinks: SideNavigationProps.Link[] = sessions.map(
-    (session) => {
-      return {
-        type: 'link',
-        text: session.name,
-        href: `/session?id=${session.id}`
-      };
-    }
-  );
-
   return (
     <SideNavigation
       header={{
@@ -24,15 +10,9 @@ export default function MigrationNavItems() {
         logo: { src: 'migrations-icon-160x160.png', alt: '' }
       }}
       items={[
-        { type: 'link', text: `Overview`, href: `/` },
+        { type: 'link', text: `Dashboard`, href: `/` },
         { type: 'link', text: 'About', href: '/about' },
         { type: 'link', text: `Tear down`, href: `/teardown` },
-        { type: 'divider' },
-        {
-          type: 'section-group',
-          title: 'Migration Sessions',
-          items: sessionNavLinks
-        },
         { type: 'divider' },
         {
           type: 'section-group',
