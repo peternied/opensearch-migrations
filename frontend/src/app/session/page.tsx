@@ -101,7 +101,7 @@ function StepPageContent() {
         submitButtonText="Mark Complete"
         allowSkipTo
       ></Wizard>
-      <DemoWrapper keyName="wizard-optional">
+      <DemoWrapper>
         <Box>
           Steps marked <i>Optional</i> is only for ease of navigation through
           this demo experience. These labels and &apos;skip&apos; options will

@@ -170,7 +170,7 @@ export default function RequestTimeline({
       />
 
       {showReplayers && (
-        <DemoWrapper keyName="playback-controls">
+        <DemoWrapper>
           <SpaceBetween size="xs" direction="horizontal">
             <Button onClick={addMovingThreshold}>Start Replayer</Button>
             <input

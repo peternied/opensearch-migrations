@@ -29,7 +29,7 @@ export default function MetadataWorkflowControl() {
       {phase === 'evaluate' && (
         <SpaceBetween size="l">
           <MetadataEvaluation />
-          <DemoWrapper keyName="run-mtd-migration">
+          <DemoWrapper>
             <Box>
               <Button variant="primary" onClick={handleRunMigration}>
                 Run Migration

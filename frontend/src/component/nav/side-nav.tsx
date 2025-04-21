@@ -18,7 +18,7 @@ export default function MigrationNavItems() {
           text: ``,
           href: '',
           info: (
-            <DemoWrapper keyName="loading-page-link">
+            <DemoWrapper>
               <Link href="/loading">Loading page</Link>
             </DemoWrapper>
           )

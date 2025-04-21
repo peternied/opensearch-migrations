@@ -89,9 +89,9 @@ export default function CaptureProxiesOverview() {
       <Container
         header={<Header variant="h2">Deploy capture proxy workers</Header>}
       >
-        <SpaceBetween size="m">
-          <Button>Magically do this</Button> {/* TODO: Expand on this */}
-          <StatusIndicator type="in-progress">
+        <SpaceBetween size={'m'}>
+          <Button>Magically do this</Button>
+          <StatusIndicator type={'in-progress'}>
             Workers deploying
           </StatusIndicator>
         </SpaceBetween>
@@ -158,7 +158,7 @@ export default function CaptureProxiesOverview() {
         )}
       </Container>
 
-      <DemoWrapper keyName="proxy-controls">
+      <DemoWrapper>
         <SpaceBetween size="s">
           <Button onClick={handleAddProxyClick}>Add Proxy Instance</Button>
         </SpaceBetween>
