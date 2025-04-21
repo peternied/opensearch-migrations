@@ -12,6 +12,8 @@ import {
   MigrationSession,
   useMigrationSessions
 } from '@/context/migration-session';
+import { Box, TextFilter } from '@cloudscape-design/components';
+import { useCollection } from '@cloudscape-design/collection-hooks';
 
 export type StatusType = 'success' | 'in-progress' | 'pending' | 'error';
 
@@ -42,6 +44,14 @@ function overallState(session: MigrationSession): StatusType {
 export default function MigrationDashboardPage() {
   const { sessions } = useMigrationSessions();
 
+  const collection = useCollection(sessions, {
+    filtering: {
+      empty: <Box>No sessions.  <Link href="#"><Button>Create session.</Button></Link></Box>,
+      noMatch: <Box>No sessions with filter criteria.</Box>,
+    },
+    sorting: {
+    }
+  })
   return (
     <SpaceBetween size="l">
       <Header
@@ -55,21 +65,29 @@ export default function MigrationDashboardPage() {
         Migration Sessions Dashboard
       </Header>
 
+      <Box>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+      </Box>
+
       <Container header={<Header variant="h2">Sessions</Header>}>
         <Table
-          items={sessions}
+          {...collection.collectionProps}
+          items={collection.items}
+          filter={<TextFilter {...collection.filterProps}></TextFilter>}
           columnDefinitions={[
             {
               id: 'name',
               header: 'Session Name',
               cell: (item) => (
                 <Link href={`/session?id=${item.id}`}>{item.name}</Link>
-              )
+              ),
+              sortingField: 'name'
             },
             {
               id: 'created',
               header: 'Created Date',
-              cell: (item) => item.createdAt.toLocaleDateString()
+              cell: (item) => <span suppressHydrationWarning>{new Date(item.createdAt).toLocaleDateString()}</span>,
+              sortingField: 'createdAt'
             },
             {
               id: 'overall-state',
@@ -118,7 +136,8 @@ export default function MigrationDashboardPage() {
                   />
                 ) : (
                   'N/A'
-                )
+                ),
+              sortingField: 'etaSeconds'
             },
             {
               id: 'size',

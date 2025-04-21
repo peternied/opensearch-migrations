@@ -102,7 +102,6 @@ export default function SnapshotCreation() {
       ></EstimateCompletionTime>
 
       {!isSnapshotting && !snapshotComplete && (
-        <DemoWrapper>
           <SpaceBetween size="m">
             <Button
               onClick={handleTakeSnapshot}
@@ -112,7 +111,6 @@ export default function SnapshotCreation() {
               Take Snapshot
             </Button>
           </SpaceBetween>
-        </DemoWrapper>
       )}
     </SpaceBetween>
   );

@@ -7,11 +7,13 @@ import type { ReactNode } from 'react';
 interface DemoWrapperProps {
   children: ReactNode;
   label?: string;
+  keyName: string;
 }
 
 export default function DemoWrapper({
   children,
-  label = 'Demo Only'
+  label = 'Demo Only',
+  keyName,
 }: DemoWrapperProps) {
   const styles = {
     orange: {
@@ -31,7 +33,7 @@ export default function DemoWrapper({
         padding: '2px'
       }}
     >
-      <SpaceBetween size="xs">
+      <SpaceBetween size="xs" key={keyName}>
         <Box fontSize="body-s" color="text-status-warning">
           ⚠️ {label}
         </Box>

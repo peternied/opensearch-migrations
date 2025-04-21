@@ -8,6 +8,7 @@ import FormField from '@cloudscape-design/components/form-field';
 import FileUpload from '@cloudscape-design/components/file-upload';
 import Box from '@cloudscape-design/components/box';
 import Alert from '@cloudscape-design/components/alert';
+import { Button } from '@cloudscape-design/components';
 
 interface SourceConfig {
   host?: string;
@@ -21,6 +22,29 @@ export default function TemplateUploadViewer() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [sourceConfig, setSourceConfig] = useState<SourceConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
+
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    setVerificationError(null);
+    setVerificationSuccess(false);
+
+    // Simulated verification logic — replace with real API call
+    await new Promise((r) => setTimeout(r, 1000));
+
+    if (!sourceConfig || !sourceConfig.host || !sourceConfig.host.startsWith('http')) {
+      setVerificationError('Host must be a valid URL starting with http or https.');
+    } else if (sourceConfig.host.includes('error')) {
+      setVerificationError(`Could not connect to the source. Please check your settings.`);
+    } else {
+      setVerificationSuccess(true);
+    }
+
+    setIsVerifying(false);
+  };
 
   const handleFileUpload = (files: File[]) => {
     if (files.length > 0) {
@@ -68,8 +92,27 @@ export default function TemplateUploadViewer() {
 
       {sourceConfig && (
         <Container
-          header={<Header variant="h2">Source Details from Template</Header>}
+        header={<Header variant="h2">Source Details from Template</Header>}
         >
+        {verificationError && (
+            <Alert
+              type="error"
+              header={`Source connection failed`}
+              onDismiss={() => setVerificationError(null)}
+            >
+              {verificationError}
+            </Alert>
+          )}
+    
+          {verificationSuccess && (
+            <Alert
+              type="success"
+              header={`Source connection successful`}
+              onDismiss={() => setVerificationSuccess(false)}
+            >
+              The source settings are valid and connection was established.
+            </Alert>
+          )}
           <SpaceBetween size="s">
             <Box variant="code">Host: {sourceConfig.host || 'N/A'}</Box>
             <Box variant="code">Username: {sourceConfig.username || 'N/A'}</Box>
@@ -84,6 +127,13 @@ export default function TemplateUploadViewer() {
               Insecure SSL: {sourceConfig.insecure ? 'Yes' : 'No'}
             </Box>
           </SpaceBetween>
+          <Button
+        variant="primary"
+        loading={isVerifying}
+        onClick={handleVerify}
+      >
+        Verify Source Connection
+      </Button>
         </Container>
       )}
     </SpaceBetween>

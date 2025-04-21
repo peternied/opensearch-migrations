@@ -27,7 +27,7 @@ export interface ReplayDetails {
 export interface MigrationSession {
   id: string;
   name: string;
-  createdAt: Date;
+  createdAt: number;
   metadata: Status;
   metadataDetails?: MetadataDetails;
   backfill: Status;
@@ -45,7 +45,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'alpha',
     name: 'Session Alpha',
-    createdAt: new Date('2024-05-01'),
+    createdAt: new Date('2024-05-01').getTime(),
     metadata: 'success',
     backfill: 'success',
     replay: 'in-progress',
@@ -55,7 +55,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'beta',
     name: 'Session Beta',
-    createdAt: new Date('2024-04-18'),
+    createdAt: new Date('2024-04-18').getTime(),
     metadata: 'success',
     backfill: 'pending',
     replay: 'pending',
@@ -65,7 +65,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'gamma',
     name: 'Session Gamma',
-    createdAt: new Date('2024-05-05'),
+    createdAt: new Date('2024-05-05').getTime(),
     metadata: 'success',
     backfill: 'in-progress',
     replay: 'pending',
@@ -75,7 +75,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'delta',
     name: 'Session Delta',
-    createdAt: new Date('2024-04-30'),
+    createdAt: new Date('2024-04-30').getTime(),
     metadata: 'pending',
     backfill: 'pending',
     replay: 'pending',
@@ -85,7 +85,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'epsilon',
     name: 'Session Epsilon',
-    createdAt: new Date('2024-05-10'),
+    createdAt: new Date('2024-05-10').getTime(),
     metadata: 'error',
     backfill: 'pending',
     replay: 'pending',
@@ -95,7 +95,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'zeta',
     name: 'Session Zeta',
-    createdAt: new Date('2024-04-25'),
+    createdAt: new Date('2024-04-25').getTime(),
     metadata: 'success',
     backfill: 'success',
     replay: 'success',
@@ -105,7 +105,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'omega',
     name: 'Session Omega',
-    createdAt: new Date('2024-05-03'),
+    createdAt: new Date('2024-05-03').getTime(),
     metadata: 'success',
     backfill: 'in-progress',
     replay: 'in-progress',
@@ -115,7 +115,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'theta',
     name: 'Session Theta',
-    createdAt: new Date('2024-04-15'),
+    createdAt: new Date('2024-04-15').getTime(),
     metadata: 'success',
     backfill: 'error',
     replay: 'pending',
@@ -125,7 +125,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'iota',
     name: 'Session Iota',
-    createdAt: new Date('2024-04-28'),
+    createdAt: new Date('2024-04-28').getTime(),
     metadata: 'success',
     backfill: 'success',
     replay: 'error',
@@ -135,7 +135,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'kappa',
     name: 'Session Kappa',
-    createdAt: new Date('2024-05-07'),
+    createdAt: new Date('2024-05-07').getTime(),
     metadata: 'success',
     backfill: 'success',
     replay: 'in-progress',
@@ -145,7 +145,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'lambda',
     name: 'Session Lambda',
-    createdAt: new Date('2024-04-22'),
+    createdAt: new Date('2024-04-22').getTime(),
     metadata: 'success',
     backfill: 'pending',
     replay: 'pending',
@@ -155,7 +155,7 @@ const initialSessions: MigrationSession[] = [
   {
     id: 'mu',
     name: 'Session Mu',
-    createdAt: new Date('2024-05-02'),
+    createdAt: new Date('2024-05-02').getTime(),
     metadata: 'success',
     backfill: 'in-progress',
     replay: 'in-progress',

@@ -3,18 +3,13 @@
 import { useState } from 'react';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import RadioGroup from '@cloudscape-design/components/radio-group';
-import FormField from '@cloudscape-design/components/form-field';
-import Input from '@cloudscape-design/components/input';
 import TemplateUploadViewer from '@/component/template/template-upload-viewer';
 import { Box } from '@cloudscape-design/components';
-import SourceConnectionForm from './connection/source';
+import SourceConnectionForm from './remote-connection';
+import BucketConnection from './bucket-connection';
 
 export default function SourceSelectionPage() {
   const [sourceType, setSourceType] = useState('connection');
-
-  // S3 snapshot state
-  const [s3Bucket, setS3Bucket] = useState('');
-  const [snapshotName, setSnapshotName] = useState('');
 
   return (
     <SpaceBetween size="l">
@@ -33,30 +28,11 @@ export default function SourceSelectionPage() {
         ]}
       />
 
-      {sourceType === 'connection' && <SourceConnectionForm />}
-
-      {sourceType === 's3snapshot' && (
-        <SpaceBetween size="m">
-          <FormField
-            label="S3 Bucket URI"
-            description="e.g., s3://my-snapshot-bucket/repo/"
-          >
-            <Input
-              value={s3Bucket}
-              onChange={({ detail }) => setS3Bucket(detail.value)}
-            />
-          </FormField>
-          <FormField
-            label="Snapshot Name"
-            description="The specific snapshot to use"
-          >
-            <Input
-              value={snapshotName}
-              onChange={({ detail }) => setSnapshotName(detail.value)}
-            />
-          </FormField>
-        </SpaceBetween>
+      {sourceType === 'connection' && (
+        <SourceConnectionForm connectionType="source" />
       )}
+
+      {sourceType === 's3snapshot' && <BucketConnection />}
 
       {sourceType === 'template' && (
         <SpaceBetween size="m">

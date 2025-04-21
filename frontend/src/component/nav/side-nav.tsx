@@ -1,17 +1,21 @@
-import { SideNavigation } from '@cloudscape-design/components';
+import { Link, SideNavigation } from '@cloudscape-design/components';
+import DemoWrapper from '../demoWrapper';
 
 export default function MigrationNavItems() {
   return (
     <SideNavigation
       header={{
-        href: '#',
+        href: '/',
         text: 'Migration Assistant',
         logo: { src: 'migrations-icon-160x160.png', alt: '' }
       }}
       items={[
-        { type: 'link', text: `Dashboard`, href: `/` },
+        { type: 'link', text: `Dashboard`, href: `/dashboard` },
         { type: 'link', text: 'About', href: '/about' },
         { type: 'link', text: `Tear down`, href: `/teardown` },
+        { type: 'link', text: ``, href: '', info: <DemoWrapper keyName='loading-page-link'>
+          <Link href="/loading">Loading page</Link>
+        </DemoWrapper>},
         { type: 'divider' },
         {
           type: 'section-group',

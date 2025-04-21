@@ -100,7 +100,7 @@ export default function MigrationAssistantStatusPage() {
               <Button variant="primary">Go to Dashboard</Button>
             </Link>
           ) : (
-            <DemoWrapper>
+            <DemoWrapper keyName='ready-button'>
               <Button variant="normal" onClick={() => setIsReady(true)}>
                 Mark as Ready for Testing
               </Button>
