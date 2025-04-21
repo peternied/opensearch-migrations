@@ -13,7 +13,7 @@ interface DemoWrapperProps {
 export default function DemoWrapper({
   children,
   label = 'Demo Only',
-  keyName,
+  keyName
 }: DemoWrapperProps) {
   const styles = {
     orange: {

@@ -24,7 +24,9 @@ export default function TemplateUploadViewer() {
   const [error, setError] = useState<string | null>(null);
 
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(
+    null
+  );
   const [verificationSuccess, setVerificationSuccess] = useState(false);
 
   const handleVerify = async () => {
@@ -35,10 +37,18 @@ export default function TemplateUploadViewer() {
     // Simulated verification logic — replace with real API call
     await new Promise((r) => setTimeout(r, 1000));
 
-    if (!sourceConfig || !sourceConfig.host || !sourceConfig.host.startsWith('http')) {
-      setVerificationError('Host must be a valid URL starting with http or https.');
+    if (
+      !sourceConfig ||
+      !sourceConfig.host ||
+      !sourceConfig.host.startsWith('http')
+    ) {
+      setVerificationError(
+        'Host must be a valid URL starting with http or https.'
+      );
     } else if (sourceConfig.host.includes('error')) {
-      setVerificationError(`Could not connect to the source. Please check your settings.`);
+      setVerificationError(
+        `Could not connect to the source. Please check your settings.`
+      );
     } else {
       setVerificationSuccess(true);
     }
@@ -92,9 +102,9 @@ export default function TemplateUploadViewer() {
 
       {sourceConfig && (
         <Container
-        header={<Header variant="h2">Source Details from Template</Header>}
+          header={<Header variant="h2">Source Details from Template</Header>}
         >
-        {verificationError && (
+          {verificationError && (
             <Alert
               type="error"
               header={`Source connection failed`}
@@ -103,7 +113,7 @@ export default function TemplateUploadViewer() {
               {verificationError}
             </Alert>
           )}
-    
+
           {verificationSuccess && (
             <Alert
               type="success"
@@ -128,12 +138,12 @@ export default function TemplateUploadViewer() {
             </Box>
           </SpaceBetween>
           <Button
-        variant="primary"
-        loading={isVerifying}
-        onClick={handleVerify}
-      >
-        Verify Source Connection
-      </Button>
+            variant="primary"
+            loading={isVerifying}
+            onClick={handleVerify}
+          >
+            Verify Source Connection
+          </Button>
         </Container>
       )}
     </SpaceBetween>

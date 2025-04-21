@@ -13,9 +13,16 @@ export default function MigrationNavItems() {
         { type: 'link', text: `Dashboard`, href: `/dashboard` },
         { type: 'link', text: 'About', href: '/about' },
         { type: 'link', text: `Tear down`, href: `/teardown` },
-        { type: 'link', text: ``, href: '', info: <DemoWrapper keyName='loading-page-link'>
-          <Link href="/loading">Loading page</Link>
-        </DemoWrapper>},
+        {
+          type: 'link',
+          text: ``,
+          href: '',
+          info: (
+            <DemoWrapper keyName="loading-page-link">
+              <Link href="/loading">Loading page</Link>
+            </DemoWrapper>
+          )
+        },
         { type: 'divider' },
         {
           type: 'section-group',

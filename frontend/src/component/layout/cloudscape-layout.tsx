@@ -1,10 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import {
-  AppLayout,
-  ContentLayout,
-  HelpPanel
-} from '@cloudscape-design/components';
+import { AppLayout, ContentLayout } from '@cloudscape-design/components';
 import { I18nProvider } from '@cloudscape-design/components/i18n';
 import messages from '@cloudscape-design/components/i18n/messages/all.en';
 import { MigrationSessionProvider } from '@/context/migration-session';
@@ -13,7 +9,11 @@ import MAHelpPanel from '../nav/help';
 
 const LOCALE = 'en';
 
-export default function AppLayoutWrapper({ children }: { children: React.ReactNode }) {
+export default function AppLayoutWrapper({
+  children
+}: {
+  children: React.ReactNode;
+}) {
   const [navigationOpen, setNavigationOpen] = useState(true);
   const toggleNavigation = () => setNavigationOpen((prev) => !prev);
 
@@ -24,9 +24,7 @@ export default function AppLayoutWrapper({ children }: { children: React.ReactNo
           navigationOpen={navigationOpen}
           onNavigationChange={toggleNavigation}
           navigation={<MigrationNavItems />}
-          tools={
-            <MAHelpPanel />
-          }
+          tools={<MAHelpPanel />}
           content={
             <ContentLayout>
               <div className="contentPlaceholder">{children}</div>

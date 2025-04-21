@@ -6,8 +6,7 @@ import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Box from '@cloudscape-design/components/box';
-import Checkbox from '@cloudscape-design/components/checkbox';
-import { KeyValuePairs } from '@cloudscape-design/components';
+import { KeyValuePairs, StatusIndicator } from '@cloudscape-design/components';
 import RequestTimeline from './request-timeline';
 import DemoWrapper from '../demoWrapper';
 
@@ -74,7 +73,9 @@ export default function CaptureProxiesOverview() {
         />
       </Container>
 
-      <Container header={<Header variant="h2">Request Activity Timeline</Header>}>
+      <Container
+        header={<Header variant="h2">Request Activity Timeline</Header>}
+      >
         {proxies.length === 0 ? (
           <Box variant="p">
             No capture proxies connected. Add one below or follow the
@@ -83,6 +84,17 @@ export default function CaptureProxiesOverview() {
         ) : (
           <RequestTimeline proxies={proxies} showReplayers={false} />
         )}
+      </Container>
+
+      <Container
+        header={<Header variant="h2">Deploy capture proxy workers</Header>}
+      >
+        <SpaceBetween size="m">
+          <Button>Magically do this</Button> {/* TODO: Expand on this */}
+          <StatusIndicator type="in-progress">
+            Workers deploying
+          </StatusIndicator>
+        </SpaceBetween>
       </Container>
 
       <Container
@@ -102,13 +114,21 @@ export default function CaptureProxiesOverview() {
         {showAddProxy && (
           <SpaceBetween size="s">
             <ol style={{ paddingLeft: '1.25rem' }}>
-              <li>Log into a coordinator node and locate your OpenSearch directory.</li>
               <li>
-                Update the config file to set a new internal port, e.g. <code>http.port: 19200</code>, then restart the node.
+                Log into a coordinator node and locate your OpenSearch
+                directory.
               </li>
-              <li>Verify the new port is active (e.g. <code>netstat</code>, <code>curl localhost:19200</code>).</li>
               <li>
-                Ensure <code>JAVA_HOME</code> is set. Use the bundled JDK if needed.
+                Update the config file to set a new internal port, e.g.{' '}
+                <code>http.port: 19200</code>, then restart the node.
+              </li>
+              <li>
+                Verify the new port is active (e.g. <code>netstat</code>,{' '}
+                <code>curl localhost:19200</code>).
+              </li>
+              <li>
+                Ensure <code>JAVA_HOME</code> is set. Use the bundled JDK if
+                needed.
               </li>
               <li>
                 Download the Capture Proxy from{' '}
@@ -124,10 +144,15 @@ export default function CaptureProxiesOverview() {
               <li>
                 Start the proxy with:
                 <Box variant="code" padding={{ top: 'xxs' }}>
-                  ./trafficCaptureProxyServer --kafkaConnection kafka:9092 --destinationUri http://localhost:19200 --listenPort 9200 --insecureDestination
+                  ./trafficCaptureProxyServer --kafkaConnection kafka:9092
+                  --destinationUri http://localhost:19200 --listenPort 9200
+                  --insecureDestination
                 </Box>
               </li>
-              <li>Test traffic on both ports (9200, 19200) and verify Kafka topic creation.</li>
+              <li>
+                Test traffic on both ports (9200, 19200) and verify Kafka topic
+                creation.
+              </li>
             </ol>
           </SpaceBetween>
         )}

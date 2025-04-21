@@ -12,7 +12,9 @@ interface ConnectionSettingsProps {
   connectionType: 'source' | 'target';
 }
 
-export default function Connection({ connectionType }: ConnectionSettingsProps) {
+export default function Connection({
+  connectionType
+}: ConnectionSettingsProps) {
   const [host, setHost] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +23,9 @@ export default function Connection({ connectionType }: ConnectionSettingsProps) 
   const [insecure, setInsecure] = useState(false);
 
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(
+    null
+  );
   const [verificationSuccess, setVerificationSuccess] = useState(false);
 
   const handleVerify = async () => {
@@ -33,9 +37,13 @@ export default function Connection({ connectionType }: ConnectionSettingsProps) 
     await new Promise((r) => setTimeout(r, 1000));
 
     if (!host || !host.startsWith('http')) {
-      setVerificationError('Host must be a valid URL starting with http or https.');
+      setVerificationError(
+        'Host must be a valid URL starting with http or https.'
+      );
     } else if (host.includes('error')) {
-      setVerificationError(`Could not connect to the ${connectionType}. Please check your settings.`);
+      setVerificationError(
+        `Could not connect to the ${connectionType}. Please check your settings.`
+      );
     } else {
       setVerificationSuccess(true);
     }
@@ -61,7 +69,8 @@ export default function Connection({ connectionType }: ConnectionSettingsProps) 
           header={`${capitalize(connectionType)} connection successful`}
           onDismiss={() => setVerificationSuccess(false)}
         >
-          The {connectionType} settings are valid and connection was established.
+          The {connectionType} settings are valid and connection was
+          established.
         </Alert>
       )}
 
@@ -126,11 +135,7 @@ export default function Connection({ connectionType }: ConnectionSettingsProps) 
         </Checkbox>
       </FormField>
 
-      <Button
-        variant="primary"
-        loading={isVerifying}
-        onClick={handleVerify}
-      >
+      <Button variant="primary" loading={isVerifying} onClick={handleVerify}>
         Verify {capitalize(connectionType)} Connection
       </Button>
     </SpaceBetween>

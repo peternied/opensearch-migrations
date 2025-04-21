@@ -32,7 +32,7 @@ function generateSeries(
   const interval = 300;
   const points = Math.floor(durationSeconds / interval);
   const data = Array.from({ length: points }, (_, i) => ({
-    x: new Date(session.createdAt.getTime() + i * interval * 1000).getTime(),
+    x: new Date(session.createdAt + i * interval * 1000).getTime(),
     y: average + (Math.random() - 0.5) * average * 0.3
   }));
   const result: MixedLineBarChartProps.LineDataSeries<number> = {
@@ -47,7 +47,7 @@ function generateSeries(
 const session: MigrationSession = {
   id: 'session-123',
   name: 'April Migration Run',
-  createdAt: new Date('2025-04-17T14:00:00Z'),
+  createdAt: new Date('2025-04-17T14:00:00Z').getTime(),
   etaSeconds: 86400,
   sizeBytes: 12884901888,
   metadata: 'success',

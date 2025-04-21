@@ -42,7 +42,7 @@ export default function SourceSelector() {
 
         {sourceType === 'connection' && (
           <Suspense fallback={<div>Loading...</div>}>
-            <SourceConnection />
+            <SourceConnection connectionType="source" />
           </Suspense>
         )}
 

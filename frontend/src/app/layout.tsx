@@ -1,6 +1,10 @@
-import AppLayoutWrapper from "@/component/layout/cloudscape-layout";
+import AppLayoutWrapper from '@/component/layout/cloudscape-layout';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html>
       <body>

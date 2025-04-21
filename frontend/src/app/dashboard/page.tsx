@@ -46,12 +46,18 @@ export default function MigrationDashboardPage() {
 
   const collection = useCollection(sessions, {
     filtering: {
-      empty: <Box>No sessions.  <Link href="#"><Button>Create session.</Button></Link></Box>,
-      noMatch: <Box>No sessions with filter criteria.</Box>,
+      empty: (
+        <Box>
+          No sessions.{' '}
+          <Link href="#">
+            <Button>Create session.</Button>
+          </Link>
+        </Box>
+      ),
+      noMatch: <Box>No sessions with filter criteria.</Box>
     },
-    sorting: {
-    }
-  })
+    sorting: {}
+  });
   return (
     <SpaceBetween size="l">
       <Header
@@ -66,7 +72,13 @@ export default function MigrationDashboardPage() {
       </Header>
 
       <Box>
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+        tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+        veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+        commodo consequat. Duis aute irure dolor in reprehenderit in voluptate
+        velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
+        occaecat cupidatat non proident, sunt in culpa qui officia deserunt
+        mollit anim id est laborum.
       </Box>
 
       <Container header={<Header variant="h2">Sessions</Header>}>
@@ -86,7 +98,11 @@ export default function MigrationDashboardPage() {
             {
               id: 'created',
               header: 'Created Date',
-              cell: (item) => <span suppressHydrationWarning>{new Date(item.createdAt).toLocaleDateString()}</span>,
+              cell: (item) => (
+                <span suppressHydrationWarning>
+                  {new Date(item.createdAt).toLocaleDateString()}
+                </span>
+              ),
               sortingField: 'createdAt'
             },
             {

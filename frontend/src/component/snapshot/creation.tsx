@@ -7,7 +7,6 @@ import Button from '@cloudscape-design/components/button';
 import Header from '@cloudscape-design/components/header';
 import type { TableProps } from '@cloudscape-design/components/table';
 import EstimateCompletionTime from '../time/eta';
-import DemoWrapper from '../demoWrapper';
 
 type NonCancelableEventHandler<Detail> = (event: { detail: Detail }) => void;
 interface IndexEntry {
@@ -102,15 +101,15 @@ export default function SnapshotCreation() {
       ></EstimateCompletionTime>
 
       {!isSnapshotting && !snapshotComplete && (
-          <SpaceBetween size="m">
-            <Button
-              onClick={handleTakeSnapshot}
-              disabled={selectedItems.length === 0}
-              variant="primary"
-            >
-              Take Snapshot
-            </Button>
-          </SpaceBetween>
+        <SpaceBetween size="m">
+          <Button
+            onClick={handleTakeSnapshot}
+            disabled={selectedItems.length === 0}
+            variant="primary"
+          >
+            Take Snapshot
+          </Button>
+        </SpaceBetween>
       )}
     </SpaceBetween>
   );

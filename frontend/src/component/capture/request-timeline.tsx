@@ -21,48 +21,59 @@ interface RequestTimelineProps {
     startTime: number;
     requestsAtSecond: number[];
   }[];
-  showReplayers: boolean; 
+  showReplayers: boolean;
 }
 
-export default function RequestTimeline({ proxies, showReplayers }: RequestTimelineProps) {
+interface Datum<T> {
+  x: T;
+  y: number;
+}
+
+export default function RequestTimeline({
+  proxies,
+  showReplayers
+}: RequestTimelineProps) {
   const [movingThresholds, setMovingThresholds] = useState<
     { id: string; startTime: number; addedAt: number; multiplier: number }[]
   >([]);
   const [multiplierInput, setMultiplierInput] = useState('1');
 
   const { chartSeries, totalSeries } = useMemo(() => {
-    if (proxies.length === 0) {
+    if (proxies?.length === 0) {
       return {
-        chartSeries: [],
+        chartSeries: [] as MixedLineBarChartProps.DataSeries<Date>[],
         totalSeries: {
           title: 'Total Requests',
           type: 'line',
-          data: []
-        }
+          data: [] as Datum<Date>[]
+        } as MixedLineBarChartProps.DataSeries<Date>
       };
     }
-  
+
     // 1. Create a map of all timestamps across all proxies
     const timestampMap = new Map<number, number>(); // timestamp => total count
-  
-    const chartSeries = proxies.map((proxy, index) => {
-      const dataPoints = proxy.requestsAtSecond.map((val, i) => {
-        const timestamp = Math.floor((proxy.startTime + i * 1000) / 1000) * 1000; // normalize to full second
-        const existing = timestampMap.get(timestamp) || 0;
-        timestampMap.set(timestamp, existing + val);
+
+    const chartSeries: MixedLineBarChartProps.DataSeries<Date>[] = proxies?.map(
+      (proxy, index) => {
+        const dataPoints = proxy.requestsAtSecond.map((val, i) => {
+          const timestamp =
+            Math.floor((proxy.startTime + i * 1000) / 1000) * 1000; // normalize to full second
+          const existing = timestampMap.get(timestamp) || 0;
+          timestampMap.set(timestamp, existing + val);
+          return {
+            x: new Date(timestamp),
+            y: val
+          };
+        });
+
         return {
-          x: new Date(timestamp),
-          y: val
+          title: `Proxy ${index + 1}`,
+          type: 'line',
+          data: dataPoints
         };
-      });
-  
-      return {
-        title: `Proxy ${index + 1}`,
-        type: 'line',
-        data: dataPoints
-      };
-    });
-  
+      }
+    );
+
     // 2. Create total series from the timestampMap
     const totalData = Array.from(timestampMap.entries())
       .sort(([a], [b]) => a - b)
@@ -70,16 +81,16 @@ export default function RequestTimeline({ proxies, showReplayers }: RequestTimel
         x: new Date(ts),
         y: val
       }));
-  
-    const totalSeries: MixedLineBarChartProps.ChartSeries<Date> = {
+
+    const totalSeries: MixedLineBarChartProps.DataSeries<Date> = {
       title: 'Total Requests',
       type: 'line',
       data: totalData
     };
-  
+
     return { chartSeries, totalSeries };
   }, [proxies]);
-  
+
   const now = Date.now();
 
   const movingThresholdSeries: MixedLineBarChartProps.ThresholdSeries[] =
@@ -106,7 +117,10 @@ export default function RequestTimeline({ proxies, showReplayers }: RequestTimel
 
   // Only use the total series for the demo wrapper analysis
   const allTotalPoints = totalSeries.data;
-  const totalRequestCount = allTotalPoints.reduce((sum, point) => sum + point.y, 0);
+  const totalRequestCount = allTotalPoints.reduce(
+    (sum, point) => sum + point.y,
+    0
+  );
 
   const addMovingThreshold = () => {
     const multiplier = parseFloat(multiplierInput);
@@ -155,20 +169,21 @@ export default function RequestTimeline({ proxies, showReplayers }: RequestTimel
         yTickFormatter={(e) => e.toString()}
       />
 
-      { showReplayers && (
-      <DemoWrapper keyName="playback-controls">
-        <SpaceBetween size="xs" direction="horizontal">
-          <Button onClick={addMovingThreshold}>Start Replayer</Button>
-          <input
-            type="number"
-            min="0.1"
-            step="0.1"
-            value={multiplierInput}
-            onChange={(e) => setMultiplierInput(e.target.value)}
-            style={{ width: '60px' }}
-          />
-        </SpaceBetween>
-      </DemoWrapper>)}
+      {showReplayers && (
+        <DemoWrapper keyName="playback-controls">
+          <SpaceBetween size="xs" direction="horizontal">
+            <Button onClick={addMovingThreshold}>Start Replayer</Button>
+            <input
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={multiplierInput}
+              onChange={(e) => setMultiplierInput(e.target.value)}
+              style={{ width: '60px' }}
+            />
+          </SpaceBetween>
+        </DemoWrapper>
+      )}
 
       {movingThresholds.map((threshold) => {
         const elapsed = now - threshold.addedAt;

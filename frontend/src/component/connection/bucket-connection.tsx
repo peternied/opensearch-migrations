@@ -1,12 +1,20 @@
-import { Alert, Button, FormField, Input, SpaceBetween } from '@cloudscape-design/components';
+import {
+  Alert,
+  Button,
+  FormField,
+  Input,
+  SpaceBetween
+} from '@cloudscape-design/components';
 import { useState } from 'react';
 
-export default function bucketConnection() {
+export default function BucketConnection() {
   const [s3Bucket, setS3Bucket] = useState('');
   const [snapshotName, setSnapshotName] = useState('');
 
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(
+    null
+  );
   const [verificationSuccess, setVerificationSuccess] = useState(false);
 
   const handleVerify = async () => {
@@ -17,10 +25,17 @@ export default function bucketConnection() {
     // Simulated verification logic — replace with real API call
     await new Promise((r) => setTimeout(r, 1000));
 
-    if (s3Bucket || !(s3Bucket.startsWith('http') || s3Bucket.startsWith('s3'))) {
-      setVerificationError('Host must be a valid URL starting with s3, http or https.');
+    if (
+      s3Bucket ||
+      !(s3Bucket.startsWith('http') || s3Bucket.startsWith('s3'))
+    ) {
+      setVerificationError(
+        'Host must be a valid URL starting with s3, http or https.'
+      );
     } else if (s3Bucket.includes('error')) {
-      setVerificationError(`Could not connect to the bucket. Please check your settings.`);
+      setVerificationError(
+        `Could not connect to the bucket. Please check your settings.`
+      );
     } else {
       setVerificationSuccess(true);
     }
@@ -29,7 +44,7 @@ export default function bucketConnection() {
   };
   return (
     <SpaceBetween size="m">
-        {verificationError && (
+      {verificationError && (
         <Alert
           type="error"
           header={`Bucket connection failed`}
@@ -66,11 +81,7 @@ export default function bucketConnection() {
           onChange={({ detail }) => setSnapshotName(detail.value)}
         />
       </FormField>
-      <Button
-        variant="primary"
-        loading={isVerifying}
-        onClick={handleVerify}
-      >
+      <Button variant="primary" loading={isVerifying} onClick={handleVerify}>
         Verify Bucket
       </Button>
     </SpaceBetween>
