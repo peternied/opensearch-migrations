@@ -50,14 +50,13 @@ export default function RequestTimeline({
       };
     }
 
-    // 1. Create a map of all timestamps across all proxies
-    const timestampMap = new Map<number, number>(); // timestamp => total count
+    const timestampMap = new Map<number, number>();
 
     const chartSeries: MixedLineBarChartProps.DataSeries<Date>[] = proxies?.map(
       (proxy, index) => {
         const dataPoints = proxy.requestsAtSecond.map((val, i) => {
           const timestamp =
-            Math.floor((proxy.startTime + i * 1000) / 1000) * 1000; // normalize to full second
+            Math.floor((proxy.startTime + i * 1000) / 1000) * 1000;
           const existing = timestampMap.get(timestamp) || 0;
           timestampMap.set(timestamp, existing + val);
           return {

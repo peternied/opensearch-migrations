@@ -13,14 +13,13 @@ import DemoWrapper from '../demoWrapper';
 interface ProxyInstance {
   id: number;
   startTime: number;
-  requestsAtSecond: number[]; // represents seconds -after- the start time
+  requestsAtSecond: number[];
 }
 
 export default function CaptureProxiesOverview() {
   const [proxies, setProxies] = useState<ProxyInstance[]>([]);
   const [showAddProxy, setShowAddProxy] = useState(false);
 
-  // Simulate 1s updates to proxy RPS data
   useEffect(() => {
     const interval = setInterval(() => {
       setProxies((prevProxies) =>

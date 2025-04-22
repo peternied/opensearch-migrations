@@ -19,6 +19,7 @@ import DemoWrapper from '@/components/demoWrapper';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMigrationSessions } from '@/context/migration-session';
 import CaptureProxiesOverview from '@/components/capture/captured-overview';
+import MetadataEvaluationAndMigration from '@/components/metadata/evaulation';
 
 const steps: WizardProps.Step[] = [
   {
@@ -43,7 +44,7 @@ const steps: WizardProps.Step[] = [
   },
   {
     title: 'Metadata',
-    content: <MetadataWorkflowControl />,
+    content: <MetadataEvaluationAndMigration />,
     isOptional: true
   },
   {

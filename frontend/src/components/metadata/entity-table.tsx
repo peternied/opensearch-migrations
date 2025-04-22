@@ -1,99 +1,121 @@
 'use client';
 
 import { useState } from 'react';
-import Table from '@cloudscape-design/components/table';
+import Table, { TableProps } from '@cloudscape-design/components/table';
 import Pagination from '@cloudscape-design/components/pagination';
-import StatusIndicator from '@cloudscape-design/components/status-indicator';
+import StatusIndicator, {
+  StatusIndicatorProps
+} from '@cloudscape-design/components/status-indicator';
 import Popover from '@cloudscape-design/components/popover';
-import { Box, Header, SpaceBetween } from '@cloudscape-design/components';
+import {
+  Box,
+  Button,
+  Header,
+  Link,
+  SpaceBetween,
+  TextFilter
+} from '@cloudscape-design/components';
+import { useCollection } from '@cloudscape-design/collection-hooks';
+import { json } from 'stream/consumers';
 
 export interface MigrationEntity {
   name: string;
-  status?: 'success' | 'error';
+  status: 'success' | 'already-exists' | 'transform-failure' | 'target-failure' | 'incompatible-replica-count' | 'skipped-by-filter';
   message?: string;
 }
+
+type TableMode = 'evaluation' | 'migration';
 
 interface MigrationEntityTableProps {
   items: MigrationEntity[];
   label: string;
-  pageSize?: number;
-  mode: 'evaluation' | 'migration';
+  mode: TableMode;
 }
+
+function formatStatus(
+  item: MigrationEntity,
+  mode: TableMode
+): StatusIndicatorProps.Type {
+  if (item.status === 'success') {
+    return mode === 'evaluation' ? 'in-progress' : 'success';
+  }
+  if (item.status === 'already-exists') {
+    return 'stopped';
+  }
+  if (item.status === 'skipped-by-filter') {
+    return 'pending'
+  }
+  return 'error';
+}
+
+const MIN_ITEM_COUNT_FOR_FILTERING = 3;
 
 export default function MigrationEntityTable({
   items,
   label,
-  pageSize = 5,
   mode
 }: MigrationEntityTableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
+  const collection = useCollection(items, {
+    filtering: {
+      empty: <StatusIndicator type="info">None found</StatusIndicator>,
+      noMatch: <Box>No items with filter criteria.</Box>
+    },
+    sorting: {}
+  });
 
-  const totalPages = Math.ceil(items.length / pageSize);
-  const pagedItems = items.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  if (items.length === 0) {
-    return (
-      <Box padding={{ vertical: 'l' }}>
-        {' '}
-        <SpaceBetween size="m">
-          <Header variant="h3">{label}</Header>
-          <StatusIndicator type="info">None found</StatusIndicator>
-        </SpaceBetween>
-      </Box>
-    );
-  }
-
+  const columns: TableProps.ColumnDefinition<MigrationEntity>[] = [
+    {
+      id: 'status-icon',
+      header: '',
+      cell: (item) => (
+        <StatusIndicator type={formatStatus(item, mode)}></StatusIndicator>
+      ),
+      width: '3%'
+    },
+    {
+      id: 'name',
+      header: 'Name',
+      cell: (item) => item.name,
+      sortingField: 'name'
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      cell: (item) => item.status
+    },
+    {
+      id: 'message',
+      header: 'Message',
+      cell: (item) => item.message,
+      sortingField: 'message'
+    },
+    {
+      id: 'drill-down',
+      header: 'Drill Down',
+      cell: (item) => (
+        <Popover
+          content={
+            <Box>
+              {`GET /${label}/${item.name}`}
+              <pre>
+                {JSON.stringify(JSON.parse('{ "foo": "bar" }'), null, 3)}
+              </pre>
+            </Box>
+          }
+        >
+          <Link>{`GET /${label}/${item.name}`}</Link>
+        </Popover>
+      )
+    }
+  ];
   return (
     <Table
-      columnDefinitions={[
-        {
-          id: 'name',
-          header: 'Name',
-          cell: (item) => item.name,
-          width: '70%'
-        },
-        {
-          id: 'status',
-          header: 'Status',
-          cell: (item) =>
-            item.status === 'success' ? (
-              <StatusIndicator
-                type={mode === 'evaluation' ? 'info' : 'success'}
-              >
-                {mode === 'evaluation'
-                  ? 'Ready for migration'
-                  : 'Successfully migrated'}
-              </StatusIndicator>
-            ) : item.status === 'error' ? (
-              <Popover
-                dismissButton={false}
-                position="top"
-                size="small"
-                triggerType="custom"
-                content={item.message}
-              >
-                <StatusIndicator type="error">Failed</StatusIndicator>
-              </Popover>
-            ) : null,
-          minWidth: 120,
-          maxWidth: 140
-        }
-      ]}
-      items={pagedItems}
+      columnDefinitions={columns}
+      {...collection.collectionProps}
+      items={collection.items}
       variant="embedded"
       header={<Header variant="h3">{label}</Header>}
-      pagination={
-        totalPages > 1 ? (
-          <Pagination
-            currentPageIndex={currentPage}
-            pagesCount={totalPages}
-            onChange={({ detail }) => setCurrentPage(detail.currentPageIndex)}
-          />
-        ) : undefined
-      }
+      filter={collection.items.length > MIN_ITEM_COUNT_FOR_FILTERING && <TextFilter {...collection.filterProps}></TextFilter>}
     />
   );
 }

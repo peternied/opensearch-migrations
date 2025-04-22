@@ -1,71 +1,126 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
+import Link from '@cloudscape-design/components/link';
+import Button from '@cloudscape-design/components/button';
+import KeyValuePairs from '@cloudscape-design/components/key-value-pairs';
 import MigrationEntityTable, { MigrationEntity } from './entity-table';
+import { Spinner } from '@cloudscape-design/components';
 
-const indexes: MigrationEntity[] = [
+const allIndexes: MigrationEntity[] = [
   { name: 'geonames', status: 'success' },
   { name: 'nyc_taxis', status: 'success' },
   { name: 'percolator', status: 'success' },
   {
     name: 'logs-181998',
-    status: 'error',
-    message:
-      'IndexMappingTypeRemoval unsupported. Specify --multi-type-behavior.'
+    status: 'target-failure',
+    message: 'IndexMappingTypeRemoval unsupported. Specify --multi-type-behavior.'
   },
   { name: 'logs-191998', status: 'success' },
   { name: 'logs-201998', status: 'success' },
   { name: 'logs-211998', status: 'success' }
 ];
-const indexTemplates: MigrationEntity[] = [
+const allIndexTemplates: MigrationEntity[] = [
   { name: 'daily_logs', status: 'success' }
 ];
-const componentTemplates: MigrationEntity[] = [];
+const allComponentTemplates: MigrationEntity[] = [];
+const allAliases: MigrationEntity[] = [
+  { name: 'logs-all', status: 'success' }
+];
 
-const aliases: MigrationEntity[] = [{ name: 'logs-all', status: 'success' }];
+export default function MetadataEvaluationAndMigration() {
+  const [mode, setMode] = useState<'evaluation' | 'migration'>('evaluation');
+  const [status, setStatus] = useState<'idle' | 'running' | 'completed'>('completed');
+  const [indexes, setIndexes] = useState<MigrationEntity[]>([]);
+  const [indexTemplates, setIndexTemplates] = useState<MigrationEntity[]>([]);
+  const [componentTemplates, setComponentTemplates] = useState<MigrationEntity[]>([]);
+  const [aliases, setAliases] = useState<MigrationEntity[]>([]);
 
-export default function MetadataEvaluation() {
+  const loadItems = () => {
+    setIndexes([]);
+    setIndexTemplates([]);
+    setComponentTemplates([]);
+    setAliases([]);
+    setTimeout(() => {
+      setIndexes(allIndexes);
+      setIndexTemplates(allIndexTemplates);
+      setComponentTemplates(allComponentTemplates);
+      setAliases(allAliases);
+      setStatus('completed');
+    }, 1500);
+  };
+
+  const runProcess = () => {
+    setStatus('running');
+    loadItems();
+  };
+
+  const toggleMode = () => {
+    setMode((prev) => (prev === 'evaluation' ? 'migration' : 'evaluation'));
+    setStatus('running');
+    loadItems();
+  };
+
+  useEffect(() => {
+    runProcess();
+  }, []);
+
+  const renderStatus = () => {
+    switch (status) {
+      case 'running':
+        return <StatusIndicator type="in-progress">Running</StatusIndicator>;
+      case 'completed':
+        return <StatusIndicator type="success">Completed</StatusIndicator>;
+      default:
+        return <StatusIndicator type="stopped">Idle</StatusIndicator>;
+    }
+  };
+
   return (
     <SpaceBetween size="l">
-      <Header variant="h2">Issues</Header>
-      <SpaceBetween size="s">
-        <StatusIndicator type="error">
-          <strong>logs-181998:</strong> IndexMappingTypeRemoval unsupported —{' '}
-          <em>
-            No multi type resolution behavior declared, specify
-            --multi-type-behavior to process
-          </em>
-        </StatusIndicator>
-        <StatusIndicator type="warning">
-          Elasticsearch 7.10.2 is not specifically supported, attempting
-          migration as if 7.17.22
-        </StatusIndicator>
+      <Header variant="h1">Metadata {mode === 'evaluation' ? 'Evaluation' : 'Migration'}</Header>
+
+      <KeyValuePairs
+        columns={3}
+        items={[
+          { label: 'Status', value: renderStatus() },
+          { label: 'Indices', value: indexes.length },
+          { label: 'Templates', value: indexTemplates.length },
+          { label: 'Aliases', value: aliases.length },
+          {
+            label: 'Raw Logs',
+            value: <Link href="#" external>Metadata {mode} logs</Link>
+          }
+        ]}
+      />
+
+      <SpaceBetween size="s" direction="horizontal">
+        <Button onClick={runProcess} disabled={status === 'running'}>
+          Rerun {mode === 'evaluation' ? 'Evaluation' : 'Migration'}
+        </Button>
+        {mode === 'evaluation' && (
+          <Button variant="primary" onClick={toggleMode} disabled={status === 'running'}>
+            Migrate Items
+          </Button>
+        )}
       </SpaceBetween>
-      <Header variant="h2">Individual Item Results</Header>
-      <SpaceBetween size="m">
-        <MigrationEntityTable
-          items={indexes}
-          label="Indexes"
-          mode="evaluation"
-        />
-        <MigrationEntityTable
-          items={indexTemplates}
-          label="Index Templates"
-          mode="evaluation"
-        />
-        <MigrationEntityTable
-          items={componentTemplates}
-          label="Component Templates"
-          mode="evaluation"
-        />
-        <MigrationEntityTable
-          items={aliases}
-          label="Aliases"
-          mode="evaluation"
-        />
-      </SpaceBetween>
+
+      {status === 'completed' ? (
+        <>
+          <MigrationEntityTable items={indexes} label="Indexes" mode={mode} />
+          <MigrationEntityTable items={indexTemplates} label="Index Templates" mode={mode} />
+          <MigrationEntityTable items={componentTemplates} label="Component Templates" mode={mode} />
+          <MigrationEntityTable items={aliases} label="Aliases" mode={mode} />
+        </>
+      ) : (
+        <>
+          <Spinner></Spinner> Loading results...
+        </>
+      )}
     </SpaceBetween>
   );
 }
+
