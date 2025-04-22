@@ -24,6 +24,8 @@ export interface ReplayDetails {
   requests: string;
 }
 
+export type SessionWorkflow = 'freeform' | 'backfill' | 'replay' | 'full';
+
 export interface MigrationSession {
   id: string;
   name: string;
@@ -36,6 +38,7 @@ export interface MigrationSession {
   replayDetails?: ReplayDetails;
   etaSeconds: number | null;
   sizeBytes: number;
+  workflow: SessionWorkflow; 
 }
 
 const GB = 1024 * 1024 * 1024;
@@ -50,7 +53,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'success',
     replay: 'in-progress',
     etaSeconds: 60 * 60 * 3,
-    sizeBytes: 1.2 * GB
+    sizeBytes: 1.2 * GB,
+    workflow: 'freeform'
   },
   {
     id: 'beta',
@@ -60,7 +64,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'pending',
     replay: 'pending',
     etaSeconds: null,
-    sizeBytes: 0
+    sizeBytes: 0,
+    workflow: 'freeform'
   },
   {
     id: 'gamma',
@@ -70,7 +75,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'in-progress',
     replay: 'pending',
     etaSeconds: 55 * 60,
-    sizeBytes: 850 * MB
+    sizeBytes: 850 * MB,
+    workflow: 'freeform'
   },
   {
     id: 'delta',
@@ -80,7 +86,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'pending',
     replay: 'pending',
     etaSeconds: null,
-    sizeBytes: 0
+    sizeBytes: 0,
+    workflow: 'freeform'
   },
   {
     id: 'epsilon',
@@ -90,7 +97,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'pending',
     replay: 'pending',
     etaSeconds: null,
-    sizeBytes: 0
+    sizeBytes: 0,
+    workflow: 'freeform'
   },
   {
     id: 'zeta',
@@ -100,7 +108,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'success',
     replay: 'success',
     etaSeconds: 0,
-    sizeBytes: 3.5 * GB
+    sizeBytes: 3.5 * GB,
+    workflow: 'freeform'
   },
   {
     id: 'omega',
@@ -110,7 +119,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'in-progress',
     replay: 'in-progress',
     etaSeconds: 60 * 60 * 1.5,
-    sizeBytes: 2.1 * GB
+    sizeBytes: 2.1 * GB,
+    workflow: 'freeform'
   },
   {
     id: 'theta',
@@ -120,7 +130,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'error',
     replay: 'pending',
     etaSeconds: null,
-    sizeBytes: 500 * MB
+    sizeBytes: 500 * MB,
+    workflow: 'freeform'
   },
   {
     id: 'iota',
@@ -130,7 +141,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'success',
     replay: 'error',
     etaSeconds: null,
-    sizeBytes: 1.8 * GB
+    sizeBytes: 1.8 * GB,
+    workflow: 'freeform'
   },
   {
     id: 'kappa',
@@ -140,7 +152,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'success',
     replay: 'in-progress',
     etaSeconds: 60 * 60 * 2,
-    sizeBytes: 2.9 * GB
+    sizeBytes: 2.9 * GB,
+    workflow: 'freeform'
   },
   {
     id: 'lambda',
@@ -150,7 +163,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'pending',
     replay: 'pending',
     etaSeconds: null,
-    sizeBytes: 0
+    sizeBytes: 0,
+    workflow: 'freeform'
   },
   {
     id: 'mu',
@@ -160,7 +174,8 @@ const initialSessions: MigrationSession[] = [
     backfill: 'in-progress',
     replay: 'in-progress',
     etaSeconds: 60 * 60 * 4,
-    sizeBytes: 4.4 * GB
+    sizeBytes: 4.4 * GB,
+    workflow: 'freeform'
   }
 ];
 
