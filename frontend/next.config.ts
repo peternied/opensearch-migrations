@@ -23,8 +23,11 @@ function execOrUnknown(command: string) {
 }
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
   transpilePackages: [
     '@cloudscape-design/components',
+    '@cloudscape-design/board-components',
+    '@cloudscape-design/global-styles',
     '@cloudscape-design/component-toolkit'
   ],
   output: 'export',
