@@ -7,7 +7,7 @@ import Button from '@cloudscape-design/components/button';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Table from '@cloudscape-design/components/table';
 import Link from 'next/link';
-import EstimateCompletionTime from '@/component/time/eta';
+import EstimateCompletionTime from '@/components/time/eta';
 import {
   MigrationSession,
   useMigrationSessions

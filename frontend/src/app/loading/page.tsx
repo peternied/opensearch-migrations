@@ -10,7 +10,7 @@ import Flashbar, {
   FlashbarProps
 } from '@cloudscape-design/components/flashbar';
 import ProgressBar from '@cloudscape-design/components/progress-bar';
-import DemoWrapper from '@/component/demoWrapper';
+import DemoWrapper from '@/components/demoWrapper';
 
 const TOTAL_SECONDS = 30 * 60;
 const INTERVAL_SECONDS = 1;

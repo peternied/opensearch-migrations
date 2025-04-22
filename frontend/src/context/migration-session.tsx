@@ -1,6 +1,6 @@
 'use client';
 
-import { Status } from '@/component/time/eta';
+import { Status } from '@/components/time/eta';
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface MetadataDetails {

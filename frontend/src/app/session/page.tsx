@@ -1,11 +1,11 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import SourceSelector from '@/component/connection/connection-source-selector';
-import Connection from '@/component/connection/remote-connection';
-import MetadataWorkflowControl from '@/component/metadata/selection';
-import BackfillStatusDashboard from '@/component/backfill/status';
-import RequestTimeline from '@/component/capture/request-timeline';
+import SourceSelector from '@/components/connection/connection-source-selector';
+import Connection from '@/components/connection/remote-connection';
+import MetadataWorkflowControl from '@/components/metadata/selection';
+import BackfillStatusDashboard from '@/components/backfill/status';
+import RequestTimeline from '@/components/capture/request-timeline';
 import {
   Box,
   Header,
@@ -13,12 +13,12 @@ import {
   Wizard,
   WizardProps
 } from '@cloudscape-design/components';
-import SnapshotCreation from '@/component/snapshot/creation';
-import MigrationSessionReviewPage from '@/component/session/review';
-import DemoWrapper from '@/component/demoWrapper';
+import SnapshotCreation from '@/components/snapshot/creation';
+import MigrationSessionReviewPage from '@/components/session/review';
+import DemoWrapper from '@/components/demoWrapper';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMigrationSessions } from '@/context/migration-session';
-import CaptureProxiesOverview from '@/component/capture/captured-overview';
+import CaptureProxiesOverview from '@/components/capture/captured-overview';
 
 const steps: WizardProps.Step[] = [
   {

@@ -6,8 +6,8 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import RadioGroup from '@cloudscape-design/components/radio-group';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
-import TemplateUploadViewer from '@/component/template/template-upload-viewer';
-import SourceConnection from '@/component/connection/remote-connection';
+import TemplateUploadViewer from '@/components/template/template-upload-viewer';
+import SourceConnection from '@/components/connection/remote-connection';
 
 export default function SourceSelector() {
   const [sourceType, setSourceType] = useState('connection');

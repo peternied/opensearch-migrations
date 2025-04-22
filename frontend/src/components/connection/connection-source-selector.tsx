@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import RadioGroup from '@cloudscape-design/components/radio-group';
-import TemplateUploadViewer from '@/component/template/template-upload-viewer';
+import TemplateUploadViewer from '@/components/template/template-upload-viewer';
 import { Box } from '@cloudscape-design/components';
 import SourceConnectionForm from './remote-connection';
 import BucketConnection from './bucket-connection';

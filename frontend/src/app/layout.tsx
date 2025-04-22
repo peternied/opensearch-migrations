@@ -1,4 +1,4 @@
-import AppLayoutWrapper from '@/component/layout/cloudscape-layout';
+import AppLayoutWrapper from '@/components/layout/cloudscape-layout';
 
 export default function RootLayout({
   children
