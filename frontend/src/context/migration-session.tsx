@@ -44,7 +44,10 @@ export interface MigrationSession {
 const GB = 1024 * 1024 * 1024;
 const MB = 1024 * 1024;
 
-const initialSessions: MigrationSession[] = [
+const initialSessions: MigrationSession[] = [];
+
+
+const demoSessions: MigrationSession[] = [
   {
     id: 'alpha',
     name: 'Session Alpha',
@@ -182,6 +185,8 @@ const initialSessions: MigrationSession[] = [
 interface MigrationSessionContextType {
   sessions: MigrationSession[];
   addSession: (session: MigrationSession) => void;
+  addDemoSessions: () => void;
+  clearSessions: () => void;
 }
 
 const MigrationSessionContext = createContext<
@@ -199,8 +204,16 @@ export function MigrationSessionProvider({
     setSessions((prev) => [...prev, session]);
   };
 
+  const addDemoSessions = () => {
+    demoSessions.forEach(addSession);
+  }
+
+  const clearSessions = () => {
+    setSessions((prev) => []);
+  }
+
   return (
-    <MigrationSessionContext.Provider value={{ sessions, addSession }}>
+    <MigrationSessionContext.Provider value={{ sessions, addSession, addDemoSessions, clearSessions }}>
       {children}
     </MigrationSessionContext.Provider>
   );

@@ -14,6 +14,7 @@ import {
 } from '@/context/migration-session';
 import { Box, TextFilter } from '@cloudscape-design/components';
 import { useCollection } from '@cloudscape-design/collection-hooks';
+import DemoWrapper from '@/components/demoWrapper';
 
 export type StatusType = 'success' | 'in-progress' | 'pending' | 'error';
 
@@ -42,15 +43,15 @@ function overallState(session: MigrationSession): StatusType {
 }
 
 export default function MigrationDashboardPage() {
-  const { sessions } = useMigrationSessions();
+  const { sessions, addDemoSessions, clearSessions } = useMigrationSessions();
 
   const collection = useCollection(sessions, {
     filtering: {
       empty: (
         <Box>
-          No sessions.{' '}
+          There are no sessions.{' '}
           <Link href="#">
-            <Button>Create session.</Button>
+            <Button>Create Migration Session</Button>
           </Link>
         </Box>
       ),
@@ -168,6 +169,12 @@ export default function MigrationDashboardPage() {
           variant="borderless"
         />
       </Container>
+      <DemoWrapper>
+        <SpaceBetween size='m' direction='horizontal'>
+          <Button onClick={addDemoSessions}>Add Demo Sessions</Button>
+          <Button onClick={clearSessions}>Clear Sessions</Button>
+        </SpaceBetween>
+      </DemoWrapper>
     </SpaceBetween>
   );
 }
