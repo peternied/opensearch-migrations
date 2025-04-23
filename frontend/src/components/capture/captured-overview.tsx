@@ -6,7 +6,7 @@ import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Button from '@cloudscape-design/components/button';
 import Box from '@cloudscape-design/components/box';
-import { KeyValuePairs, StatusIndicator } from '@cloudscape-design/components';
+import { CopyToClipboard, KeyValuePairs, StatusIndicator } from '@cloudscape-design/components';
 import RequestTimeline from './request-timeline';
 import DemoWrapper from '../demoWrapper';
 
@@ -58,15 +58,19 @@ export default function CaptureProxiesOverview() {
     <SpaceBetween size="m">
       <Container header={<Header variant="h2">Overview</Header>}>
         <KeyValuePairs
-          columns={2}
+          columns={3}
           items={[
             {
-              label: 'Connected Proxies',
-              value: `${proxies.length}`
+              label: 'Capture proxy status',
+              value: proxies.length !== 0 ? 'Active' : 'Inactive'
             },
             {
               label: 'Total Requests Captured',
               value: totalRequests.toLocaleString()
+            },
+            {
+              label: 'Proxy Url',
+              value: proxies.length !==0 ? <CopyToClipboard textToCopy='https://k8.deployed/capture-proxy' copySuccessText='Copied' copyErrorText='Unable to copy' variant='inline'></CopyToClipboard> : 'Unavailable',
             }
           ]}
         />
@@ -93,6 +97,9 @@ export default function CaptureProxiesOverview() {
           <StatusIndicator type={'in-progress'}>
             Workers deploying
           </StatusIndicator>
+          <Box>
+            After spun up, here is the load balancer endpoint https://foo.bar/captureProxy
+          </Box>
         </SpaceBetween>
       </Container>
 

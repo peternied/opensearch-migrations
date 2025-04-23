@@ -1,4 +1,5 @@
 import AppLayoutWrapper from '@/components/layout/cloudscape-layout';
+import { MigrationSessionProvider } from '@/context/migration-session';
 
 export default function RootLayout({
   children
@@ -8,7 +9,9 @@ export default function RootLayout({
   return (
     <html>
       <body>
-        <AppLayoutWrapper>{children}</AppLayoutWrapper>
+        <MigrationSessionProvider>
+          <AppLayoutWrapper>{children}</AppLayoutWrapper>
+        </MigrationSessionProvider>
       </body>
     </html>
   );

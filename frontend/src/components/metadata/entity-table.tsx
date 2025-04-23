@@ -1,26 +1,22 @@
 'use client';
 
-import { useState } from 'react';
 import Table, { TableProps } from '@cloudscape-design/components/table';
-import Pagination from '@cloudscape-design/components/pagination';
 import StatusIndicator, {
   StatusIndicatorProps
 } from '@cloudscape-design/components/status-indicator';
 import Popover from '@cloudscape-design/components/popover';
-import {
-  Box,
-  Button,
-  Header,
-  Link,
-  SpaceBetween,
-  TextFilter
-} from '@cloudscape-design/components';
+import { Box, Header, Link, TextFilter } from '@cloudscape-design/components';
 import { useCollection } from '@cloudscape-design/collection-hooks';
-import { json } from 'stream/consumers';
 
 export interface MigrationEntity {
   name: string;
-  status: 'success' | 'already-exists' | 'transform-failure' | 'target-failure' | 'incompatible-replica-count' | 'skipped-by-filter';
+  status:
+    | 'success'
+    | 'already-exists'
+    | 'transform-failure'
+    | 'target-failure'
+    | 'incompatible-replica-count'
+    | 'skipped-by-filter';
   message?: string;
 }
 
@@ -43,7 +39,7 @@ function formatStatus(
     return 'stopped';
   }
   if (item.status === 'skipped-by-filter') {
-    return 'pending'
+    return 'pending';
   }
   return 'error';
 }
@@ -115,7 +111,11 @@ export default function MigrationEntityTable({
       items={collection.items}
       variant="embedded"
       header={<Header variant="h3">{label}</Header>}
-      filter={collection.items.length > MIN_ITEM_COUNT_FOR_FILTERING && <TextFilter {...collection.filterProps}></TextFilter>}
+      filter={
+        collection.items.length > MIN_ITEM_COUNT_FOR_FILTERING && (
+          <TextFilter {...collection.filterProps}></TextFilter>
+        )
+      }
     />
   );
 }

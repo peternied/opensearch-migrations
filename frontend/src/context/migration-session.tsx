@@ -38,14 +38,11 @@ export interface MigrationSession {
   replayDetails?: ReplayDetails;
   etaSeconds: number | null;
   sizeBytes: number;
-  workflow: SessionWorkflow; 
+  workflow: SessionWorkflow;
 }
 
 const GB = 1024 * 1024 * 1024;
 const MB = 1024 * 1024;
-
-const initialSessions: MigrationSession[] = [];
-
 
 const demoSessions: MigrationSession[] = [
   {
@@ -182,6 +179,29 @@ const demoSessions: MigrationSession[] = [
   }
 ];
 
+import { useEffect } from 'react';
+
+const SESSION_STORAGE_KEY = 'migrationSessions';
+
+function loadSessionsFromLocalStorage(): MigrationSession[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.warn('Failed to load sessions from localStorage', e);
+    return [];
+  }
+}
+
+function saveSessionsToLocalStorage(sessions: MigrationSession[]) {
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions));
+  } catch (e) {
+    console.warn('Failed to save sessions to localStorage', e);
+  }
+}
+
 interface MigrationSessionContextType {
   sessions: MigrationSession[];
   addSession: (session: MigrationSession) => void;
@@ -193,12 +213,31 @@ const MigrationSessionContext = createContext<
   MigrationSessionContextType | undefined
 >(undefined);
 
+function useInitializeSessions() {
+  const [sessions, setSessions] = useState<MigrationSession[]>([]);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    const loaded = loadSessionsFromLocalStorage();
+    setSessions(loaded);
+    setInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (initialized) {
+      saveSessionsToLocalStorage(sessions);
+    }
+  }, [sessions, initialized]);
+
+  return { sessions, setSessions, initialized };
+}
+
 export function MigrationSessionProvider({
   children
 }: {
   children: ReactNode;
 }) {
-  const [sessions, setSessions] = useState<MigrationSession[]>(initialSessions);
+  const { sessions, setSessions } = useInitializeSessions();
 
   const addSession = (session: MigrationSession) => {
     setSessions((prev) => [...prev, session]);
@@ -206,14 +245,16 @@ export function MigrationSessionProvider({
 
   const addDemoSessions = () => {
     demoSessions.forEach(addSession);
-  }
+  };
 
   const clearSessions = () => {
-    setSessions((prev) => []);
-  }
+    setSessions([]);
+  };
 
   return (
-    <MigrationSessionContext.Provider value={{ sessions, addSession, addDemoSessions, clearSessions }}>
+    <MigrationSessionContext.Provider
+      value={{ sessions, addSession, addDemoSessions, clearSessions }}
+    >
       {children}
     </MigrationSessionContext.Provider>
   );

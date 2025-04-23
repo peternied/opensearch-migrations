@@ -3,12 +3,15 @@
 import { Suspense, useState } from 'react';
 import SourceSelector from '@/components/connection/connection-source-selector';
 import Connection from '@/components/connection/remote-connection';
-import MetadataWorkflowControl from '@/components/metadata/selection';
 import BackfillStatusDashboard from '@/components/backfill/status';
 import RequestTimeline from '@/components/capture/request-timeline';
 import {
   Box,
+  Button,
+  Flashbar,
+  FlashbarProps,
   Header,
+  Link,
   SpaceBetween,
   Wizard,
   WizardProps
@@ -17,61 +20,119 @@ import SnapshotCreation from '@/components/snapshot/creation';
 import MigrationSessionReviewPage from '@/components/session/review';
 import DemoWrapper from '@/components/demoWrapper';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMigrationSessions } from '@/context/migration-session';
+import {
+  SessionWorkflow,
+  useMigrationSessions
+} from '@/context/migration-session';
 import CaptureProxiesOverview from '@/components/capture/captured-overview';
 import MetadataEvaluationAndMigration from '@/components/metadata/evaulation';
 
-const steps: WizardProps.Step[] = [
+type StepId =
+  | 'select-source'
+  | 'capture-traffic'
+  | 'select-target'
+  | 'create-snapshot'
+  | 'metadata'
+  | 'backfill'
+  | 'replay-traffic'
+  | 'review';
+
+interface SessionStep extends WizardProps.Step {
+  validWorkflows: SessionWorkflow[];
+  requiredSteps: StepId[];
+  stepId: StepId;
+}
+
+const stepDefinitions: SessionStep[] = [
   {
     title: 'Select Source',
     content: <SourceSelector />,
-    isOptional: true
+    stepId: 'select-source',
+    requiredSteps: [],
+    validWorkflows: ['backfill', 'freeform', 'full']
   },
   {
-    title: 'Traffic Capture',
+    title: 'Capture Traffic',
     content: <CaptureProxiesOverview />,
-    isOptional: true
+    stepId: 'capture-traffic',
+    requiredSteps: [],
+    validWorkflows: ['freeform', 'full', 'replay']
   },
   {
     title: 'Select Target',
     content: <Connection connectionType="target" />,
-    isOptional: true
+    stepId: 'select-target',
+    requiredSteps: [],
+    validWorkflows: ['freeform', 'full', 'replay', 'backfill']
   },
   {
     title: 'Create Snapshot',
     content: <SnapshotCreation />,
-    isOptional: true
+    stepId: 'create-snapshot',
+    requiredSteps: [],
+    validWorkflows: ['freeform', 'full', 'backfill']
   },
   {
     title: 'Metadata',
     content: <MetadataEvaluationAndMigration />,
-    isOptional: true
+    stepId: 'metadata',
+    requiredSteps: [],
+    validWorkflows: ['freeform', 'full', 'backfill']
   },
   {
     title: 'Backfill',
     content: <BackfillStatusDashboard />,
-    isOptional: true
+    stepId: 'backfill',
+    requiredSteps: [],
+    validWorkflows: ['freeform', 'full', 'backfill']
   },
   {
     title: 'Traffic Replay',
     content: <RequestTimeline proxies={[]} showReplayers={true} />,
-    isOptional: true
+    stepId: 'replay-traffic',
+    requiredSteps: [],
+    validWorkflows: ['freeform', 'full', 'replay']
   },
   {
     title: 'Review',
-    content: <MigrationSessionReviewPage />
+    content: <MigrationSessionReviewPage />,
+    stepId: 'review',
+    requiredSteps: [],
+    validWorkflows: ['freeform', 'full', 'replay', 'backfill']
   }
 ];
 
+function createSteps(sessionWorkflow: SessionWorkflow) {
+  const filteredSteps = stepDefinitions.filter((s) =>
+    s.validWorkflows.includes(sessionWorkflow)
+  );
+  const steps = filteredSteps.map((s) => {
+    if (sessionWorkflow === 'freeform') {
+      s.isOptional = true;
+    }
+    return s;
+  });
+  console.log('Steps: ' + steps);
+  return steps;
+}
+
+function findStepIndexByName(stepId: StepId, steps: SessionStep[]) {
+  const foundId = steps.map((s) => s.stepId).findIndex((id) => id === stepId);
+  return foundId === -1 ? 0 : foundId;
+}
+
 function StepPageContent() {
+  const { sessions } = useMigrationSessions();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialStep = parseInt(searchParams.get('step') ?? '0', 10);
+  const sessionId = searchParams.get('id');
+  const currentSession = sessions.find((s) => s.id == sessionId);
 
+  const steps = !!currentSession ? createSteps(currentSession!.workflow) : [];
+  const currentStep =
+    (searchParams.get('step') as StepId) ?? steps[0]?.stepId ?? undefined;
   const [activeStepIndex, setActiveStepIndex] = useState(
-    isNaN(initialStep)
-      ? 0
-      : Math.min(Math.max(initialStep, 0), steps.length - 1)
+    findStepIndexByName(currentStep, steps)
   );
 
   const handleStepChange = ({
@@ -83,18 +144,45 @@ function StepPageContent() {
     setActiveStepIndex(nextIndex);
 
     const currentParams = new URLSearchParams(window.location.search);
-    currentParams.set('step', String(nextIndex));
+    currentParams.set('step', steps[nextIndex].stepId);
 
     router.replace(`?${currentParams.toString()}`);
   };
 
-  const { sessions } = useMigrationSessions();
-  const sessionId = searchParams.get('id');
-  const currentSession = sessions.find((s) => s.id == sessionId);
+  let flashbarItems: FlashbarProps.MessageDefinition[] = [];
+  if (currentSession?.workflow === 'freeform') {
+    flashbarItems.push({
+      type: 'info',
+      header: 'Freeform Navigation',
+      content:
+        'In this freeform session you can freely navigate between any steps.',
+      dismissible: true,
+      id: 'freeform-nav',
+      onDismiss: () =>
+        (flashbarItems = flashbarItems.filter(
+          (item) => item.id === 'freeform-nav'
+        ))
+    });
+  }
+
+  if (steps.length === 0) {
+    flashbarItems.push({
+      type: 'error',
+      header: 'Session not found',
+      content: `Unable to find session ${sessionId}`,
+      id: 'session-not-found',
+      action: (
+        <Link href="/dashboard">
+          <Button>Dashboard</Button>
+        </Link>
+      )
+    });
+  }
 
   return (
     <SpaceBetween size="xxl">
       <Header>Session: {currentSession?.name}</Header>
+      <Flashbar items={flashbarItems}></Flashbar>
       <Wizard
         steps={steps}
         activeStepIndex={activeStepIndex}
