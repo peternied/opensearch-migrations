@@ -11,6 +11,7 @@ export default function MigrationNavItems() {
       }}
       items={[
         { type: 'link', text: `Dashboard`, href: `/dashboard` },
+        { type: 'link', text: `Create Session`, href: `/create` },
         { type: 'link', text: 'About', href: '/about' },
         { type: 'link', text: `Tear down`, href: `/teardown` },
         {
@@ -20,6 +21,7 @@ export default function MigrationNavItems() {
           info: (
             <DemoWrapper>
               <Link href="/loading">Loading page</Link>
+              <Link href='/developer/ux-inspector'>UX Inspector</Link>
             </DemoWrapper>
           )
         },

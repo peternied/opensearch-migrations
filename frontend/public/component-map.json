@@ -42,28 +42,13 @@
     "/developer/ux-inspector/",
     "/playground/"
   ],
-  "CS:FormField": [
-    "/create/"
-  ],
   "CS:Icon": [
     "/create/",
     "/dashboard/"
   ],
-  "CS:Input": [
-    "/create/"
-  ],
   "CS:Spinner": [
     "/create/",
     "/dashboard/"
-  ],
-  "CS:Tiles": [
-    "/create/"
-  ],
-  "MA:DemoWrapper": [
-    "/create/",
-    "/dashboard/",
-    "/loading/",
-    "/session/"
   ],
   "CS:StatusIndicator": [
     "/dashboard/"
@@ -77,11 +62,26 @@
   "CS:TextFilter": [
     "/dashboard/"
   ],
+  "MA:DemoWrapper": [
+    "/create/",
+    "/dashboard/",
+    "/loading/",
+    "/session/"
+  ],
   "MA:EstimateCompletionTime": [
     "/dashboard/"
   ],
   "MA:formatTimeDuration": [
     "/dashboard/"
+  ],
+  "CS:FormField": [
+    "/create/"
+  ],
+  "CS:Input": [
+    "/create/"
+  ],
+  "CS:Tiles": [
+    "/create/"
   ],
   "CS:Flashbar": [
     "/loading/",
