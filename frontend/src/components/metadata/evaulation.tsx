@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Link from '@cloudscape-design/components/link';
@@ -93,7 +92,11 @@ export default function MetadataEvaluationAndMigration() {
           { label: 'Aliases', value: aliases.length },
           {
             label: 'Raw Logs',
-            value: <Link href="#" external>Metadata {mode} logs</Link>
+            value: (
+              <Link href="#" external>
+                Metadata {mode} logs
+              </Link>
+            )
           }
         ]}
       />

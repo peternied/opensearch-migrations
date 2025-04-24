@@ -154,8 +154,7 @@ function StepPageContent() {
     flashbarItems.push({
       type: 'info',
       header: 'Freeform Navigation',
-      content:
-        'In this freeform session you can freely navigate between any steps.',
+      content: 'In freeform session you can freely navigate between any steps.',
       dismissible: true,
       id: 'freeform-nav',
       onDismiss: () =>
