@@ -7,14 +7,15 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import FormField from '@cloudscape-design/components/form-field';
 import Input from '@cloudscape-design/components/input';
 import Box from '@cloudscape-design/components/box';
-import Icon, { IconProps } from '@cloudscape-design/components/icon';
+import Icon from '@cloudscape-design/components/icon';
 import Button from '@cloudscape-design/components/button';
 import Tiles from '@cloudscape-design/components/tiles';
 import DemoWrapper from '@/components/demoWrapper';
 import {
   MigrationSession,
   SessionWorkflow,
-  useMigrationSessions
+  useMigrationSessions,
+  workflowIcon
 } from '@/context/migration-session';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'next/navigation';
@@ -24,7 +25,6 @@ type WorkflowOption = {
   value: SessionWorkflow;
   label: string;
   description: string;
-  iconName: IconProps.Name;
 };
 
 const WORKFLOW_OPTIONS: WorkflowOption[] = [
@@ -33,28 +33,24 @@ const WORKFLOW_OPTIONS: WorkflowOption[] = [
     label: 'Backfill',
     description:
       'Transfer existing historical data to the new system without impacting live traffic.',
-    iconName: 'upload'
   },
   {
     value: 'replay',
     label: 'Traffic Capture/Replay',
     description:
       'Capture live traffic and replay it in the new environment for testing and validation.',
-    iconName: 'redo'
   },
   {
     value: 'full',
     label: 'Combined Capture + Replay',
     description:
       'Perform backfill and then begin traffic capture and replay in a single workflow.',
-    iconName: 'command-prompt'
   },
   {
     value: 'freeform',
     label: 'Freeform Exploration',
     description:
       'Explore the Migration Assistant website without committing to a specific workflow.',
-    iconName: 'star'
   }
 ];
 
@@ -111,7 +107,7 @@ export default function CreateMigrationSessionPage() {
                 label: (
                   <SpaceBetween size="xs">
                     <Box display="inline" padding={{ right: 's' }}>
-                      <Icon name={option.iconName} size="big" />
+                      <Icon name={workflowIcon(option.value)} size="big" />
                     </Box>
                     <span>{option.label}</span>
                   </SpaceBetween>

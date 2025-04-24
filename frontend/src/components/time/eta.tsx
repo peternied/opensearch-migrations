@@ -19,7 +19,8 @@ interface EstimateCompletionTimeProps {
   errorMessage?: string;
 }
 
-function formatETA(seconds: number): string {
+export function formatTimeDuration(seconds: number): string {
+  if (isNaN(seconds)) return 'unknown';
   if (seconds <= 0) return 'less than a second';
 
   const units = [
@@ -48,7 +49,7 @@ export default function EstimateCompletionTime({
   label = 'Estimated Completion Time',
   errorMessage: error
 }: EstimateCompletionTimeProps) {
-  const formattedETA = formatETA(etaSeconds);
+  const formattedETA = formatTimeDuration(etaSeconds);
   const progressLabel =
     percentage !== undefined ? `${formatPercent(percentage)}%` : 'In Progress';
 

@@ -94,7 +94,7 @@ const stepDefinitions: SessionStep[] = [
     validWorkflows: ['freeform', 'full', 'replay']
   },
   {
-    title: 'Review',
+    title: 'Review Finished Migration',
     content: <MigrationSessionReviewPage />,
     stepId: 'review',
     requiredSteps: [],

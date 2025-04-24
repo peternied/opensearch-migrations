@@ -1,0 +1,121 @@
+[
+  {
+    "route": "/",
+    "components": []
+  },
+  {
+    "route": "/about/",
+    "components": [
+      "CS:Header",
+      "CS:SpaceBetween",
+      "MA:MigrationAssistantVersion"
+    ]
+  },
+  {
+    "route": "/app",
+    "components": []
+  },
+  {
+    "route": "/create/",
+    "components": [
+      "CS:Box",
+      "CS:Button",
+      "CS:Container",
+      "CS:FormField",
+      "CS:Header",
+      "CS:Icon",
+      "CS:Input",
+      "CS:SpaceBetween",
+      "CS:Spinner",
+      "CS:Tiles",
+      "MA:DemoWrapper"
+    ]
+  },
+  {
+    "route": "/dashboard/",
+    "components": [
+      "CS:Box",
+      "CS:Button",
+      "CS:Container",
+      "CS:Header",
+      "CS:Icon",
+      "CS:SpaceBetween",
+      "CS:Spinner",
+      "CS:StatusIndicator",
+      "CS:Table",
+      "CS:TableProps",
+      "CS:TextFilter",
+      "MA:DemoWrapper",
+      "MA:EstimateCompletionTime",
+      "MA:formatTimeDuration"
+    ]
+  },
+  {
+    "route": "/developer/ux-inspector/",
+    "components": [
+      "CS:Box",
+      "CS:Container",
+      "CS:ExpandableSection",
+      "CS:Header",
+      "CS:Link",
+      "CS:SpaceBetween"
+    ]
+  },
+  {
+    "route": "/loading/",
+    "components": [
+      "CS:Box",
+      "CS:Button",
+      "CS:Flashbar",
+      "CS:FlashbarProps",
+      "CS:Header",
+      "CS:ProgressBar",
+      "CS:SpaceBetween",
+      "MA:DemoWrapper"
+    ]
+  },
+  {
+    "route": "/playground/",
+    "components": [
+      "CS:Container",
+      "CS:ContentLayout",
+      "CS:Grid",
+      "CS:Header",
+      "CS:SpaceBetween",
+      "MA:InputDocumentSection",
+      "MA:OutputDocumentSection",
+      "MA:TransformationSection"
+    ]
+  },
+  {
+    "route": "/session/",
+    "components": [
+      "CS:Box",
+      "CS:Button",
+      "CS:Flashbar",
+      "CS:FlashbarProps",
+      "CS:Header",
+      "CS:Link",
+      "CS:SpaceBetween",
+      "CS:Wizard",
+      "CS:WizardProps",
+      "MA:BackfillStatusDashboard",
+      "MA:CaptureProxiesOverview",
+      "MA:Connection",
+      "MA:DemoWrapper",
+      "MA:MetadataEvaluationAndMigration",
+      "MA:MigrationSessionReviewPage",
+      "MA:RequestTimeline",
+      "MA:SnapshotCreation",
+      "MA:SourceSelector"
+    ]
+  },
+  {
+    "route": "/teardown/",
+    "components": [
+      "CS:Button",
+      "CS:Header",
+      "CS:SpaceBetween"
+    ]
+  }
+]

@@ -7,12 +7,13 @@ import Button from '@cloudscape-design/components/button';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Table, { TableProps } from '@cloudscape-design/components/table';
 import Link from 'next/link';
-import EstimateCompletionTime from '@/components/time/eta';
+import EstimateCompletionTime, { formatTimeDuration } from '@/components/time/eta';
 import {
   MigrationSession,
-  useMigrationSessions
+  useMigrationSessions,
+  workflowIcon
 } from '@/context/migration-session';
-import { Box, Spinner, TextFilter } from '@cloudscape-design/components';
+import { Box, Icon, Spinner, TextFilter } from '@cloudscape-design/components';
 import { useCollection } from '@cloudscape-design/collection-hooks';
 import DemoWrapper from '@/components/demoWrapper';
 import { Suspense } from 'react';
@@ -43,10 +44,33 @@ function overallState(session: MigrationSession): StatusType {
   return 'error';
 }
 
+function isOngoing(session: MigrationSession): boolean {
+  return !session.completedAt;
+}
+
+function isCompleted(session: MigrationSession): boolean {
+  return !!session.completedAt;
+}
+
+function statusMessage(session: MigrationSession): React.ReactNode {
+  if (overallState(session) === 'in-progress') return <EstimateCompletionTime etaSeconds={session.etaSeconds || Infinity} variant='inline' />;
+  if (overallState(session) === 'pending') return 'xxx is completed, todo xxx';
+  if (overallState(session) === 'error') return 'xxx encountered an error.';
+  return '';
+}
+
+function actionLabel(session: MigrationSession): JSX.Element {
+  const state = overallState(session);
+  if (state === 'in-progress') return <Link href={`/session?id=${session.id}`}><Button>Monitor</Button></Link>;
+  if (state === 'pending') return <Link href={`/session?id=${session.id}`}><Button>Continue</Button></Link>;
+  if (state === 'error') return <Link href={`/session?id=${session.id}`}><Button>Fix</Button></Link>;
+  return <span>N/A</span>;
+}
+
 export default function MigrationDashboardPage() {
   const { sessions, addDemoSessions, clearSessions } = useMigrationSessions();
 
-  const collection = useCollection(sessions, {
+  const ongoing = useCollection(sessions.filter(isOngoing), {
     filtering: {
       empty: (
         <Box>
@@ -60,76 +84,73 @@ export default function MigrationDashboardPage() {
     },
     sorting: {}
   });
-  const columns: TableProps.ColumnDefinition<MigrationSession>[] = [
+
+  const completed = useCollection(sessions.filter(isCompleted), {
+    filtering: {
+      empty: (
+        <Box>
+          There are no completed sessions.{' '}
+        </Box>
+      ),
+      noMatch: <Box>No sessions with filter criteria.</Box>
+    },
+    sorting: {}
+  });
+
+  const ongoingColumns: TableProps.ColumnDefinition<MigrationSession>[] = [
     {
       id: 'name',
       header: 'Session Name',
-      cell: (item) => <Link href={`/session?id=${item.id}`}>{item.name}</Link>,
-      sortingField: 'name'
+      cell: (item) => <><Icon size='small' name={workflowIcon(item.workflow)} alt={item.workflow}/> <Link href={`/session?id=${item.id}`}>{item.name}</Link></>
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      cell: (item) => <StatusIndicator type={overallState(item)}>{overallState(item)}</StatusIndicator>
+    },
+    {
+      id: 'message',
+      header: 'Message',
+      cell: (item) => statusMessage(item)
+    },
+    {
+      id: 'action',
+      header: 'Action',
+      cell: (item) => actionLabel(item)
+    }
+  ];
+
+  const completedColumns: TableProps.ColumnDefinition<MigrationSession>[] = [
+    {
+      id: 'name',
+      header: 'Session Name',
+      cell: (item) => <><Icon size='small' name={workflowIcon(item.workflow)} alt={item.workflow}/> <Link href={`/session?id=${item.id}`}>{item.name}</Link></>
     },
     {
       id: 'created',
-      header: 'Created Date',
+      header: 'Create Date',
       cell: (item) => (
-        <span suppressHydrationWarning>
-          {new Date(item.createdAt).toLocaleDateString()}
-        </span>
-      ),
-      sortingField: 'createdAt'
-    },
-    {
-      id: 'overall-state',
-      header: 'Overall State',
-      cell: (item) => (
-        <StatusIndicator type={overallState(item)}>
-          {overallState(item)}
-        </StatusIndicator>
+        <span suppressHydrationWarning>{new Date(item.createdAt).toLocaleDateString()}</span>
       )
     },
     {
-      id: 'metadata',
-      header: 'Metadata',
-      cell: (item) => (
-        <StatusIndicator type={item.metadata}>{item.metadata}</StatusIndicator>
-      )
+      id: 'status',
+      header: 'Status',
+      cell: () => <StatusIndicator type="success">Completed</StatusIndicator>
     },
     {
-      id: 'backfill',
-      header: 'Backfill',
-      cell: (item) => (
-        <StatusIndicator type={item.backfill}>{item.backfill}</StatusIndicator>
-      )
-    },
-    {
-      id: 'replay',
-      header: 'Traffic Replay',
-      cell: (item) => (
-        <StatusIndicator type={item.replay}>{item.replay}</StatusIndicator>
-      )
-    },
-    {
-      id: 'eta',
-      header: 'Estimated Time',
-      cell: (item) =>
-        item.etaSeconds ? (
-          <EstimateCompletionTime
-            etaSeconds={item.etaSeconds}
-            variant="inline"
-          />
-        ) : (
-          'N/A'
-        ),
-      sortingField: 'etaSeconds'
+      id: 'time',
+      header: 'Time',
+      cell: (item) =>  item.completedAt && formatTimeDuration(item.completedAt - item.createdAt)
     },
     {
       id: 'size',
-      header: 'Estimated Size',
+      header: 'Migration Size',
       cell: (item) =>
-        item.sizeBytes != 0
-          ? (item.sizeBytes / (1024 * 1024 * 1024)).toFixed(2) + ' Gb'
-          : 'N/A'
+        item.sizeBytes ? `${(item.sizeBytes / (1024 ** 4)).toFixed(1)} TB` : 'N/A'
     }
   ];
+
   return (
     <Suspense fallback={<Spinner />}>
       <SpaceBetween size="l">
@@ -144,26 +165,26 @@ export default function MigrationDashboardPage() {
           Migration Sessions Dashboard
         </Header>
 
-        <Box>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
-          minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-          aliquip ex ea commodo consequat. Duis aute irure dolor in
-          reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-          pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-          culpa qui officia deserunt mollit anim id est laborum.
-        </Box>
-
-        <Container header={<Header variant="h2">Sessions</Header>}>
+        <Container header={<Header variant="h2">Ongoing Sessions</Header>}>
           <Table
-            {...collection.collectionProps}
-            items={collection.items}
-            filter={<TextFilter {...collection.filterProps}></TextFilter>}
-            columnDefinitions={columns}
-            stickyHeader
+            {...ongoing.collectionProps}
+            items={ongoing.items}
+            columnDefinitions={ongoingColumns}
             variant="borderless"
+            stickyHeader
           />
         </Container>
+
+        <Container header={<Header variant="h2">Completed Sessions</Header>}>
+          <Table
+            {...completed.collectionProps}
+            items={completed.items}
+            columnDefinitions={completedColumns}
+            variant="borderless"
+            stickyHeader
+          />
+        </Container>
+
         <DemoWrapper>
           <SpaceBetween size="m" direction="horizontal">
             <Button onClick={addDemoSessions}>Add Demo Sessions</Button>

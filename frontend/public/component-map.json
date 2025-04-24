@@ -1,0 +1,149 @@
+{
+  "CS:Header": [
+    "/about/",
+    "/create/",
+    "/dashboard/",
+    "/developer/ux-inspector/",
+    "/loading/",
+    "/playground/",
+    "/session/",
+    "/teardown/"
+  ],
+  "CS:SpaceBetween": [
+    "/about/",
+    "/create/",
+    "/dashboard/",
+    "/developer/ux-inspector/",
+    "/loading/",
+    "/playground/",
+    "/session/",
+    "/teardown/"
+  ],
+  "MA:MigrationAssistantVersion": [
+    "/about/"
+  ],
+  "CS:Box": [
+    "/create/",
+    "/dashboard/",
+    "/developer/ux-inspector/",
+    "/loading/",
+    "/session/"
+  ],
+  "CS:Button": [
+    "/create/",
+    "/dashboard/",
+    "/loading/",
+    "/session/",
+    "/teardown/"
+  ],
+  "CS:Container": [
+    "/create/",
+    "/dashboard/",
+    "/developer/ux-inspector/",
+    "/playground/"
+  ],
+  "CS:FormField": [
+    "/create/"
+  ],
+  "CS:Icon": [
+    "/create/",
+    "/dashboard/"
+  ],
+  "CS:Input": [
+    "/create/"
+  ],
+  "CS:Spinner": [
+    "/create/",
+    "/dashboard/"
+  ],
+  "CS:Tiles": [
+    "/create/"
+  ],
+  "MA:DemoWrapper": [
+    "/create/",
+    "/dashboard/",
+    "/loading/",
+    "/session/"
+  ],
+  "CS:StatusIndicator": [
+    "/dashboard/"
+  ],
+  "CS:Table": [
+    "/dashboard/"
+  ],
+  "CS:TableProps": [
+    "/dashboard/"
+  ],
+  "CS:TextFilter": [
+    "/dashboard/"
+  ],
+  "MA:EstimateCompletionTime": [
+    "/dashboard/"
+  ],
+  "MA:formatTimeDuration": [
+    "/dashboard/"
+  ],
+  "CS:Flashbar": [
+    "/loading/",
+    "/session/"
+  ],
+  "CS:FlashbarProps": [
+    "/loading/",
+    "/session/"
+  ],
+  "CS:ProgressBar": [
+    "/loading/"
+  ],
+  "CS:ContentLayout": [
+    "/playground/"
+  ],
+  "CS:Grid": [
+    "/playground/"
+  ],
+  "MA:InputDocumentSection": [
+    "/playground/"
+  ],
+  "MA:OutputDocumentSection": [
+    "/playground/"
+  ],
+  "MA:TransformationSection": [
+    "/playground/"
+  ],
+  "CS:Link": [
+    "/developer/ux-inspector/",
+    "/session/"
+  ],
+  "CS:Wizard": [
+    "/session/"
+  ],
+  "CS:WizardProps": [
+    "/session/"
+  ],
+  "MA:BackfillStatusDashboard": [
+    "/session/"
+  ],
+  "MA:CaptureProxiesOverview": [
+    "/session/"
+  ],
+  "MA:Connection": [
+    "/session/"
+  ],
+  "MA:MetadataEvaluationAndMigration": [
+    "/session/"
+  ],
+  "MA:MigrationSessionReviewPage": [
+    "/session/"
+  ],
+  "MA:RequestTimeline": [
+    "/session/"
+  ],
+  "MA:SnapshotCreation": [
+    "/session/"
+  ],
+  "MA:SourceSelector": [
+    "/session/"
+  ],
+  "CS:ExpandableSection": [
+    "/developer/ux-inspector/"
+  ]
+}

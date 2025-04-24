@@ -1,6 +1,7 @@
 'use client';
 
 import { Status } from '@/components/time/eta';
+import { IconProps } from '@cloudscape-design/components';
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface MetadataDetails {
@@ -26,6 +27,21 @@ export interface ReplayDetails {
 
 export type SessionWorkflow = 'freeform' | 'backfill' | 'replay' | 'full';
 
+export function workflowIcon(workflow: SessionWorkflow): IconProps.Name {
+  switch (workflow) {
+    case 'backfill':
+      return 'upload'
+    case 'freeform':
+      return 'star';
+    case 'full':
+      return 'command-prompt';
+    case 'replay':
+      return 'redo';
+  }
+}
+
+export type SessionCompletion = 'success' | 'aborted' 
+
 export interface MigrationSession {
   id: string;
   name: string;
@@ -39,6 +55,8 @@ export interface MigrationSession {
   etaSeconds: number | null;
   sizeBytes: number;
   workflow: SessionWorkflow;
+  completedAt?: number;
+  completion?: SessionCompletion;
 }
 
 const GB = 1024 * 1024 * 1024;
@@ -65,7 +83,7 @@ const demoSessions: MigrationSession[] = [
     replay: 'pending',
     etaSeconds: null,
     sizeBytes: 0,
-    workflow: 'freeform'
+    workflow: 'backfill'
   },
   {
     id: 'gamma',
@@ -76,7 +94,7 @@ const demoSessions: MigrationSession[] = [
     replay: 'pending',
     etaSeconds: 55 * 60,
     sizeBytes: 850 * MB,
-    workflow: 'freeform'
+    workflow: 'full'
   },
   {
     id: 'delta',
@@ -87,7 +105,7 @@ const demoSessions: MigrationSession[] = [
     replay: 'pending',
     etaSeconds: null,
     sizeBytes: 0,
-    workflow: 'freeform'
+    workflow: 'replay'
   },
   {
     id: 'epsilon',
@@ -98,7 +116,9 @@ const demoSessions: MigrationSession[] = [
     replay: 'pending',
     etaSeconds: null,
     sizeBytes: 0,
-    workflow: 'freeform'
+    workflow: 'freeform',
+    completedAt: new Date('2024-05-11').getTime(),
+    completion: 'aborted'
   },
   {
     id: 'zeta',
@@ -109,7 +129,9 @@ const demoSessions: MigrationSession[] = [
     replay: 'success',
     etaSeconds: 0,
     sizeBytes: 3.5 * GB,
-    workflow: 'freeform'
+    workflow: 'freeform',
+    completedAt: new Date('2024-04-28').getTime(),
+    completion: 'success'
   },
   {
     id: 'omega',

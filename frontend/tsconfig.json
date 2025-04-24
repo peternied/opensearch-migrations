@@ -28,6 +28,6 @@
     ".next/types/**/*.ts",
     "next-env.d.ts",
     "build/site/types/**/*.ts"
-  ],
+, "scripts/generate-sitemap.js"  ],
   "exclude": ["node_modules"]
 }

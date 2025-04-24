@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/generate-sitemap.js",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
@@ -10,11 +11,14 @@
     "lint:fix": "next lint --fix && npx prettier . --write"
   },
   "dependencies": {
+    "@babel/parser": "^7.27.0",
+    "@babel/traverse": "^7.27.0",
     "@cloudscape-design/board-components": "^3.0.99",
     "@cloudscape-design/components": "3.0.839",
     "@cloudscape-design/global-styles": "1.0.32",
     "@cloudscape-design/test-utils-core": "^1.0.56",
     "@types/uuid": "^10.0.0",
+    "globby": "^11.1.0",
     "next": "^15.2.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -29,8 +33,8 @@
     "eslint-config-next": "15.0.2",
     "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-prettier": "^5.2.6",
-    "prettier": "^3.5.3",
     "postcss": "^8",
+    "prettier": "^3.5.3",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   },
