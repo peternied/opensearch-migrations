@@ -13,10 +13,11 @@ import {
   useMigrationSessions,
   workflowIcon
 } from '@/context/migration-session';
-import { Box, Icon, Spinner, TextFilter } from '@cloudscape-design/components';
+import { Box, Icon, Popover, Spinner, TextFilter } from '@cloudscape-design/components';
 import { useCollection } from '@cloudscape-design/collection-hooks';
 import DemoWrapper from '@/components/demoWrapper';
 import { Suspense } from 'react';
+import { setEngine } from 'crypto';
 
 export type StatusType = 'success' | 'in-progress' | 'pending' | 'error';
 
@@ -44,6 +45,19 @@ function overallState(session: MigrationSession): StatusType {
   return 'error';
 }
 
+function nextState(session: MigrationSession, status: StatusType): string {
+  if (session.metadata === status) {
+    return 'metadata';
+  }
+  if (session.backfill === status) {
+    return 'backfill';
+  }
+  if (session.replay === status) {
+    return 'replay';
+  }
+  return 'unknown'
+}
+
 function isOngoing(session: MigrationSession): boolean {
   return !session.completedAt;
 }
@@ -54,8 +68,8 @@ function isCompleted(session: MigrationSession): boolean {
 
 function statusMessage(session: MigrationSession): React.ReactNode {
   if (overallState(session) === 'in-progress') return <EstimateCompletionTime etaSeconds={session.etaSeconds || Infinity} variant='inline' />;
-  if (overallState(session) === 'pending') return 'xxx is completed, todo xxx';
-  if (overallState(session) === 'error') return 'xxx encountered an error.';
+  if (overallState(session) === 'pending') return `Waiting for input on ${nextState(session, 'pending')}`;
+  if (overallState(session) === 'error') return `Error in step ${nextState(session, 'error')}`;
   return '';
 }
 
@@ -101,7 +115,8 @@ export default function MigrationDashboardPage() {
     {
       id: 'name',
       header: 'Session Name',
-      cell: (item) => <><Icon size='small' name={workflowIcon(item.workflow)} alt={item.workflow}/> <Link href={`/session?id=${item.id}`}>{item.name}</Link></>
+      cell: (item) => <><Icon size='small' name={workflowIcon(item.workflow)} alt={item.workflow}/> <Link href={`/session?id=${item.id}`}>{item.name}</Link></>,
+      sortingField: 'name',
     },
     {
       id: 'status',
@@ -124,14 +139,19 @@ export default function MigrationDashboardPage() {
     {
       id: 'name',
       header: 'Session Name',
-      cell: (item) => <><Icon size='small' name={workflowIcon(item.workflow)} alt={item.workflow}/> <Link href={`/session?id=${item.id}`}>{item.name}</Link></>
+      cell: (item) => <>
+        <Icon size='small' name={workflowIcon(item.workflow)} alt={item.workflow}/>
+        <Link href={`/session?id=${item.id}`}>{item.name}</Link>
+      </>,
+      sortingField: 'name',
     },
     {
       id: 'created',
       header: 'Create Date',
       cell: (item) => (
         <span suppressHydrationWarning>{new Date(item.createdAt).toLocaleDateString()}</span>
-      )
+      ),
+      sortingField: 'createdAt',
     },
     {
       id: 'status',

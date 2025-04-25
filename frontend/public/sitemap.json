@@ -81,10 +81,7 @@
       "CS:ContentLayout",
       "CS:Grid",
       "CS:Header",
-      "CS:SpaceBetween",
-      "MA:InputDocumentSection",
-      "MA:OutputDocumentSection",
-      "MA:TransformationSection"
+      "CS:SpaceBetween"
     ]
   },
   {
