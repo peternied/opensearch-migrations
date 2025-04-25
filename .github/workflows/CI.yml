@@ -297,27 +297,15 @@ jobs:
           docker stop $(docker ps -q) && docker system prune --volumes -f
           docker image ls --format '{{.Repository}}:{{.Tag}}' | grep '^migrations/' | xargs -I {} docker image rm {}
 
-  discover-node-projects:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.find-projects.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - id: find-projects
-        run: |
-          matrix=$(find . -name 'package.json' -not -path '*/node_modules/*' -exec dirname {} \; | sort -u | jq -R . | jq -s .)
-          echo "Found projects: $matrix"
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
-        shell: bash
-
   node-tests:
     runs-on: ubuntu-latest
-    needs: discover-node-projects
     strategy:
       fail-fast: false
       matrix:
-        npm-project: ${{ fromJson(needs.discover-node-projects.outputs.matrix) }}
+        npm-project:
+          - ./deployment/cdk/opensearch-service-migration
+          - ./deployment/migration-assistant-solution
+          - ./frontend
     defaults:
       run:
         working-directory: ${{ matrix.npm-project }}

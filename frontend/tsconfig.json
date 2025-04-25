@@ -14,7 +14,12 @@
     "jsx": "preserve",
     "incremental": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@tests/*": [
+        "./__tests__/*"
+      ]
     },
     "plugins": [
       {
