@@ -7,7 +7,8 @@ import Link from '@cloudscape-design/components/link';
 import Button from '@cloudscape-design/components/button';
 import KeyValuePairs from '@cloudscape-design/components/key-value-pairs';
 import MigrationEntityTable, { MigrationEntity } from './entity-table';
-import { Spinner } from '@cloudscape-design/components';
+import { Spinner, Box, Alert } from '@cloudscape-design/components';
+import { MigrationSession } from '@/context/migration-session';
 
 const allIndexes: MigrationEntity[] = [
   { name: 'geonames', status: 'success' },
@@ -29,17 +30,28 @@ const allIndexTemplates: MigrationEntity[] = [
 const allComponentTemplates: MigrationEntity[] = [];
 const allAliases: MigrationEntity[] = [{ name: 'logs-all', status: 'success' }];
 
-export default function MetadataEvaluationAndMigration() {
+export interface MetadataProps {
+  session: MigrationSession;
+} 
+export default function MetadataEvaluationAndMigration({ session }: MetadataProps) {
   const [mode, setMode] = useState<'evaluation' | 'migration'>('evaluation');
-  const [status, setStatus] = useState<'idle' | 'running' | 'completed'>(
-    'completed'
-  );
+  const [status, setStatus] = useState<'idle' | 'running' | 'completed'>('completed');
   const [indexes, setIndexes] = useState<MigrationEntity[]>([]);
   const [indexTemplates, setIndexTemplates] = useState<MigrationEntity[]>([]);
   const [componentTemplates, setComponentTemplates] = useState<
     MigrationEntity[]
   >([]);
   const [aliases, setAliases] = useState<MigrationEntity[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
+
+  const validateSession = () => {
+    const validationErrors: string[] = [];
+    console.log(`*** session info: ${JSON.stringify(session)}`);
+    if (session?.snapshot !== 'success') {
+      validationErrors.push('Snapshot must be defined before running evaluation.');
+    }
+    setErrors(validationErrors);
+  };
 
   const loadItems = () => {
     setIndexes([]);
@@ -56,6 +68,7 @@ export default function MetadataEvaluationAndMigration() {
   };
 
   const runProcess = () => {
+    if (errors) { return; }
     setStatus('running');
     loadItems();
   };
@@ -67,10 +80,14 @@ export default function MetadataEvaluationAndMigration() {
   };
 
   useEffect(() => {
-    runProcess();
+    validateSession();
   }, []);
 
   const renderStatus = () => {
+    if (errors.length > 0) {
+      return <StatusIndicator type="stopped">Idle</StatusIndicator>;
+    }
+
     switch (status) {
       case 'running':
         return <StatusIndicator type="in-progress">Running</StatusIndicator>;
@@ -83,6 +100,16 @@ export default function MetadataEvaluationAndMigration() {
 
   return (
     <SpaceBetween size="l">
+      {errors.length > 0 && (
+        <Box>
+          {errors.map((error, idx) => (
+            <Alert key={idx} statusIconAriaLabel="Error" type="error">
+              {error}
+            </Alert>
+          ))}
+        </Box>
+      )}
+
       <KeyValuePairs
         columns={3}
         items={[
@@ -102,14 +129,14 @@ export default function MetadataEvaluationAndMigration() {
       />
 
       <SpaceBetween size="s" direction="horizontal">
-        <Button onClick={runProcess} disabled={status === 'running'}>
+        <Button onClick={runProcess} disabled={status === 'running' || errors.length > 0}>
           Rerun {mode === 'evaluation' ? 'Evaluation' : 'Migration'}
         </Button>
         {mode === 'evaluation' && (
           <Button
             variant="primary"
             onClick={toggleMode}
-            disabled={status === 'running'}
+            disabled={status === 'running' || errors.length > 0}
           >
             Migrate Items
           </Button>
@@ -131,11 +158,11 @@ export default function MetadataEvaluationAndMigration() {
           />
           <MigrationEntityTable items={aliases} label="Aliases" mode={mode} />
         </>
-      ) : (
+      ) : errors.length == 0 ? (
         <>
-          <Spinner></Spinner> Loading results...
+          <Spinner /> Loading results...
         </>
-      )}
+      ) : (<></>)}
     </SpaceBetween>
   );
 }

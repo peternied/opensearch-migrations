@@ -44,7 +44,6 @@
       "CS:StatusIndicator",
       "CS:Table",
       "CS:TableProps",
-      "CS:TextFilter",
       "MA:DemoWrapper",
       "MA:EstimateCompletionTime",
       "MA:formatTimeDuration"

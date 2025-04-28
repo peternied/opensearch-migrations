@@ -43,79 +43,6 @@ interface SessionStep extends WizardProps.Step {
   stepId: StepId;
 }
 
-const stepDefinitions: SessionStep[] = [
-  {
-    title: 'Select Source',
-    content: <SourceSelector />,
-    stepId: 'select-source',
-    requiredSteps: [],
-    validWorkflows: ['backfill', 'freeform', 'full']
-  },
-  {
-    title: 'Capture Traffic',
-    content: <CaptureProxiesOverview />,
-    stepId: 'capture-traffic',
-    requiredSteps: [],
-    validWorkflows: ['freeform', 'full', 'replay']
-  },
-  {
-    title: 'Select Target',
-    content: <Connection connectionType="target" />,
-    stepId: 'select-target',
-    requiredSteps: [],
-    validWorkflows: ['freeform', 'full', 'replay', 'backfill']
-  },
-  {
-    title: 'Create Snapshot',
-    content: <SnapshotCreation />,
-    stepId: 'create-snapshot',
-    requiredSteps: [],
-    validWorkflows: ['freeform', 'full', 'backfill']
-  },
-  {
-    title: 'Metadata',
-    content: <MetadataEvaluationAndMigration />,
-    stepId: 'metadata',
-    requiredSteps: [],
-    validWorkflows: ['freeform', 'full', 'backfill']
-  },
-  {
-    title: 'Backfill',
-    content: <BackfillStatusDashboard />,
-    stepId: 'backfill',
-    requiredSteps: [],
-    validWorkflows: ['freeform', 'full', 'backfill']
-  },
-  {
-    title: 'Traffic Replay',
-    content: <RequestTimeline proxies={[]} showReplayers={true} />,
-    stepId: 'replay-traffic',
-    requiredSteps: [],
-    validWorkflows: ['freeform', 'full', 'replay']
-  },
-  {
-    title: 'Review Finished Migration',
-    content: <MigrationSessionReviewPage />,
-    stepId: 'review',
-    requiredSteps: [],
-    validWorkflows: ['freeform', 'full', 'replay', 'backfill']
-  }
-];
-
-function createSteps(sessionWorkflow: SessionWorkflow) {
-  const filteredSteps = stepDefinitions.filter((s) =>
-    s.validWorkflows.includes(sessionWorkflow)
-  );
-  const steps = filteredSteps.map((s) => {
-    if (sessionWorkflow === 'freeform') {
-      s.isOptional = true;
-    }
-    return s;
-  });
-  console.log('Steps: ' + steps);
-  return steps;
-}
-
 function findStepIndexByName(stepId: StepId, steps: SessionStep[]) {
   const foundId = steps.map((s) => s.stepId).findIndex((id) => id === stepId);
   return foundId === -1 ? 0 : foundId;
@@ -127,6 +54,78 @@ function StepPageContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('id');
   const currentSession = sessions.find((s) => s.id == sessionId);
+
+  const stepDefinitions: SessionStep[] = [
+    {
+      title: 'Select Source',
+      content: <SourceSelector />,
+      stepId: 'select-source',
+      requiredSteps: [],
+      validWorkflows: ['backfill', 'freeform', 'full']
+    },
+    {
+      title: 'Capture Traffic',
+      content: <CaptureProxiesOverview />,
+      stepId: 'capture-traffic',
+      requiredSteps: [],
+      validWorkflows: ['freeform', 'full', 'replay']
+    },
+    {
+      title: 'Select Target',
+      content: <Connection connectionType="target" />,
+      stepId: 'select-target',
+      requiredSteps: [],
+      validWorkflows: ['freeform', 'full', 'replay', 'backfill']
+    },
+    {
+      title: 'Create Snapshot',
+      content: <SnapshotCreation />,
+      stepId: 'create-snapshot',
+      requiredSteps: [],
+      validWorkflows: ['freeform', 'full', 'backfill']
+    },
+    {
+      title: 'Metadata',
+      content: <MetadataEvaluationAndMigration session={currentSession} />,
+      stepId: 'metadata',
+      requiredSteps: [],
+      validWorkflows: ['freeform', 'full', 'backfill']
+    },
+    {
+      title: 'Backfill',
+      content: <BackfillStatusDashboard />,
+      stepId: 'backfill',
+      requiredSteps: [],
+      validWorkflows: ['freeform', 'full', 'backfill']
+    },
+    {
+      title: 'Traffic Replay',
+      content: <RequestTimeline proxies={[]} showReplayers={true} />,
+      stepId: 'replay-traffic',
+      requiredSteps: [],
+      validWorkflows: ['freeform', 'full', 'replay']
+    },
+    {
+      title: 'Review Finished Migration',
+      content: <MigrationSessionReviewPage />,
+      stepId: 'review',
+      requiredSteps: [],
+      validWorkflows: ['freeform', 'full', 'replay', 'backfill']
+    }
+  ];
+
+  function createSteps(sessionWorkflow: SessionWorkflow) {
+    const filteredSteps = stepDefinitions.filter((s) =>
+      s.validWorkflows.includes(sessionWorkflow)
+    );
+    const steps = filteredSteps.map((s) => {
+      if (sessionWorkflow === 'freeform') {
+        s.isOptional = true;
+      }
+      return s;
+    });
+    return steps;
+  }
 
   const steps = !!currentSession ? createSteps(currentSession!.workflow) : [];
   const currentStep =

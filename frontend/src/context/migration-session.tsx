@@ -43,6 +43,7 @@ export function workflowIcon(workflow: SessionWorkflow): IconProps.Name {
 export type SessionCompletion = 'success' | 'aborted' 
 
 export interface MigrationSession {
+  snapshot: Status;
   id: string;
   name: string;
   createdAt: number;
@@ -67,6 +68,7 @@ const demoSessions: MigrationSession[] = [
     id: 'alpha',
     name: 'Session Alpha',
     createdAt: new Date('2024-05-01').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'success',
     replay: 'in-progress',
@@ -78,6 +80,7 @@ const demoSessions: MigrationSession[] = [
     id: 'beta',
     name: 'Session Beta',
     createdAt: new Date('2024-04-18').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'pending',
     replay: 'pending',
@@ -89,6 +92,7 @@ const demoSessions: MigrationSession[] = [
     id: 'gamma',
     name: 'Session Gamma',
     createdAt: new Date('2024-05-05').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'in-progress',
     replay: 'pending',
@@ -100,6 +104,7 @@ const demoSessions: MigrationSession[] = [
     id: 'delta',
     name: 'Session Delta',
     createdAt: new Date('2024-04-30').getTime(),
+    snapshot: 'in-progress',
     metadata: 'pending',
     backfill: 'pending',
     replay: 'pending',
@@ -111,6 +116,7 @@ const demoSessions: MigrationSession[] = [
     id: 'epsilon',
     name: 'Session Epsilon',
     createdAt: new Date('2024-05-10').getTime(),
+    snapshot: 'success',
     metadata: 'error',
     backfill: 'pending',
     replay: 'pending',
@@ -124,6 +130,7 @@ const demoSessions: MigrationSession[] = [
     id: 'zeta',
     name: 'Session Zeta',
     createdAt: new Date('2024-04-25').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'success',
     replay: 'success',
@@ -137,6 +144,7 @@ const demoSessions: MigrationSession[] = [
     id: 'omega',
     name: 'Session Omega',
     createdAt: new Date('2024-05-03').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'in-progress',
     replay: 'in-progress',
@@ -148,6 +156,7 @@ const demoSessions: MigrationSession[] = [
     id: 'theta',
     name: 'Session Theta',
     createdAt: new Date('2024-04-15').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'error',
     replay: 'pending',
@@ -159,6 +168,7 @@ const demoSessions: MigrationSession[] = [
     id: 'iota',
     name: 'Session Iota',
     createdAt: new Date('2024-04-28').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'success',
     replay: 'error',
@@ -170,6 +180,7 @@ const demoSessions: MigrationSession[] = [
     id: 'kappa',
     name: 'Session Kappa',
     createdAt: new Date('2024-05-07').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'success',
     replay: 'in-progress',
@@ -181,6 +192,7 @@ const demoSessions: MigrationSession[] = [
     id: 'lambda',
     name: 'Session Lambda',
     createdAt: new Date('2024-04-22').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'pending',
     replay: 'pending',
@@ -192,6 +204,7 @@ const demoSessions: MigrationSession[] = [
     id: 'mu',
     name: 'Session Mu',
     createdAt: new Date('2024-05-02').getTime(),
+    snapshot: 'success',
     metadata: 'success',
     backfill: 'in-progress',
     replay: 'in-progress',

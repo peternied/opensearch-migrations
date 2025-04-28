@@ -72,7 +72,9 @@ const session: MigrationSession = {
     toCutoverSeconds: 1800,
     sizeBytes: 2884901888,
     requests: '342,232,322'
-  }
+  },
+  workflow: 'full',
+  snapshot: 'success'
 };
 const backfillData = generateSeries(
   session.backfillDetails!.durationSeconds,

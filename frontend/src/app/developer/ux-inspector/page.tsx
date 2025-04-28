@@ -40,7 +40,7 @@ export default function UXInspectorPage() {
       <SpaceBetween size="l">
         <ExpandableSection headerText="By Route" defaultExpanded>
           <SpaceBetween size="s">
-            {routeMap.toSorted().map(({ route, components }) => (
+            {routeMap.map(({ route, components }) => (
               <Box key={route}>
                 <strong>
                   <Link href={route} external={false}>
@@ -59,7 +59,7 @@ export default function UXInspectorPage() {
 
         <ExpandableSection headerText="By Component" defaultExpanded>
           <SpaceBetween size="s">
-            {Object.entries(componentMap).toSorted().map(([component, routes]) => (
+            {Object.entries(componentMap).map(([component, routes]) => (
               <Box key={component}>
                 <strong>{component}</strong>
                 <ul>
