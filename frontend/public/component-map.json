@@ -7,6 +7,8 @@
     "/loading/",
     "/playground/",
     "/session/",
+    "/tasks/gather/",
+    "/tasks/manage/",
     "/teardown/"
   ],
   "CS:SpaceBetween": [
@@ -17,6 +19,9 @@
     "/loading/",
     "/playground/",
     "/session/",
+    "/tasks/gather/",
+    "/tasks/manage/",
+    "/tasks/manage/task-table",
     "/teardown/"
   ],
   "MA:MigrationAssistantVersion": [
@@ -34,13 +39,17 @@
     "/dashboard/",
     "/loading/",
     "/session/",
+    "/tasks/gather/",
+    "/tasks/manage/task-table",
     "/teardown/"
   ],
   "CS:Container": [
     "/create/",
     "/dashboard/",
     "/developer/ux-inspector/",
-    "/playground/"
+    "/playground/",
+    "/tasks/gather/",
+    "/tasks/manage/"
   ],
   "CS:FormField": [
     "/create/"
@@ -69,7 +78,9 @@
     "/dashboard/"
   ],
   "CS:Table": [
-    "/dashboard/"
+    "/dashboard/",
+    "/tasks/gather/",
+    "/tasks/manage/task-table"
   ],
   "CS:TableProps": [
     "/dashboard/"
@@ -133,5 +144,8 @@
   ],
   "CS:ExpandableSection": [
     "/developer/ux-inspector/"
+  ],
+  "CS:Dropdown": [
+    "/tasks/manage/task-table"
   ]
 }

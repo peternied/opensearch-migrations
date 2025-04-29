@@ -107,6 +107,33 @@
     ]
   },
   {
+    "route": "/tasks/gather/",
+    "components": [
+      "CS:Button",
+      "CS:Container",
+      "CS:Header",
+      "CS:SpaceBetween",
+      "CS:Table"
+    ]
+  },
+  {
+    "route": "/tasks/manage/",
+    "components": [
+      "CS:Container",
+      "CS:Header",
+      "CS:SpaceBetween"
+    ]
+  },
+  {
+    "route": "/tasks/manage/task-table",
+    "components": [
+      "CS:Button",
+      "CS:Dropdown",
+      "CS:SpaceBetween",
+      "CS:Table"
+    ]
+  },
+  {
     "route": "/teardown/",
     "components": [
       "CS:Button",
