@@ -9,6 +9,7 @@
     "/session/",
     "/tasks/gather/",
     "/tasks/manage/",
+    "/tasks/workflow/components/TaskHeader",
     "/teardown/"
   ],
   "CS:SpaceBetween": [
@@ -22,6 +23,9 @@
     "/tasks/gather/",
     "/tasks/manage/",
     "/tasks/manage/task-table",
+    "/tasks/workflow/",
+    "/tasks/workflow/components/WorkflowProgress",
+    "/tasks/workflow/components/steps/MetadataMigrationStep",
     "/teardown/"
   ],
   "MA:MigrationAssistantVersion": [
@@ -32,7 +36,9 @@
     "/dashboard/",
     "/developer/ux-inspector/",
     "/loading/",
-    "/session/"
+    "/session/",
+    "/tasks/workflow/components/TaskDetails",
+    "/tasks/workflow/components/WorkflowProgress"
   ],
   "CS:Button": [
     "/create/",
@@ -41,6 +47,9 @@
     "/session/",
     "/tasks/gather/",
     "/tasks/manage/task-table",
+    "/tasks/workflow/components/TransformationsPanel",
+    "/tasks/workflow/components/WorkflowProgress",
+    "/tasks/workflow/components/steps/MetadataMigrationStep",
     "/teardown/"
   ],
   "CS:Container": [
@@ -49,10 +58,12 @@
     "/developer/ux-inspector/",
     "/playground/",
     "/tasks/gather/",
-    "/tasks/manage/"
+    "/tasks/manage/",
+    "/tasks/workflow/"
   ],
   "CS:FormField": [
-    "/create/"
+    "/create/",
+    "/tasks/workflow/components/steps/MetadataMigrationStep"
   ],
   "CS:Icon": [
     "/create/",
@@ -113,7 +124,8 @@
     "/session/"
   ],
   "CS:Wizard": [
-    "/session/"
+    "/session/",
+    "/tasks/workflow/components/WorkflowProgress"
   ],
   "CS:WizardProps": [
     "/session/"
@@ -145,7 +157,13 @@
   "CS:ExpandableSection": [
     "/developer/ux-inspector/"
   ],
-  "CS:Dropdown": [
-    "/tasks/manage/task-table"
+  "CS:KeyValuePairs": [
+    "/tasks/workflow/components/TaskDetails"
+  ],
+  "CS:KeyValuePairsProps": [
+    "/tasks/workflow/components/TaskDetails"
+  ],
+  "CS:Checkbox": [
+    "/tasks/workflow/components/steps/MetadataMigrationStep"
   ]
 }

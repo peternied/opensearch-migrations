@@ -128,9 +128,57 @@
     "route": "/tasks/manage/task-table",
     "components": [
       "CS:Button",
-      "CS:Dropdown",
       "CS:SpaceBetween",
       "CS:Table"
+    ]
+  },
+  {
+    "route": "/tasks/workflow/",
+    "components": [
+      "CS:Container",
+      "CS:SpaceBetween"
+    ]
+  },
+  {
+    "route": "/tasks/workflow/components/StepRenderer",
+    "components": []
+  },
+  {
+    "route": "/tasks/workflow/components/steps/MetadataMigrationStep",
+    "components": [
+      "CS:Button",
+      "CS:Checkbox",
+      "CS:FormField",
+      "CS:SpaceBetween"
+    ]
+  },
+  {
+    "route": "/tasks/workflow/components/TaskDetails",
+    "components": [
+      "CS:Box",
+      "CS:KeyValuePairs",
+      "CS:KeyValuePairsProps"
+    ]
+  },
+  {
+    "route": "/tasks/workflow/components/TaskHeader",
+    "components": [
+      "CS:Header"
+    ]
+  },
+  {
+    "route": "/tasks/workflow/components/TransformationsPanel",
+    "components": [
+      "CS:Button"
+    ]
+  },
+  {
+    "route": "/tasks/workflow/components/WorkflowProgress",
+    "components": [
+      "CS:Box",
+      "CS:Button",
+      "CS:SpaceBetween",
+      "CS:Wizard"
     ]
   },
   {
