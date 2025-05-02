@@ -12,11 +12,11 @@ const fetchTaskDetails = async (taskId: string): Promise<TaskDetails> => {
     items: [
       { id: '1', name: 'Item 1', status: 'Pending' },
       { id: '2', name: 'Item 2', status: 'Migrated' },
-      { id: '3', name: 'Item 3', status: 'Error' },
+      { id: '3', name: 'Item 3', status: 'Error' }
     ],
     transformationsCount: 3,
     workflowType: 'standard',
-    currentStep: 0,
+    currentStep: 0
   };
 };
 
@@ -31,7 +31,7 @@ export interface WorkflowState {
 export interface WorkflowActions {
   goToStep: (stepIndex: number) => void;
   completeCurrentStep: () => void;
-  updateStepData: (stepId: string, data: any) => void;
+  updateStepData: (stepId: string, data: unknown) => void;
   completeWorkflow: () => void;
 }
 
@@ -41,22 +41,22 @@ export function useWorkflow(taskId: string): [WorkflowState, WorkflowActions] {
     steps: [],
     activeStepIndex: 0,
     isLoading: true,
-    error: null,
+    error: null
   });
 
   // Load task details and initialize workflow
   useEffect(() => {
     const loadTaskDetails = async () => {
       try {
-        setState(prev => ({ ...prev, isLoading: true, error: null }));
-        
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
         const taskDetails = await fetchTaskDetails(taskId);
         const workflowConfig = getWorkflowConfig(taskDetails.workflowType);
-        
+
         // Initialize steps with completion status based on current step
         const steps = workflowConfig.steps.map((step, index) => ({
           ...step,
-          isCompleted: index < taskDetails.currentStep,
+          isCompleted: index < taskDetails.currentStep
         }));
 
         setState({
@@ -64,13 +64,16 @@ export function useWorkflow(taskId: string): [WorkflowState, WorkflowActions] {
           steps,
           activeStepIndex: taskDetails.currentStep,
           isLoading: false,
-          error: null,
+          error: null
         });
       } catch (error) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Failed to load task details',
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to load task details'
         }));
       }
     };
@@ -82,28 +85,29 @@ export function useWorkflow(taskId: string): [WorkflowState, WorkflowActions] {
   const actions: WorkflowActions = {
     goToStep: (stepIndex: number) => {
       if (stepIndex >= 0 && stepIndex < state.steps.length) {
-        setState(prev => ({ ...prev, activeStepIndex: stepIndex }));
+        setState((prev) => ({ ...prev, activeStepIndex: stepIndex }));
       }
     },
 
     completeCurrentStep: () => {
       const { activeStepIndex, steps } = state;
-      
+
       if (activeStepIndex < steps.length) {
         // Mark current step as completed
         const updatedSteps = [...steps];
         updatedSteps[activeStepIndex] = {
           ...updatedSteps[activeStepIndex],
-          isCompleted: true,
+          isCompleted: true
         };
 
         // Move to next step if available
         const nextStepIndex = activeStepIndex + 1;
-        
-        setState(prev => ({
+
+        setState((prev) => ({
           ...prev,
           steps: updatedSteps,
-          activeStepIndex: nextStepIndex < steps.length ? nextStepIndex : activeStepIndex,
+          activeStepIndex:
+            nextStepIndex < steps.length ? nextStepIndex : activeStepIndex
         }));
 
         // In a real app, you would save this progress to the backend
@@ -111,26 +115,26 @@ export function useWorkflow(taskId: string): [WorkflowState, WorkflowActions] {
       }
     },
 
-    updateStepData: (stepId: string, data: any) => {
+    updateStepData: (stepId: string, data: unknown) => {
       // In a real app, you would save this step data to the backend
       console.log(`Updating step ${stepId} with data:`, data);
     },
 
     completeWorkflow: () => {
       // Mark all steps as completed
-      const updatedSteps = state.steps.map(step => ({
+      const updatedSteps = state.steps.map((step) => ({
         ...step,
-        isCompleted: true,
+        isCompleted: true
       }));
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        steps: updatedSteps,
+        steps: updatedSteps
       }));
 
       // In a real app, you would save this completion status to the backend
       // completeTaskWorkflow(taskId);
-    },
+    }
   };
 
   return [state, actions];

@@ -1,20 +1,20 @@
-import { playgroundReducer } from "@/context/PlaygroundContext";
+import { playgroundReducer } from '@/context/PlaygroundContext';
 import {
   createInputDocument,
   createTransformation,
   createOutputDocument,
-  createTestState,
-} from "@tests/__utils__/playgroundFactories";
+  createTestState
+} from '@tests/__utils__/playgroundFactories';
 
-describe("PlaygroundReducer", () => {
-  describe("ADD_INPUT_DOCUMENT", () => {
-    it("should add a new input document to the state", () => {
+describe('PlaygroundReducer', () => {
+  describe('ADD_INPUT_DOCUMENT', () => {
+    it('should add a new input document to the state', () => {
       const initialState = createTestState();
       const newDocument = createInputDocument();
 
       const action = {
-        type: "ADD_INPUT_DOCUMENT" as const,
-        payload: newDocument,
+        type: 'ADD_INPUT_DOCUMENT' as const,
+        payload: newDocument
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -23,23 +23,23 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("UPDATE_INPUT_DOCUMENT", () => {
-    it("should update an existing input document", () => {
-      const existingDocument = createInputDocument("test-id", {
-        name: "Original Name",
-        content: "Original content",
+  describe('UPDATE_INPUT_DOCUMENT', () => {
+    it('should update an existing input document', () => {
+      const existingDocument = createInputDocument('test-id', {
+        name: 'Original Name',
+        content: 'Original content'
       });
       const initialState = createTestState({
-        inputDocuments: [existingDocument],
+        inputDocuments: [existingDocument]
       });
 
-      const updatedDocument = createInputDocument("test-id", {
-        name: "Updated Name",
-        content: "Updated content",
+      const updatedDocument = createInputDocument('test-id', {
+        name: 'Updated Name',
+        content: 'Updated content'
       });
       const action = {
-        type: "UPDATE_INPUT_DOCUMENT" as const,
-        payload: updatedDocument,
+        type: 'UPDATE_INPUT_DOCUMENT' as const,
+        payload: updatedDocument
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -47,20 +47,20 @@ describe("PlaygroundReducer", () => {
       expect(newState.inputDocuments[0]).toEqual(updatedDocument);
     });
 
-    it("should not modify other documents when updating one", () => {
-      const document1 = createInputDocument("id-1");
-      const document2 = createInputDocument("id-2");
+    it('should not modify other documents when updating one', () => {
+      const document1 = createInputDocument('id-1');
+      const document2 = createInputDocument('id-2');
       const initialState = createTestState({
-        inputDocuments: [document1, document2],
+        inputDocuments: [document1, document2]
       });
 
-      const updatedDocument = createInputDocument("id-1", {
-        name: "Updated Document 1",
-        content: "Updated Content 1",
+      const updatedDocument = createInputDocument('id-1', {
+        name: 'Updated Document 1',
+        content: 'Updated Content 1'
       });
       const action = {
-        type: "UPDATE_INPUT_DOCUMENT" as const,
-        payload: updatedDocument,
+        type: 'UPDATE_INPUT_DOCUMENT' as const,
+        payload: updatedDocument
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -70,17 +70,17 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("REMOVE_INPUT_DOCUMENT", () => {
-    it("should remove an input document by id", () => {
-      const document1 = createInputDocument("id-1");
-      const document2 = createInputDocument("id-2");
+  describe('REMOVE_INPUT_DOCUMENT', () => {
+    it('should remove an input document by id', () => {
+      const document1 = createInputDocument('id-1');
+      const document2 = createInputDocument('id-2');
       const initialState = createTestState({
-        inputDocuments: [document1, document2],
+        inputDocuments: [document1, document2]
       });
 
       const action = {
-        type: "REMOVE_INPUT_DOCUMENT" as const,
-        payload: "id-1",
+        type: 'REMOVE_INPUT_DOCUMENT' as const,
+        payload: 'id-1'
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -88,17 +88,17 @@ describe("PlaygroundReducer", () => {
       expect(newState.inputDocuments[0]).toEqual(document2);
     });
 
-    it("should clear output documents when removing an input document", () => {
-      const document = createInputDocument("id-1");
+    it('should clear output documents when removing an input document', () => {
+      const document = createInputDocument('id-1');
       const outputDocument = createOutputDocument();
       const initialState = createTestState({
         inputDocuments: [document],
-        outputDocuments: [outputDocument],
+        outputDocuments: [outputDocument]
       });
 
       const action = {
-        type: "REMOVE_INPUT_DOCUMENT" as const,
-        payload: "id-1",
+        type: 'REMOVE_INPUT_DOCUMENT' as const,
+        payload: 'id-1'
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -107,14 +107,14 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("ADD_TRANSFORMATION", () => {
-    it("should add a new transformation to the state", () => {
+  describe('ADD_TRANSFORMATION', () => {
+    it('should add a new transformation to the state', () => {
       const initialState = createTestState();
       const newTransformation = createTransformation();
 
       const action = {
-        type: "ADD_TRANSFORMATION" as const,
-        payload: newTransformation,
+        type: 'ADD_TRANSFORMATION' as const,
+        payload: newTransformation
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -122,16 +122,16 @@ describe("PlaygroundReducer", () => {
       expect(newState.transformations[0]).toEqual(newTransformation);
     });
 
-    it("should clear output documents when adding a transformation", () => {
+    it('should clear output documents when adding a transformation', () => {
       const outputDocument = createOutputDocument();
       const initialState = createTestState({
-        outputDocuments: [outputDocument],
+        outputDocuments: [outputDocument]
       });
 
-      const newTransformation = createTransformation("transform-2");
+      const newTransformation = createTransformation('transform-2');
       const action = {
-        type: "ADD_TRANSFORMATION" as const,
-        payload: newTransformation,
+        type: 'ADD_TRANSFORMATION' as const,
+        payload: newTransformation
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -140,23 +140,23 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("UPDATE_TRANSFORMATION", () => {
-    it("should update an existing transformation", () => {
-      const existingTransformation = createTransformation("transform-1", {
-        name: "Original Name",
-        content: "Original script",
+  describe('UPDATE_TRANSFORMATION', () => {
+    it('should update an existing transformation', () => {
+      const existingTransformation = createTransformation('transform-1', {
+        name: 'Original Name',
+        content: 'Original script'
       });
       const initialState = createTestState({
-        transformations: [existingTransformation],
+        transformations: [existingTransformation]
       });
 
-      const updatedTransformation = createTransformation("transform-1", {
-        name: "Updated Name",
-        content: "Updated script",
+      const updatedTransformation = createTransformation('transform-1', {
+        name: 'Updated Name',
+        content: 'Updated script'
       });
       const action = {
-        type: "UPDATE_TRANSFORMATION" as const,
-        payload: updatedTransformation,
+        type: 'UPDATE_TRANSFORMATION' as const,
+        payload: updatedTransformation
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -164,24 +164,24 @@ describe("PlaygroundReducer", () => {
       expect(newState.transformations[0]).toEqual(updatedTransformation);
     });
 
-    it("should clear output documents when updating a transformation", () => {
-      const transformation = createTransformation("transform-1", {
-        name: "Original Name",
-        content: "Original script",
+    it('should clear output documents when updating a transformation', () => {
+      const transformation = createTransformation('transform-1', {
+        name: 'Original Name',
+        content: 'Original script'
       });
       const outputDocument = createOutputDocument();
       const initialState = createTestState({
         transformations: [transformation],
-        outputDocuments: [outputDocument],
+        outputDocuments: [outputDocument]
       });
 
-      const updatedTransformation = createTransformation("transform-1", {
-        name: "Updated Name",
-        content: "Updated script",
+      const updatedTransformation = createTransformation('transform-1', {
+        name: 'Updated Name',
+        content: 'Updated script'
       });
       const action = {
-        type: "UPDATE_TRANSFORMATION" as const,
-        payload: updatedTransformation,
+        type: 'UPDATE_TRANSFORMATION' as const,
+        payload: updatedTransformation
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -190,17 +190,17 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("REMOVE_TRANSFORMATION", () => {
-    it("should remove a transformation by id", () => {
-      const transformation1 = createTransformation("transform-1");
-      const transformation2 = createTransformation("transform-2");
+  describe('REMOVE_TRANSFORMATION', () => {
+    it('should remove a transformation by id', () => {
+      const transformation1 = createTransformation('transform-1');
+      const transformation2 = createTransformation('transform-2');
       const initialState = createTestState({
-        transformations: [transformation1, transformation2],
+        transformations: [transformation1, transformation2]
       });
 
       const action = {
-        type: "REMOVE_TRANSFORMATION" as const,
-        payload: "transform-1",
+        type: 'REMOVE_TRANSFORMATION' as const,
+        payload: 'transform-1'
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -208,17 +208,17 @@ describe("PlaygroundReducer", () => {
       expect(newState.transformations[0]).toEqual(transformation2);
     });
 
-    it("should clear output documents when removing a transformation", () => {
-      const transformation = createTransformation("transform-1");
+    it('should clear output documents when removing a transformation', () => {
+      const transformation = createTransformation('transform-1');
       const outputDocument = createOutputDocument();
       const initialState = createTestState({
         transformations: [transformation],
-        outputDocuments: [outputDocument],
+        outputDocuments: [outputDocument]
       });
 
       const action = {
-        type: "REMOVE_TRANSFORMATION" as const,
-        payload: "transform-1",
+        type: 'REMOVE_TRANSFORMATION' as const,
+        payload: 'transform-1'
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -227,18 +227,18 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("REORDER_TRANSFORMATION", () => {
-    it("should reorder transformations", () => {
-      const transformation1 = createTransformation("transform-1");
-      const transformation2 = createTransformation("transform-2");
-      const transformation3 = createTransformation("transform-3");
+  describe('REORDER_TRANSFORMATION', () => {
+    it('should reorder transformations', () => {
+      const transformation1 = createTransformation('transform-1');
+      const transformation2 = createTransformation('transform-2');
+      const transformation3 = createTransformation('transform-3');
       const initialState = createTestState({
-        transformations: [transformation1, transformation2, transformation3],
+        transformations: [transformation1, transformation2, transformation3]
       });
 
       const action = {
-        type: "REORDER_TRANSFORMATION" as const,
-        payload: { fromIndex: 0, toIndex: 2 },
+        type: 'REORDER_TRANSFORMATION' as const,
+        payload: { fromIndex: 0, toIndex: 2 }
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -248,18 +248,18 @@ describe("PlaygroundReducer", () => {
       expect(newState.transformations[2]).toEqual(transformation1);
     });
 
-    it("should clear output documents when reordering transformations", () => {
-      const transformation1 = createTransformation("transform-1");
-      const transformation2 = createTransformation("transform-2");
+    it('should clear output documents when reordering transformations', () => {
+      const transformation1 = createTransformation('transform-1');
+      const transformation2 = createTransformation('transform-2');
       const outputDocument = createOutputDocument();
       const initialState = createTestState({
         transformations: [transformation1, transformation2],
-        outputDocuments: [outputDocument],
+        outputDocuments: [outputDocument]
       });
 
       const action = {
-        type: "REORDER_TRANSFORMATION" as const,
-        payload: { fromIndex: 0, toIndex: 1 },
+        type: 'REORDER_TRANSFORMATION' as const,
+        payload: { fromIndex: 0, toIndex: 1 }
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -269,14 +269,14 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("ADD_OUTPUT_DOCUMENT", () => {
-    it("should add a new output document to the state", () => {
+  describe('ADD_OUTPUT_DOCUMENT', () => {
+    it('should add a new output document to the state', () => {
       const initialState = createTestState();
       const newOutputDocument = createOutputDocument();
 
       const action = {
-        type: "ADD_OUTPUT_DOCUMENT" as const,
-        payload: newOutputDocument,
+        type: 'ADD_OUTPUT_DOCUMENT' as const,
+        payload: newOutputDocument
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -285,24 +285,24 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("UPDATE_OUTPUT_DOCUMENT", () => {
-    it("should update an existing output document", () => {
-      const existingOutputDocument = createOutputDocument("output-1", {
-        name: "Original Output",
-        content: "Original output content",
+  describe('UPDATE_OUTPUT_DOCUMENT', () => {
+    it('should update an existing output document', () => {
+      const existingOutputDocument = createOutputDocument('output-1', {
+        name: 'Original Output',
+        content: 'Original output content'
       });
       const initialState = createTestState({
-        outputDocuments: [existingOutputDocument],
+        outputDocuments: [existingOutputDocument]
       });
 
-      const updatedOutputDocument = createOutputDocument("output-1", {
-        name: "Updated Output",
-        content: "Updated output content",
-        transformationsApplied: ["transform-1", "transform-2"],
+      const updatedOutputDocument = createOutputDocument('output-1', {
+        name: 'Updated Output',
+        content: 'Updated output content',
+        transformationsApplied: ['transform-1', 'transform-2']
       });
       const action = {
-        type: "UPDATE_OUTPUT_DOCUMENT" as const,
-        payload: updatedOutputDocument,
+        type: 'UPDATE_OUTPUT_DOCUMENT' as const,
+        payload: updatedOutputDocument
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -311,20 +311,20 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("REMOVE_OUTPUT_DOCUMENT", () => {
-    it("should remove an output document by id", () => {
-      const outputDocument1 = createOutputDocument("output-1");
-      const outputDocument2 = createOutputDocument("output-2", {
-        sourceInputId: "id-2",
-        transformationsApplied: ["transform-2"],
+  describe('REMOVE_OUTPUT_DOCUMENT', () => {
+    it('should remove an output document by id', () => {
+      const outputDocument1 = createOutputDocument('output-1');
+      const outputDocument2 = createOutputDocument('output-2', {
+        sourceInputId: 'id-2',
+        transformationsApplied: ['transform-2']
       });
       const initialState = createTestState({
-        outputDocuments: [outputDocument1, outputDocument2],
+        outputDocuments: [outputDocument1, outputDocument2]
       });
 
       const action = {
-        type: "REMOVE_OUTPUT_DOCUMENT" as const,
-        payload: "output-1",
+        type: 'REMOVE_OUTPUT_DOCUMENT' as const,
+        payload: 'output-1'
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -333,20 +333,20 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("CLEAR_OUTPUT_DOCUMENTS", () => {
-    it("should clear all output documents", () => {
-      const outputDocument1 = createOutputDocument("output-1");
-      const outputDocument2 = createOutputDocument("output-2", {
-        sourceInputId: "id-2",
-        transformationsApplied: ["transform-2"],
+  describe('CLEAR_OUTPUT_DOCUMENTS', () => {
+    it('should clear all output documents', () => {
+      const outputDocument1 = createOutputDocument('output-1');
+      const outputDocument2 = createOutputDocument('output-2', {
+        sourceInputId: 'id-2',
+        transformationsApplied: ['transform-2']
       });
       const initialState = createTestState({
-        outputDocuments: [outputDocument1, outputDocument2],
+        outputDocuments: [outputDocument1, outputDocument2]
       });
 
       const action = {
-        type: "CLEAR_OUTPUT_DOCUMENTS" as const,
-        payload: undefined,
+        type: 'CLEAR_OUTPUT_DOCUMENTS' as const,
+        payload: undefined
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -354,18 +354,18 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("SET_STATE", () => {
-    it("should set partial state", () => {
+  describe('SET_STATE', () => {
+    it('should set partial state', () => {
       const initialState = createTestState();
-      const inputDocument = createInputDocument("id-1");
-      const transformation = createTransformation("transform-1");
+      const inputDocument = createInputDocument('id-1');
+      const transformation = createTransformation('transform-1');
 
       const action = {
-        type: "SET_STATE" as const,
+        type: 'SET_STATE' as const,
         payload: {
           inputDocuments: [inputDocument],
-          transformations: [transformation],
-        },
+          transformations: [transformation]
+        }
       };
       const newState = playgroundReducer(initialState, action);
 
@@ -377,16 +377,16 @@ describe("PlaygroundReducer", () => {
     });
   });
 
-  describe("Unknown action", () => {
-    it("should return the current state for unknown action types", () => {
+  describe('Unknown action', () => {
+    it('should return the current state for unknown action types', () => {
       const initialState = createTestState({
         inputDocuments: [
-          { id: "id-1", name: "Document 1", content: "Content 1" },
-        ],
+          { id: 'id-1', name: 'Document 1', content: 'Content 1' }
+        ]
       });
 
       // We need to cast this to any since it's an invalid action type
-      const action = { type: "UNKNOWN_ACTION", payload: {} } as any;
+      const action = { type: 'UNKNOWN_ACTION', payload: {} } as any;
       const newState = playgroundReducer(initialState, action);
 
       expect(newState).toEqual(initialState);

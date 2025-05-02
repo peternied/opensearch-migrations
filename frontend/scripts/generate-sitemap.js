@@ -22,7 +22,7 @@ async function buildComponentGraph() {
     const code = fs.readFileSync(file, 'utf-8');
     const ast = parser.parse(code, {
       sourceType: 'module',
-      plugins: ['typescript', 'jsx'],
+      plugins: ['typescript', 'jsx']
     });
 
     const thisComponent = path.basename(file, '.tsx');
@@ -31,14 +31,20 @@ async function buildComponentGraph() {
     traverse(ast, {
       ImportDeclaration(p) {
         const importPath = p.node.source.value;
-        if (importPath.includes('/src/components') || importPath.startsWith('@/components')) {
+        if (
+          importPath.includes('/src/components') ||
+          importPath.startsWith('@/components')
+        ) {
           for (const spec of p.node.specifiers) {
-            if (spec.type === 'ImportSpecifier' || spec.type === 'ImportDefaultSpecifier') {
+            if (
+              spec.type === 'ImportSpecifier' ||
+              spec.type === 'ImportDefaultSpecifier'
+            ) {
               graph[`MA:${thisComponent}`].push(`MA:${spec.local.name}`);
             }
           }
         }
-      },
+      }
     });
   }
 
@@ -67,7 +73,7 @@ async function buildSitemap(graph) {
     const code = fs.readFileSync(file, 'utf-8');
     const ast = parser.parse(code, {
       sourceType: 'module',
-      plugins: ['typescript', 'jsx'],
+      plugins: ['typescript', 'jsx']
     });
 
     const directImports = [];
@@ -77,17 +83,24 @@ async function buildSitemap(graph) {
         const importPath = p.node.source.value;
 
         for (const spec of p.node.specifiers) {
-          if (spec.type !== 'ImportSpecifier' && spec.type !== 'ImportDefaultSpecifier') continue;
+          if (
+            spec.type !== 'ImportSpecifier' &&
+            spec.type !== 'ImportDefaultSpecifier'
+          )
+            continue;
 
           const localName = spec.local.name;
 
-          if (importPath.includes('/src/components') || importPath.startsWith('@/components')) {
+          if (
+            importPath.includes('/src/components') ||
+            importPath.startsWith('@/components')
+          ) {
             directImports.push(`MA:${localName}`);
           } else if (importPath.startsWith('@cloudscape-design/components')) {
             directImports.push(`CS:${localName}`);
           }
         }
-      },
+      }
     });
 
     const allComponents = new Set(directImports);
@@ -97,11 +110,14 @@ async function buildSitemap(graph) {
       }
     }
 
-    let route = '/' + path.relative(APP_DIR, file)
-      .replace(/page\.tsx$/, '')
-      .replace(/\.tsx$/, '')
-      .replace(/\\/g, '/')
-      .replace(/\/index$/, '');
+    let route =
+      '/' +
+      path
+        .relative(APP_DIR, file)
+        .replace(/page\.tsx$/, '')
+        .replace(/\.tsx$/, '')
+        .replace(/\\/g, '/')
+        .replace(/\/index$/, '');
 
     if (route === '/page') route = '/';
 
@@ -134,5 +150,7 @@ async function buildSitemap(graph) {
   fs.writeFileSync(ROUTE_OUTPUT, JSON.stringify(routeMap, null, 2));
   fs.writeFileSync(COMPONENT_OUTPUT, JSON.stringify(componentMap, null, 2));
 
-  console.log('✅ Tagged sitemap.json and component-map.json written with transitive + cloudscape tracking');
+  console.log(
+    '✅ Tagged sitemap.json and component-map.json written with transitive + cloudscape tracking'
+  );
 })();

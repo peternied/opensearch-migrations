@@ -1,22 +1,22 @@
-import React from "react";
-import { renderHook, act } from "@testing-library/react";
-import { usePlaygroundActions } from "@/hooks/usePlaygroundActions";
-import { PlaygroundProvider } from "@/context/PlaygroundProvider";
-import { PlaygroundContext, initialState } from "@/context/PlaygroundContext";
+import React from 'react';
+import { renderHook, act } from '@testing-library/react';
+import { usePlaygroundActions } from '@/hooks/usePlaygroundActions';
+import { PlaygroundProvider } from '@/context/PlaygroundProvider';
+import { PlaygroundContext, initialState } from '@/context/PlaygroundContext';
 import {
   createInputDocument,
-  createTransformation,
-} from "@tests/__utils__/playgroundFactories";
+  createTransformation
+} from '@tests/__utils__/playgroundFactories';
 
-const TEST_UUID = "test-uuid";
-const TEST_DOC_NAME = "Test Document";
-const TEST_DOC_CONTENT = "Test content";
+const TEST_UUID = 'test-uuid';
+const TEST_DOC_NAME = 'Test Document';
+const TEST_DOC_CONTENT = 'Test content';
 
-jest.mock("uuid", () => ({
-  v4: jest.fn(() => TEST_UUID),
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => TEST_UUID)
 }));
 
-describe("usePlaygroundActions", () => {
+describe('usePlaygroundActions', () => {
   // Standard wrapper using the actual PlaygroundProvider
   const standardWrapper = ({ children }: { children: React.ReactNode }) => (
     <PlaygroundProvider>{children}</PlaygroundProvider>
@@ -29,7 +29,7 @@ describe("usePlaygroundActions", () => {
       <PlaygroundContext.Provider
         value={{
           state: initialState,
-          dispatch: mockDispatch,
+          dispatch: mockDispatch
         }}
       >
         {children}
@@ -42,10 +42,10 @@ describe("usePlaygroundActions", () => {
     jest.clearAllMocks();
   });
 
-  describe("addInputDocument", () => {
-    it("should create a new input document with the correct structure", () => {
+  describe('addInputDocument', () => {
+    it('should create a new input document with the correct structure', () => {
       const { result } = renderHook(() => usePlaygroundActions(), {
-        wrapper: standardWrapper,
+        wrapper: standardWrapper
       });
 
       let createdDoc;
@@ -59,11 +59,11 @@ describe("usePlaygroundActions", () => {
       expect(createdDoc).toEqual({
         id: TEST_UUID,
         name: TEST_DOC_NAME,
-        content: TEST_DOC_CONTENT,
+        content: TEST_DOC_CONTENT
       });
     });
 
-    it("should dispatch the ADD_INPUT_DOCUMENT action with correct payload", () => {
+    it('should dispatch the ADD_INPUT_DOCUMENT action with correct payload', () => {
       const { wrapper, mockDispatch } = createMockWrapper();
       const { result } = renderHook(() => usePlaygroundActions(), { wrapper });
 
@@ -78,16 +78,16 @@ describe("usePlaygroundActions", () => {
 
       expect(mockDispatch).toHaveBeenCalledTimes(1);
       expect(mockDispatch).toHaveBeenCalledWith({
-        type: "ADD_INPUT_DOCUMENT",
-        payload: testDocument,
+        type: 'ADD_INPUT_DOCUMENT',
+        payload: testDocument
       });
     });
   });
 
-  describe("addTransformation", () => {
-    it("should create a new transformation with the correct structure", () => {
+  describe('addTransformation', () => {
+    it('should create a new transformation with the correct structure', () => {
       const { result } = renderHook(() => usePlaygroundActions(), {
-        wrapper: standardWrapper,
+        wrapper: standardWrapper
       });
 
       let createdTransform;
@@ -101,11 +101,11 @@ describe("usePlaygroundActions", () => {
       expect(createdTransform).toEqual({
         id: TEST_UUID,
         name: TEST_DOC_NAME,
-        content: TEST_DOC_CONTENT,
+        content: TEST_DOC_CONTENT
       });
     });
 
-    it("should dispatch the ADD_TRANSFORMATION action with correct payload", () => {
+    it('should dispatch the ADD_TRANSFORMATION action with correct payload', () => {
       const { wrapper, mockDispatch } = createMockWrapper();
 
       const { result } = renderHook(() => usePlaygroundActions(), { wrapper });
@@ -121,22 +121,22 @@ describe("usePlaygroundActions", () => {
 
       expect(mockDispatch).toHaveBeenCalledTimes(1);
       expect(mockDispatch).toHaveBeenCalledWith({
-        type: "ADD_TRANSFORMATION",
-        payload: testTransformation,
+        type: 'ADD_TRANSFORMATION',
+        payload: testTransformation
       });
     });
   });
 
-  describe("reorderTransformation", () => {
-    it("should dispatch reorder action with correct payload", () => {
+  describe('reorderTransformation', () => {
+    it('should dispatch reorder action with correct payload', () => {
       const { result } = renderHook(() => usePlaygroundActions(), {
-        wrapper: standardWrapper,
+        wrapper: standardWrapper
       });
 
       // Add two transformations first
       act(() => {
-        result.current.addTransformation("Transform 1", "Script 1");
-        result.current.addTransformation("Transform 2", "Script 2");
+        result.current.addTransformation('Transform 1', 'Script 1');
+        result.current.addTransformation('Transform 2', 'Script 2');
       });
 
       // Now reorder them
@@ -149,14 +149,14 @@ describe("usePlaygroundActions", () => {
       expect(result.current.reorderTransformation).toBeInstanceOf(Function);
     });
 
-    it("should dispatch the correct sequence of actions when adding transformations and reordering", () => {
+    it('should dispatch the correct sequence of actions when adding transformations and reordering', () => {
       const { wrapper, mockDispatch } = createMockWrapper();
       const { result } = renderHook(() => usePlaygroundActions(), { wrapper });
 
       const testTransformations = [
-        createTransformation(TEST_UUID, { name: "Transform 1" }),
-        createTransformation(TEST_UUID, { name: "Transform 2" }),
-        createTransformation(TEST_UUID),
+        createTransformation(TEST_UUID, { name: 'Transform 1' }),
+        createTransformation(TEST_UUID, { name: 'Transform 2' }),
+        createTransformation(TEST_UUID)
       ];
 
       act(() => {
@@ -179,18 +179,18 @@ describe("usePlaygroundActions", () => {
       expect(mockDispatch).toHaveBeenCalledTimes(3);
 
       expect(mockDispatch).toHaveBeenNthCalledWith(1, {
-        type: "ADD_TRANSFORMATION",
-        payload: expect.objectContaining(testTransformations[0]),
+        type: 'ADD_TRANSFORMATION',
+        payload: expect.objectContaining(testTransformations[0])
       });
 
       expect(mockDispatch).toHaveBeenNthCalledWith(2, {
-        type: "ADD_TRANSFORMATION",
-        payload: expect.objectContaining(testTransformations[1]),
+        type: 'ADD_TRANSFORMATION',
+        payload: expect.objectContaining(testTransformations[1])
       });
 
       expect(mockDispatch).toHaveBeenNthCalledWith(3, {
-        type: "REORDER_TRANSFORMATION",
-        payload: { fromIndex: 0, toIndex: 1 },
+        type: 'REORDER_TRANSFORMATION',
+        payload: { fromIndex: 0, toIndex: 1 }
       });
     });
   });

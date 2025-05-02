@@ -37,11 +37,11 @@ Workflows are defined in `config/workflowConfig.ts`. Each workflow has a type an
 export const CUSTOM_WORKFLOW: WorkflowConfig = {
   type: 'custom',
   steps: [
-    { 
-      id: 'custom-step-1', 
-      title: 'Custom Step 1', 
-      description: 'Description of custom step 1.' 
-    },
+    {
+      id: 'custom-step-1',
+      title: 'Custom Step 1',
+      description: 'Description of custom step 1.'
+    }
     // Add more steps as needed
   ]
 };
@@ -50,7 +50,7 @@ export const CUSTOM_WORKFLOW: WorkflowConfig = {
 export const WORKFLOW_CONFIGS: Record<string, WorkflowConfig> = {
   standard: STANDARD_WORKFLOW,
   lite: LITE_WORKFLOW,
-  custom: CUSTOM_WORKFLOW,
+  custom: CUSTOM_WORKFLOW
 };
 ```
 
@@ -66,9 +66,12 @@ To add a new step component:
 
 ```typescript
 // In StepRenderer.tsx
-const STEP_COMPONENTS: Record<string, React.ComponentType<WorkflowStepComponentProps>> = {
+const STEP_COMPONENTS: Record<
+  string,
+  React.ComponentType<WorkflowStepComponentProps>
+> = {
   'metadata-migration': MetadataMigrationStep,
-  'custom-step-1': CustomStep1Component,
+  'custom-step-1': CustomStep1Component
   // Add more step components as they are created
 };
 ```
@@ -76,6 +79,7 @@ const STEP_COMPONENTS: Record<string, React.ComponentType<WorkflowStepComponentP
 ### Workflow State Management
 
 The `useWorkflow` hook manages the workflow state, including:
+
 - Loading task details
 - Tracking the active step
 - Handling step transitions
@@ -98,6 +102,7 @@ The `useWorkflow` hook manages the workflow state, including:
 ### Customizing Step Behavior
 
 Each step component can:
+
 - Implement custom validation logic
 - Store and manage step-specific state
 - Perform step-specific actions
@@ -111,19 +116,19 @@ import { useWorkflow } from './hooks/useWorkflow';
 
 function MyComponent({ taskId }) {
   const [workflowState, workflowActions] = useWorkflow(taskId);
-  
+
   // Use workflowState to access the current state
   const { steps, activeStepIndex } = workflowState;
-  
+
   // Use workflowActions to manipulate the workflow
   const handleComplete = () => {
     workflowActions.completeCurrentStep();
   };
-  
+
   // Render workflow components
   return (
     <div>
-      <WorkflowProgress 
+      <WorkflowProgress
         steps={steps}
         activeStepIndex={activeStepIndex}
         onStepChange={workflowActions.goToStep}
@@ -132,3 +137,4 @@ function MyComponent({ taskId }) {
     </div>
   );
 }
+```

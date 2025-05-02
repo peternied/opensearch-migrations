@@ -25,7 +25,7 @@ export default function UXInspectorPage() {
     async function loadData() {
       const [routeRes, compRes] = await Promise.all([
         fetch('/sitemap.json'),
-        fetch('/component-map.json'),
+        fetch('/component-map.json')
       ]);
 
       setRouteMap(await routeRes.json());

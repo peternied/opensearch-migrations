@@ -30,7 +30,7 @@ export type SessionWorkflow = 'freeform' | 'backfill' | 'replay' | 'full';
 export function workflowIcon(workflow: SessionWorkflow): IconProps.Name {
   switch (workflow) {
     case 'backfill':
-      return 'upload'
+      return 'upload';
     case 'freeform':
       return 'star';
     case 'full':
@@ -40,7 +40,7 @@ export function workflowIcon(workflow: SessionWorkflow): IconProps.Name {
   }
 }
 
-export type SessionCompletion = 'success' | 'aborted' 
+export type SessionCompletion = 'success' | 'aborted';
 
 export interface MigrationSession {
   snapshot: Status;

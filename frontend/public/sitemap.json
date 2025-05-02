@@ -109,19 +109,25 @@
   {
     "route": "/tasks/gather/",
     "components": [
+      "CS:Box",
       "CS:Button",
       "CS:Container",
+      "CS:FormField",
       "CS:Header",
+      "CS:Input",
       "CS:SpaceBetween",
+      "CS:StatusIndicator",
       "CS:Table"
     ]
   },
   {
     "route": "/tasks/manage/",
     "components": [
+      "CS:Box",
       "CS:Container",
       "CS:Header",
-      "CS:SpaceBetween"
+      "CS:SpaceBetween",
+      "MA:EstimateCompletionTime"
     ]
   },
   {
@@ -129,6 +135,7 @@
     "components": [
       "CS:Button",
       "CS:SpaceBetween",
+      "CS:StatusIndicator",
       "CS:Table"
     ]
   },
@@ -149,6 +156,7 @@
       "CS:Button",
       "CS:Checkbox",
       "CS:FormField",
+      "CS:Input",
       "CS:SpaceBetween"
     ]
   },

@@ -14,12 +14,8 @@
     "jsx": "preserve",
     "incremental": true,
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@tests/*": [
-        "./__tests__/*"
-      ]
+      "@/*": ["./src/*"],
+      "@tests/*": ["./__tests__/*"]
     },
     "plugins": [
       {
@@ -32,7 +28,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    "build/site/types/**/*.ts"
-, "scripts/generate-sitemap.js"  ],
+    "build/site/types/**/*.ts",
+    "scripts/generate-sitemap.js"
+  ],
   "exclude": ["node_modules"]
 }

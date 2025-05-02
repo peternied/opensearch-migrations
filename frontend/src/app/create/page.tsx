@@ -32,25 +32,25 @@ const WORKFLOW_OPTIONS: WorkflowOption[] = [
     value: 'backfill',
     label: 'Backfill',
     description:
-      'Transfer existing historical data to the new system without impacting live traffic.',
+      'Transfer existing historical data to the new system without impacting live traffic.'
   },
   {
     value: 'replay',
     label: 'Traffic Capture/Replay',
     description:
-      'Capture live traffic and replay it in the new environment for testing and validation.',
+      'Capture live traffic and replay it in the new environment for testing and validation.'
   },
   {
     value: 'full',
     label: 'Combined Capture + Replay',
     description:
-      'Perform backfill and then begin traffic capture and replay in a single workflow.',
+      'Perform backfill and then begin traffic capture and replay in a single workflow.'
   },
   {
     value: 'freeform',
     label: 'Freeform Exploration',
     description:
-      'Explore the Migration Assistant website without committing to a specific workflow.',
+      'Explore the Migration Assistant website without committing to a specific workflow.'
   }
 ];
 

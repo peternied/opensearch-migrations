@@ -4,9 +4,9 @@ import Button from '@cloudscape-design/components/button';
 import FormField from '@cloudscape-design/components/form-field';
 import Checkbox from '@cloudscape-design/components/checkbox';
 import { WorkflowStepComponentProps } from '../../types';
+import Input from '@cloudscape-design/components/input';
 
 export function MetadataMigrationStep({
-  step,
   stepData,
   onUpdate,
   onComplete,
@@ -15,15 +15,15 @@ export function MetadataMigrationStep({
   const [migrationOptions, setMigrationOptions] = useState({
     preserveOriginalMetadata: stepData?.preserveOriginalMetadata || true,
     migratePermissions: stepData?.migratePermissions || true,
-    migrateAliases: stepData?.migrateAliases || true,
+    migrateAliases: stepData?.migrateAliases || true
   });
 
   const handleOptionChange = (option: string, checked: boolean) => {
     const updatedOptions = {
       ...migrationOptions,
-      [option]: checked,
+      [option]: checked
     };
-    
+
     setMigrationOptions(updatedOptions);
     onUpdate(updatedOptions);
   };
@@ -31,7 +31,7 @@ export function MetadataMigrationStep({
   const handleStartMigration = () => {
     // In a real app, this would trigger the actual migration process
     console.log('Starting metadata migration with options:', migrationOptions);
-    
+
     // Simulate a migration process
     setTimeout(() => {
       console.log('Metadata migration completed');
@@ -48,30 +48,38 @@ export function MetadataMigrationStep({
       <FormField label="Migration Options">
         <SpaceBetween size="s">
           <Checkbox
-            checked={migrationOptions.preserveOriginalMetadata}
-            onChange={({ detail }) => 
-              handleOptionChange('preserveOriginalMetadata', detail.checked)
-            }
-          >
-            Preserve original metadata
-          </Checkbox>
-          
-          <Checkbox
-            checked={migrationOptions.migratePermissions}
-            onChange={({ detail }) => 
-              handleOptionChange('migratePermissions', detail.checked)
-            }
-          >
-            Migrate security permissions
-          </Checkbox>
-          
-          <Checkbox
             checked={migrationOptions.migrateAliases}
-            onChange={({ detail }) => 
+            onChange={({ detail }) =>
               handleOptionChange('migrateAliases', detail.checked)
             }
           >
             Migrate index aliases
+          </Checkbox>
+          <Checkbox
+            checked={migrationOptions.migrateAliases}
+            onChange={({ detail }) =>
+              handleOptionChange('migrateAliases', detail.checked)
+            }
+          >
+            Apply (3) transformations
+          </Checkbox>
+          <Checkbox
+            checked={migrationOptions.preserveOriginalMetadata}
+            onChange={({ detail }) =>
+              handleOptionChange('preserveOriginalMetadata', detail.checked)
+            }
+          >
+            Union types into index with same name
+          </Checkbox>
+
+          <Checkbox
+            checked={migrationOptions.migratePermissions}
+            onChange={({ detail }) =>
+              handleOptionChange('migratePermissions', detail.checked)
+            }
+          >
+            Update shard count
+            <Input inputMode="numeric" value={'5'}></Input>
           </Checkbox>
         </SpaceBetween>
       </FormField>

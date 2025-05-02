@@ -9,20 +9,20 @@ import { TaskItem } from './types';
 
 // Mock data for associated items - in a real app, this would come from the API
 const associatedItems: TaskItem[] = [
-  { id: '1', name: 'Item 1', status: 'Pending' },
-  { id: '2', name: 'Item 2', status: 'Migrated' },
-  { id: '3', name: 'Item 3', status: 'Error' },
+  { id: '1', name: 'Index a', status: 'Pending' },
+  { id: '2', name: 'Index b', status: 'Migrated' },
+  { id: '3', name: 'Index c', status: 'Error' }
 ];
 
 export default function TaskWorkflowPage() {
   // Get taskId from URL params
   const params = useParams();
-  const taskId = params.taskId as string || '1'; // Default to '1' if not provided
+  const taskId = (params.taskId as string) || '1'; // Default to '1' if not provided
   const router = useRouter();
 
   // Use our custom workflow hook to manage workflow state
   const [workflowState, workflowActions] = useWorkflow(taskId);
-  
+
   // Event handlers
   const handleEditTransformations = () => {
     alert('Edit transformations clicked!');
@@ -54,13 +54,13 @@ export default function TaskWorkflowPage() {
 
       <Container>
         <SpaceBetween size="l">
-          <TaskDetails 
-            taskId={taskId} 
-            items={associatedItems} 
-            onEditTransformations={handleEditTransformations} 
+          <TaskDetails
+            taskId={taskId}
+            items={associatedItems}
+            onEditTransformations={handleEditTransformations}
           />
 
-          <WorkflowProgress 
+          <WorkflowProgress
             taskId={taskId}
             steps={workflowState.steps}
             activeStepIndex={workflowState.activeStepIndex}

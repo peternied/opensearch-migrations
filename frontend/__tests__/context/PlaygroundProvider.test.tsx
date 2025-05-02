@@ -1,11 +1,11 @@
-import React from "react";
-import { render, act } from "@testing-library/react";
-import { usePlayground } from "@/context/PlaygroundContext";
-import { PlaygroundProvider } from "@/context/PlaygroundProvider";
+import React from 'react';
+import { render, act } from '@testing-library/react';
+import { usePlayground } from '@/context/PlaygroundContext';
+import { PlaygroundProvider } from '@/context/PlaygroundProvider';
 import {
   createInputDocument,
-  createTransformation,
-} from "@tests/__utils__/playgroundFactories";
+  createTransformation
+} from '@tests/__utils__/playgroundFactories';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -20,14 +20,14 @@ const localStorageMock = (() => {
     }),
     removeItem: jest.fn((key: string) => {
       delete store[key];
-    }),
+    })
   };
 })();
 
-Object.defineProperty(window, "localStorage", { value: localStorageMock });
+Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 // Storage key used in PlaygroundContext
-const STORAGE_KEY = "transformation-playground-state";
+const STORAGE_KEY = 'transformation-playground-state';
 
 // Test component that uses the context
 const TestConsumer: React.FC<{
@@ -44,7 +44,7 @@ const TestConsumer: React.FC<{
   return null;
 };
 
-describe("PlaygroundProvider", () => {
+describe('PlaygroundProvider', () => {
   // Helper function to render the provider and return necessary objects
   function renderProvider() {
     const onStateReceived = jest.fn();
@@ -67,7 +67,7 @@ describe("PlaygroundProvider", () => {
       onStateReceived,
       onDispatchReceived,
       dispatchFn,
-      ...renderResult,
+      ...renderResult
     };
   }
 
@@ -77,31 +77,31 @@ describe("PlaygroundProvider", () => {
     jest.clearAllMocks();
   });
 
-  it("should provide initial state when localStorage is empty", () => {
+  it('should provide initial state when localStorage is empty', () => {
     const { onStateReceived, onDispatchReceived } = renderProvider();
 
     expect(onStateReceived).toHaveBeenCalledWith({
       inputDocuments: [],
       transformations: [],
-      outputDocuments: [],
+      outputDocuments: []
     });
     expect(onDispatchReceived).toHaveBeenCalled();
     expect(localStorageMock.getItem).toHaveBeenCalledWith(STORAGE_KEY);
   });
 
-  it("should load state from localStorage on mount", () => {
+  it('should load state from localStorage on mount', () => {
     // Setup localStorage with some initial state
-    const inputDoc = createInputDocument("doc-1", {
-      name: "Document 1",
-      content: "Content 1",
+    const inputDoc = createInputDocument('doc-1', {
+      name: 'Document 1',
+      content: 'Content 1'
     });
-    const transformation = createTransformation("transform-1", {
-      name: "Transformation 1",
-      content: "Script 1",
+    const transformation = createTransformation('transform-1', {
+      name: 'Transformation 1',
+      content: 'Script 1'
     });
     const savedState = {
       inputDocuments: [inputDoc],
-      transformations: [transformation],
+      transformations: [transformation]
     };
     localStorageMock.setItem(STORAGE_KEY, JSON.stringify(savedState));
 
@@ -112,23 +112,23 @@ describe("PlaygroundProvider", () => {
     expect(onStateReceived).toHaveBeenLastCalledWith({
       inputDocuments: savedState.inputDocuments,
       transformations: savedState.transformations,
-      outputDocuments: [],
+      outputDocuments: []
     });
   });
 
-  it("should save state to localStorage when it changes", () => {
+  it('should save state to localStorage when it changes', () => {
     const { dispatchFn } = renderProvider();
 
     // Add an input document
-    const newDocument = createInputDocument("doc-1", {
-      name: "Document 1",
-      content: "Content 1",
+    const newDocument = createInputDocument('doc-1', {
+      name: 'Document 1',
+      content: 'Content 1'
     });
 
     act(() => {
       dispatchFn({
-        type: "ADD_INPUT_DOCUMENT" as const,
-        payload: newDocument,
+        type: 'ADD_INPUT_DOCUMENT' as const,
+        payload: newDocument
       });
     });
 
@@ -137,20 +137,20 @@ describe("PlaygroundProvider", () => {
       STORAGE_KEY,
       JSON.stringify({
         inputDocuments: [newDocument],
-        transformations: [],
+        transformations: []
       })
     );
 
     // Add a transformation
-    const newTransformation = createTransformation("transform-1", {
-      name: "Transformation 1",
-      content: "Script 1",
+    const newTransformation = createTransformation('transform-1', {
+      name: 'Transformation 1',
+      content: 'Script 1'
     });
 
     act(() => {
       dispatchFn({
-        type: "ADD_TRANSFORMATION" as const,
-        payload: newTransformation,
+        type: 'ADD_TRANSFORMATION' as const,
+        payload: newTransformation
       });
     });
 
@@ -159,7 +159,7 @@ describe("PlaygroundProvider", () => {
       STORAGE_KEY,
       JSON.stringify({
         inputDocuments: [newDocument],
-        transformations: [newTransformation],
+        transformations: [newTransformation]
       })
     );
   });

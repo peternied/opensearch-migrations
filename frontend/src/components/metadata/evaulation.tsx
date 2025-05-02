@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Link from '@cloudscape-design/components/link';
@@ -32,10 +32,14 @@ const allAliases: MigrationEntity[] = [{ name: 'logs-all', status: 'success' }];
 
 export interface MetadataProps {
   session: MigrationSession;
-} 
-export default function MetadataEvaluationAndMigration({ session }: MetadataProps) {
+}
+export default function MetadataEvaluationAndMigration({
+  session
+}: MetadataProps) {
   const [mode, setMode] = useState<'evaluation' | 'migration'>('evaluation');
-  const [status, setStatus] = useState<'idle' | 'running' | 'completed'>('completed');
+  const [status, setStatus] = useState<'idle' | 'running' | 'completed'>(
+    'completed'
+  );
   const [indexes, setIndexes] = useState<MigrationEntity[]>([]);
   const [indexTemplates, setIndexTemplates] = useState<MigrationEntity[]>([]);
   const [componentTemplates, setComponentTemplates] = useState<
@@ -44,14 +48,16 @@ export default function MetadataEvaluationAndMigration({ session }: MetadataProp
   const [aliases, setAliases] = useState<MigrationEntity[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
 
-  const validateSession = () => {
+  const validateSession = useCallback(() => {
     const validationErrors: string[] = [];
     console.log(`*** session info: ${JSON.stringify(session)}`);
     if (session?.snapshot !== 'success') {
-      validationErrors.push('Snapshot must be defined before running evaluation.');
+      validationErrors.push(
+        'Snapshot must be defined before running evaluation.'
+      );
     }
     setErrors(validationErrors);
-  };
+  }, [session, setErrors]);
 
   const loadItems = () => {
     setIndexes([]);
@@ -68,7 +74,9 @@ export default function MetadataEvaluationAndMigration({ session }: MetadataProp
   };
 
   const runProcess = () => {
-    if (errors) { return; }
+    if (errors) {
+      return;
+    }
     setStatus('running');
     loadItems();
   };
@@ -81,7 +89,7 @@ export default function MetadataEvaluationAndMigration({ session }: MetadataProp
 
   useEffect(() => {
     validateSession();
-  }, []);
+  }, [validateSession]);
 
   const renderStatus = () => {
     if (errors.length > 0) {
@@ -129,7 +137,10 @@ export default function MetadataEvaluationAndMigration({ session }: MetadataProp
       />
 
       <SpaceBetween size="s" direction="horizontal">
-        <Button onClick={runProcess} disabled={status === 'running' || errors.length > 0}>
+        <Button
+          onClick={runProcess}
+          disabled={status === 'running' || errors.length > 0}
+        >
           Rerun {mode === 'evaluation' ? 'Evaluation' : 'Migration'}
         </Button>
         {mode === 'evaluation' && (
@@ -162,7 +173,9 @@ export default function MetadataEvaluationAndMigration({ session }: MetadataProp
         <>
           <Spinner /> Loading results...
         </>
-      ) : (<></>)}
+      ) : (
+        <></>
+      )}
     </SpaceBetween>
   );
 }

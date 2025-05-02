@@ -37,6 +37,8 @@
     "/developer/ux-inspector/",
     "/loading/",
     "/session/",
+    "/tasks/gather/",
+    "/tasks/manage/",
     "/tasks/workflow/components/TaskDetails",
     "/tasks/workflow/components/WorkflowProgress"
   ],
@@ -63,6 +65,7 @@
   ],
   "CS:FormField": [
     "/create/",
+    "/tasks/gather/",
     "/tasks/workflow/components/steps/MetadataMigrationStep"
   ],
   "CS:Icon": [
@@ -70,7 +73,9 @@
     "/dashboard/"
   ],
   "CS:Input": [
-    "/create/"
+    "/create/",
+    "/tasks/gather/",
+    "/tasks/workflow/components/steps/MetadataMigrationStep"
   ],
   "CS:Spinner": [
     "/create/",
@@ -86,7 +91,9 @@
     "/session/"
   ],
   "CS:StatusIndicator": [
-    "/dashboard/"
+    "/dashboard/",
+    "/tasks/gather/",
+    "/tasks/manage/task-table"
   ],
   "CS:Table": [
     "/dashboard/",
@@ -97,7 +104,8 @@
     "/dashboard/"
   ],
   "MA:EstimateCompletionTime": [
-    "/dashboard/"
+    "/dashboard/",
+    "/tasks/manage/"
   ],
   "MA:formatTimeDuration": [
     "/dashboard/"

@@ -21,7 +21,7 @@ export default function MigrationNavItems() {
           info: (
             <DemoWrapper>
               <Link href="/loading">Loading page</Link>
-              <Link href='/developer/ux-inspector'>UX Inspector</Link>
+              <Link href="/developer/ux-inspector">UX Inspector</Link>
             </DemoWrapper>
           )
         },

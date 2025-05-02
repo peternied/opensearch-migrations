@@ -1,16 +1,16 @@
-"use client";
-import React, { useReducer, useEffect, useMemo } from "react";
+'use client';
+import React, { useReducer, useEffect, useMemo } from 'react';
 import {
   playgroundReducer,
   initialState,
   STORAGE_KEY,
-  PlaygroundContext,
-} from "./PlaygroundContext";
+  PlaygroundContext
+} from './PlaygroundContext';
 
 // Provider to persist/load from localStorage, for input documents and transformations
 
 export const PlaygroundProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
+  children
 }) => {
   const [state, dispatch] = useReducer(playgroundReducer, initialState);
 
@@ -21,15 +21,15 @@ export const PlaygroundProvider: React.FC<{ children: React.ReactNode }> = ({
       if (savedState) {
         const parsedState = JSON.parse(savedState);
         dispatch({
-          type: "SET_STATE",
+          type: 'SET_STATE',
           payload: {
             inputDocuments: parsedState.inputDocuments ?? [],
-            transformations: parsedState.transformations ?? [],
-          },
+            transformations: parsedState.transformations ?? []
+          }
         });
       }
     } catch (error) {
-      console.error("Failed to load state from localStorage:", error);
+      console.error('Failed to load state from localStorage:', error);
     }
   }, []);
 
@@ -38,11 +38,11 @@ export const PlaygroundProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const stateToSave = {
         inputDocuments: state.inputDocuments,
-        transformations: state.transformations,
+        transformations: state.transformations
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (error) {
-      console.error("Failed to save state to localStorage:", error);
+      console.error('Failed to save state to localStorage:', error);
     }
   }, [state.inputDocuments, state.transformations]);
 

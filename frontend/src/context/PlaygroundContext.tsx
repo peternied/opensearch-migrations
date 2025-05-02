@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext } from 'react';
 
 export interface InputDocument {
   id: string;
@@ -35,12 +35,12 @@ export const initialState: PlaygroundState = {
 };
 
 export type ActionType =
-  | { type: "ADD_INPUT_DOCUMENT"; payload: InputDocument }
-  | { type: "UPDATE_INPUT_DOCUMENT"; payload: InputDocument }
-  | { type: "REMOVE_INPUT_DOCUMENT"; payload: string }
-  | { type: "ADD_TRANSFORMATION"; payload: Transformation }
-  | { type: "UPDATE_TRANSFORMATION"; payload: Transformation }
-  | { type: "REMOVE_TRANSFORMATION"; payload: string }
+  | { type: 'ADD_INPUT_DOCUMENT'; payload: InputDocument }
+  | { type: 'UPDATE_INPUT_DOCUMENT'; payload: InputDocument }
+  | { type: 'REMOVE_INPUT_DOCUMENT'; payload: string }
+  | { type: 'ADD_TRANSFORMATION'; payload: Transformation }
+  | { type: 'UPDATE_TRANSFORMATION'; payload: Transformation }
+  | { type: 'REMOVE_TRANSFORMATION'; payload: string }
   | {
       type: 'REORDER_TRANSFORMATION';
       payload: { fromIndex: number; toIndex: number };
@@ -154,7 +154,7 @@ export const PlaygroundContext = createContext<
 >(undefined);
 
 // This is used to identify this app's state in local storage
-export const STORAGE_KEY = "transformation-playground-state";
+export const STORAGE_KEY = 'transformation-playground-state';
 
 // Mock dispatch function that does nothing - used when context is accessed outside of provider
 const mockDispatch: React.Dispatch<ActionType> = () => {

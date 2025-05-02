@@ -7,16 +7,15 @@ import { WorkflowProgressProps } from '../types';
 import { StepRenderer } from './StepRenderer';
 import { useState } from 'react';
 
-export function WorkflowProgress({ 
-  taskId, 
-  steps, 
-  activeStepIndex, 
-  onStepChange, 
-  onComplete 
+export function WorkflowProgress({
+  steps,
+  activeStepIndex,
+  onStepChange,
+  onComplete
 }: WorkflowProgressProps) {
   const router = useRouter();
   // Store step data for each step
-  const [stepsData, setStepsData] = useState<Record<string, any>>({});
+  const [stepsData, setStepsData] = useState<Record<string, unknown>>({});
 
   const handleNavigateToTasks = () => {
     router.push('/tasks/manage');
@@ -28,8 +27,8 @@ export function WorkflowProgress({
     }
   };
 
-  const handleStepDataUpdate = (stepId: string, data: any) => {
-    setStepsData(prev => ({
+  const handleStepDataUpdate = (stepId: string, data: unknown) => {
+    setStepsData((prev) => ({
       ...prev,
       [stepId]: data
     }));
@@ -46,7 +45,7 @@ export function WorkflowProgress({
   };
 
   // Convert steps to wizard format
-  const wizardSteps = steps.map(step => ({
+  const wizardSteps = steps.map((step) => ({
     title: step.title,
     info: step.description,
     content: (
@@ -58,7 +57,7 @@ export function WorkflowProgress({
         isActive={steps.indexOf(step) === activeStepIndex}
       />
     ),
-    isOptional: step.isOptional,
+    isOptional: step.isOptional
   }));
 
   return (
@@ -66,12 +65,13 @@ export function WorkflowProgress({
       <Box variant="h2">Workflow Progress</Box>
       <Wizard
         i18nStrings={{
-          stepNumberLabel: stepNumber => `Step ${stepNumber}`,
-          collapsedStepsLabel: (stepNumber, stepsCount) => `Step ${stepNumber} of ${stepsCount}`,
+          stepNumberLabel: (stepNumber) => `Step ${stepNumber}`,
+          collapsedStepsLabel: (stepNumber, stepsCount) =>
+            `Step ${stepNumber} of ${stepsCount}`,
           cancelButton: '',
           previousButton: 'Previous',
           nextButton: 'Next',
-          submitButton: 'Finish',
+          submitButton: 'Finish'
         }}
         activeStepIndex={activeStepIndex}
         onNavigate={({ detail }) => onStepChange(detail.requestedStepIndex)}

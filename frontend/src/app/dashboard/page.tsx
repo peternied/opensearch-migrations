@@ -7,7 +7,9 @@ import Button from '@cloudscape-design/components/button';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import Table, { TableProps } from '@cloudscape-design/components/table';
 import Link from 'next/link';
-import EstimateCompletionTime, { formatTimeDuration } from '@/components/time/eta';
+import EstimateCompletionTime, {
+  formatTimeDuration
+} from '@/components/time/eta';
 import {
   MigrationSession,
   useMigrationSessions,
@@ -54,7 +56,7 @@ function nextState(session: MigrationSession, status: StatusType): string {
   if (session.replay === status) {
     return 'replay';
   }
-  return 'unknown'
+  return 'unknown';
 }
 
 function isOngoing(session: MigrationSession): boolean {
@@ -66,17 +68,40 @@ function isCompleted(session: MigrationSession): boolean {
 }
 
 function statusMessage(session: MigrationSession): React.ReactNode {
-  if (overallState(session) === 'in-progress') return <EstimateCompletionTime etaSeconds={session.etaSeconds || Infinity} variant='inline' />;
-  if (overallState(session) === 'pending') return `Waiting for input on ${nextState(session, 'pending')}`;
-  if (overallState(session) === 'error') return `Error in step ${nextState(session, 'error')}`;
+  if (overallState(session) === 'in-progress')
+    return (
+      <EstimateCompletionTime
+        etaSeconds={session.etaSeconds || Infinity}
+        variant="inline"
+      />
+    );
+  if (overallState(session) === 'pending')
+    return `Waiting for input on ${nextState(session, 'pending')}`;
+  if (overallState(session) === 'error')
+    return `Error in step ${nextState(session, 'error')}`;
   return '';
 }
 
 function actionLabel(session: MigrationSession): JSX.Element {
   const state = overallState(session);
-  if (state === 'in-progress') return <Link href={`/session?id=${session.id}`}><Button>Monitor</Button></Link>;
-  if (state === 'pending') return <Link href={`/session?id=${session.id}`}><Button>Continue</Button></Link>;
-  if (state === 'error') return <Link href={`/session?id=${session.id}`}><Button>Fix</Button></Link>;
+  if (state === 'in-progress')
+    return (
+      <Link href={`/session?id=${session.id}`}>
+        <Button>Monitor</Button>
+      </Link>
+    );
+  if (state === 'pending')
+    return (
+      <Link href={`/session?id=${session.id}`}>
+        <Button>Continue</Button>
+      </Link>
+    );
+  if (state === 'error')
+    return (
+      <Link href={`/session?id=${session.id}`}>
+        <Button>Fix</Button>
+      </Link>
+    );
   return <span>N/A</span>;
 }
 
@@ -100,11 +125,7 @@ export default function MigrationDashboardPage() {
 
   const completed = useCollection(sessions.filter(isCompleted), {
     filtering: {
-      empty: (
-        <Box>
-          There are no completed sessions.{' '}
-        </Box>
-      ),
+      empty: <Box>There are no completed sessions. </Box>,
       noMatch: <Box>No sessions with filter criteria.</Box>
     },
     sorting: {}
@@ -114,13 +135,26 @@ export default function MigrationDashboardPage() {
     {
       id: 'name',
       header: 'Session Name',
-      cell: (item) => <><Icon size='small' name={workflowIcon(item.workflow)} alt={item.workflow}/> <Link href={`/session?id=${item.id}`}>{item.name}</Link></>,
-      sortingField: 'name',
+      cell: (item) => (
+        <>
+          <Icon
+            size="small"
+            name={workflowIcon(item.workflow)}
+            alt={item.workflow}
+          />{' '}
+          <Link href={`/session?id=${item.id}`}>{item.name}</Link>
+        </>
+      ),
+      sortingField: 'name'
     },
     {
       id: 'status',
       header: 'Status',
-      cell: (item) => <StatusIndicator type={overallState(item)}>{overallState(item)}</StatusIndicator>
+      cell: (item) => (
+        <StatusIndicator type={overallState(item)}>
+          {overallState(item)}
+        </StatusIndicator>
+      )
     },
     {
       id: 'message',
@@ -138,19 +172,27 @@ export default function MigrationDashboardPage() {
     {
       id: 'name',
       header: 'Session Name',
-      cell: (item) => <>
-        <Icon size='small' name={workflowIcon(item.workflow)} alt={item.workflow}/>
-        <Link href={`/session?id=${item.id}`}>{item.name}</Link>
-      </>,
-      sortingField: 'name',
+      cell: (item) => (
+        <>
+          <Icon
+            size="small"
+            name={workflowIcon(item.workflow)}
+            alt={item.workflow}
+          />
+          <Link href={`/session?id=${item.id}`}>{item.name}</Link>
+        </>
+      ),
+      sortingField: 'name'
     },
     {
       id: 'created',
       header: 'Create Date',
       cell: (item) => (
-        <span suppressHydrationWarning>{new Date(item.createdAt).toLocaleDateString()}</span>
+        <span suppressHydrationWarning>
+          {new Date(item.createdAt).toLocaleDateString()}
+        </span>
       ),
-      sortingField: 'createdAt',
+      sortingField: 'createdAt'
     },
     {
       id: 'status',
@@ -160,13 +202,15 @@ export default function MigrationDashboardPage() {
     {
       id: 'time',
       header: 'Time',
-      cell: (item) =>  item.completedAt && formatTimeDuration(item.completedAt - item.createdAt)
+      cell: (item) =>
+        item.completedAt &&
+        formatTimeDuration(item.completedAt - item.createdAt)
     },
     {
       id: 'size',
       header: 'Migration Size',
       cell: (item) =>
-        item.sizeBytes ? `${(item.sizeBytes / (1024 ** 4)).toFixed(1)} TB` : 'N/A'
+        item.sizeBytes ? `${(item.sizeBytes / 1024 ** 4).toFixed(1)} TB` : 'N/A'
     }
   ];
 

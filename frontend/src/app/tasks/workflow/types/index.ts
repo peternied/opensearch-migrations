@@ -1,5 +1,3 @@
-import { ReactNode } from 'react';
-
 // Task related types
 export interface TaskItem {
   id: string;
@@ -19,14 +17,14 @@ export interface WorkflowStep {
 
 export interface WorkflowStepComponentProps {
   step: WorkflowStep;
-  stepData: any;
-  onUpdate: (data: any) => void;
+  stepData: unknown;
+  onUpdate: (data: unknown) => void;
   onComplete: () => void;
   isActive: boolean;
 }
 
 export interface ValidationRule {
-  validate: (data: any) => boolean;
+  validate: (data: unknown) => boolean;
   errorMessage: string;
 }
 
