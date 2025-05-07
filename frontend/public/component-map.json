@@ -79,6 +79,7 @@
   ],
   "CS:Spinner": [
     "/create/",
+    "/current/",
     "/dashboard/"
   ],
   "CS:Tiles": [
@@ -88,6 +89,10 @@
     "/create/",
     "/dashboard/",
     "/loading/",
+    "/session/"
+  ],
+  "MA:MigrationSessionReviewPage": [
+    "/current/",
     "/session/"
   ],
   "CS:StatusIndicator": [
@@ -148,9 +153,6 @@
     "/session/"
   ],
   "MA:MetadataEvaluationAndMigration": [
-    "/session/"
-  ],
-  "MA:MigrationSessionReviewPage": [
     "/session/"
   ],
   "MA:RequestTimeline": [

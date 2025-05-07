@@ -10,21 +10,8 @@ export default function MigrationNavItems() {
         logo: { src: 'migrations-icon-160x160.png', alt: '' }
       }}
       items={[
-        { type: 'link', text: `Dashboard`, href: `/dashboard` },
-        { type: 'link', text: `Create Session`, href: `/create` },
+        { type: 'link', text: `Current Session`, href: `/current` },
         { type: 'link', text: 'About', href: '/about' },
-        { type: 'link', text: `Tear down`, href: `/teardown` },
-        {
-          type: 'link',
-          text: ``,
-          href: '',
-          info: (
-            <DemoWrapper>
-              <Link href="/loading">Loading page</Link>
-              <Link href="/developer/ux-inspector">UX Inspector</Link>
-            </DemoWrapper>
-          )
-        },
         { type: 'divider' },
         {
           type: 'section-group',
@@ -52,6 +39,21 @@ export default function MigrationNavItems() {
               externalIconAriaLabel: 'Opens in a new tab'
             }
           ]
+        },
+        { type: 'divider' },
+        {
+          type: 'link',
+          text: ``,
+          href: '',
+          info: (
+            <DemoWrapper>
+              <Link href="/developer/ux-inspector">UX Inspector</Link>
+              <Link href="/loading">Loading page</Link>
+              <Link href="/create">Create Session</Link>
+              <Link href="/dashboard">Dashboard</Link>
+              <Link href="/teardown">Tear down</Link>
+            </DemoWrapper>
+          )
         }
       ]}
     />

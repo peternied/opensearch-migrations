@@ -32,6 +32,13 @@
     ]
   },
   {
+    "route": "/current/",
+    "components": [
+      "CS:Spinner",
+      "MA:MigrationSessionReviewPage"
+    ]
+  },
+  {
     "route": "/dashboard/",
     "components": [
       "CS:Box",

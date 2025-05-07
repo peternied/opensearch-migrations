@@ -1,17 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import Header from '@cloudscape-design/components/header';
 import Container from '@cloudscape-design/components/container';
 import SpaceBetween from '@cloudscape-design/components/space-between';
-import { MigrationSession } from '@/context/migration-session';
+import Select from '@cloudscape-design/components/select';
+import Button from '@cloudscape-design/components/button';
 import {
   KeyValuePairs,
   LineChart,
   Link,
-  MixedLineBarChartProps,
-  StatusIndicator
+  StatusIndicator,
+  StatusIndicatorProps
 } from '@cloudscape-design/components';
+import { MigrationSession } from '@/context/migration-session';
 
+// Format utilities
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -24,31 +28,70 @@ function formatBytes(bytes: number): string {
   return `${mb.toFixed(2)} GB`;
 }
 
-function generateSeries(
-  durationSeconds: number,
-  average: number,
-  label: string
-): MixedLineBarChartProps.LineDataSeries<number>[] {
+function generateSeries(durationSeconds: number, average: number, label: string, startTime: number) {
   const interval = 300;
   const points = Math.floor(durationSeconds / interval);
   const data = Array.from({ length: points }, (_, i) => ({
-    x: new Date(session.createdAt + i * interval * 1000).getTime(),
+    x: new Date(startTime + i * interval * 1000).getTime(),
     y: average + (Math.random() - 0.5) * average * 0.3
   }));
-  const result: MixedLineBarChartProps.LineDataSeries<number> = {
-    title: label,
-    type: 'line',
-    data: data
-  };
-  return [result];
+  return [{ title: label, type: 'line', data }];
 }
 
-// Dummy data – replace with real props or data fetching
-const session: MigrationSession = {
-  id: 'session-123',
-  name: 'April Migration Run',
-  createdAt: new Date('2025-04-17T14:00:00Z').getTime(),
-  etaSeconds: 86400,
+// Dummy data (same as before)...
+// Dummy sessions
+const emptySession: MigrationSession | null = null;
+
+const metadataSession: MigrationSession = {
+  id: 'session-meta',
+  name: 'Metadata Only',
+  createdAt: Date.now(),
+  etaSeconds: 0,
+  sizeBytes: 0,
+  metadata: 'in-progress',
+  metadataDetails: {
+    status: 'in-progress',
+    indices: 10,
+    templates: 4,
+    aliases: 2
+  },
+  backfill: 'pending',
+  replay: 'pending',
+  workflow: 'metadata-only',
+  snapshot: 'pending'
+};
+
+const inProgressSession: MigrationSession = {
+  id: 'session-progress',
+  name: 'Backfill In Progress',
+  createdAt: Date.now() - 3600000,
+  etaSeconds: 3600,
+  sizeBytes: 8589934592,
+  metadata: 'success',
+  metadataDetails: {
+    status: 'completed',
+    indices: 42,
+    templates: 10,
+    aliases: 15
+  },
+  backfill: 'in-progress',
+  backfillDetails: {
+    status: 'in-progress',
+    durationSeconds: 1800,
+    throughputMbPerSec: 40,
+    sizeBytes: 4294967296,
+    docs: '12,000,000'
+  },
+  replay: 'pending',
+  workflow: 'full',
+  snapshot: 'pending'
+};
+
+const completeSession: MigrationSession = {
+  id: 'session-complete',
+  name: 'Completed Migration',
+  createdAt: Date.now() - 86400000,
+  etaSeconds: 0,
   sizeBytes: 12884901888,
   metadata: 'success',
   metadataDetails: {
@@ -76,209 +119,200 @@ const session: MigrationSession = {
   workflow: 'full',
   snapshot: 'success'
 };
-const backfillData = generateSeries(
-  session.backfillDetails!.durationSeconds,
-  session.backfillDetails!.throughputMbPerSec,
-  'Throughput'
-);
 
-const replayData = generateSeries(
-  session.replayDetails!.toSingularitySeconds +
-    session.replayDetails!.toCutoverSeconds,
-  500 + Math.random() * 100,
-  'Replay RPS'
-);
+const getNextStageAction = (session: MigrationSession | null) => {
+  if (!session) return null;
+
+  const actions = [];
+
+  if (!session.snapshot) {
+    actions.push({
+      label: session.snapshot === 'in-progress' ? 'Retry Snapshot' : 'Start Snapshot',
+      onClick: () => alert('Snapshot action triggered')
+    });
+  } else if (!session.metadata) {
+    actions.push({
+      label: session.metadata === 'in-progress' ? 'Retry Metadata' : 'Start Metadata',
+      onClick: () => alert('Metadata action triggered')
+    });
+  } else if (!session.backfill) {
+    actions.push({
+      label: session.backfill === 'in-progress' ? 'Retry Backfill' : 'Start Backfill',
+      onClick: () => alert('Backfill action triggered')
+    });
+  }
+
+  return actions;
+};
+
 export default function MigrationSessionReviewPage() {
+  const [selectedSession, setSelectedSession] = useState('none');
+
+  const sessionOptions = [
+    { label: 'None', value: 'none' },
+    { label: 'Metadata Only', value: 'metadata' },
+    { label: 'Backfill In Progress', value: 'in-progress' },
+    { label: 'Completed', value: 'completed' }
+  ];
+
+  let session: MigrationSession | null = null;
+  switch (selectedSession) {
+    case 'metadata':
+      session = metadataSession;
+      break;
+    case 'in-progress':
+      session = inProgressSession;
+      break;
+    case 'completed':
+      session = completeSession;
+      break;
+    default:
+      session = null;
+  }
+
+  const getOverallStatus = (): { type: StatusIndicatorProps.Type; label: string } => {
+    if (!session) return { type: 'pending', label: 'No Session Selected' };
+    if (session.backfill === 'in-progress' || session.metadata === 'in-progress') {
+      return { type: 'in-progress', label: 'Migration In Progress' };
+    }
+    return { type: 'success', label: 'Migration Completed' };
+  };
+
+  const backfillData = session?.backfillDetails
+    ? generateSeries(
+        session.backfillDetails.durationSeconds,
+        session.backfillDetails.throughputMbPerSec,
+        'Throughput',
+        session.createdAt
+      )
+    : [];
+
+  const nextActions = getNextStageAction(session);
+
   return (
     <SpaceBetween size="l">
-      <Container header={<Header variant="h2">Session Overview</Header>}>
-        <KeyValuePairs
-          columns={3}
-          items={[
-            {
-              label: 'Session',
-              value: session.name
-            },
-            {
-              label: 'Created At',
-              value: session.createdAt.toLocaleString()
-            },
-            {
-              label: 'Total Size',
-              value: formatBytes(session.sizeBytes)
+      <Select
+        selectedOption={sessionOptions.find((o) => o.value === selectedSession)}
+        onChange={({ detail }) => setSelectedSession(detail.selectedOption.value)}
+        options={sessionOptions}
+        selectedAriaLabel="Session"
+        placeholder="Select a session"
+      />
+
+      {session && (
+        <>
+          <Container
+            header={
+              <Header variant="h2" actions={nextActions?.length ? <Button onClick={nextActions[0].onClick}>{nextActions[0].label}</Button> : undefined}>
+                Session Overview
+              </Header>
             }
-          ]}
-        />
-      </Container>
+          >
+            <KeyValuePairs
+              columns={3}
+              items={[
+                { label: 'Session', value: session.name },
+                { label: 'Created At', value: new Date(session.createdAt).toLocaleString() },
+                { label: 'Total Size', value: formatBytes(session.sizeBytes) },
+                {
+                  label: 'Migration Status',
+                  value: (
+                    <StatusIndicator type={getOverallStatus().type}>
+                      {getOverallStatus().label}
+                    </StatusIndicator>
+                  )
+                }
+              ]}
+            />
+          </Container>
 
-      {/* Metadata */}
-      <Container header={<Header variant="h2">Metadata</Header>}>
-        <KeyValuePairs
-          columns={2}
-          items={[
-            {
-              label: 'Status',
-              value: <StatusIndicator type={session.metadata}></StatusIndicator>
-            },
-            {
-              label: 'Indices',
-              value: session.metadataDetails!.indices
-            },
-            {
-              label: 'Templates',
-              value: session.metadataDetails!.templates
-            },
-            {
-              label: 'Aliases',
-              value: session.metadataDetails!.aliases
-            },
-            {
-              label: 'Raw Logs',
-              value: (
-                <Link href="#non-existent" external>
-                  Metadata migration logs
-                </Link>
-              )
+          {/* Snapshot */}
+          <Container
+            header={
+              <Header variant="h2" actions={<Button>Re-run Snapshot</Button>}>
+                Snapshot
+              </Header>
             }
-          ]}
-        />
-      </Container>
+          >
+            <KeyValuePairs
+              columns={2}
+              items={[
+                {
+                  label: 'Status',
+                  value: (
+                    <StatusIndicator type={session.snapshot === 'success' ? 'success' : session.snapshot || 'pending'} />
+                  )
+                },
+                {
+                  label: 'Snapshot Logs',
+                  value: (
+                    <Link href="#">View snapshot logs</Link>
+                  )
+                }
+              ]}
+            />
+          </Container>
 
-      {/* Backfill */}
-      <Container header={<Header variant="h2">Backfill</Header>}>
-        <SpaceBetween size="xxl">
-          <KeyValuePairs
-            columns={2}
-            items={[
-              {
-                label: 'Status',
-                value: (
-                  <StatusIndicator type={session.backfill}></StatusIndicator>
-                )
-              },
-              {
-                label: 'Transferred',
-                value: formatBytes(session.backfillDetails!.sizeBytes)
-              },
-              {
-                label: 'Documents',
-                value: session.backfillDetails!.docs
-              },
-              {
-                label: 'Duration',
-                value: formatDuration(session.backfillDetails!.durationSeconds)
-              },
-              {
-                label: 'Throughput (MB/sec)',
-                value: session.backfillDetails!.throughputMbPerSec.toFixed(2)
-              },
-              {
-                label: 'Raw Logs',
-                value: (
-                  <Link href="#non-existent" external>
-                    96 worker logs
-                  </Link>
-                )
-              }
-            ]}
-          />
-          <LineChart
-            series={backfillData}
-            xTitle="Time"
-            yTitle="MB/sec"
-            height={250}
-            ariaLabel="Backfill Throughput"
-            hideLegend={true}
-            hideFilter={true}
-            xTickFormatter={(e) => {
-              const d = new Date(e);
-              return d
-                .toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: 'numeric',
-                  second: 'numeric',
-                  hour12: true
-                })
-                .split(',')
-                .join('\n');
-            }}
-          />
-        </SpaceBetween>
-      </Container>
+          {/* Metadata */}
+          {session.metadataDetails && (
+            <Container header={<Header variant="h2" actions={<Button>Re-run Metadata</Button>}>Metadata</Header>}>
+              <KeyValuePairs
+                columns={2}
+                items={[
+                  { label: 'Status', value: <StatusIndicator type={session.metadata} /> },
+                  { label: 'Indices', value: session.metadataDetails.indices },
+                  { label: 'Templates', value: session.metadataDetails.templates },
+                  { label: 'Aliases', value: session.metadataDetails.aliases },
+                  {
+                    label: 'Raw Logs',
+                    value: <Link href="#">Metadata migration logs</Link>
+                  }
+                ]}
+              />
+            </Container>
+          )}
 
-      {/* Replay */}
-      <Container header={<Header variant="h2">Replay</Header>}>
-        <SpaceBetween size="xxl">
-          <KeyValuePairs
-            columns={2}
-            items={[
-              {
-                label: 'Status',
-                value: <StatusIndicator type={session.replay}></StatusIndicator>
-              },
-              {
-                label: 'Transferred',
-                value: formatBytes(session.replayDetails!.sizeBytes)
-              },
-              {
-                label: 'Replayed Requests',
-                value: session.replayDetails!.requests
-              },
-              {
-                label: 'Start to Singularity',
-                value: formatDuration(
-                  session.replayDetails!.toSingularitySeconds
-                )
-              },
-              {
-                label: 'Singularity to Cutover',
-                value: formatDuration(session.replayDetails!.toCutoverSeconds)
-              },
-              {
-                label: 'Tuple Logs',
-                value: (
-                  <Link href="#non-existent" external>
-                    342,232,322 tuples entries
-                  </Link>
-                )
-              },
-              {
-                label: 'Raw Logs',
-                value: (
-                  <Link href="#non-existent" external>
-                    Replayer process logs
-                  </Link>
-                )
-              }
-            ]}
-          />
-          <LineChart
-            series={replayData}
-            xTitle="Time"
-            yTitle="Requests/sec"
-            height={250}
-            ariaLabel="Replay Request Rate"
-            hideLegend={true}
-            hideFilter={true}
-            xTickFormatter={(e) => {
-              const d = new Date(e);
-              return d
-                .toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: 'numeric',
-                  minute: 'numeric',
-                  second: 'numeric',
-                  hour12: true
-                })
-                .split(',')
-                .join('\n');
-            }}
-          />
-        </SpaceBetween>
-      </Container>
+          {/* Backfill */}
+          {session.backfillDetails && (
+            <Container header={<Header variant="h2" actions={<Button>Re-run Backfill</Button>}>Backfill</Header>}>
+              <SpaceBetween size="xxl">
+                <KeyValuePairs
+                  columns={2}
+                  items={[
+                    { label: 'Status', value: <StatusIndicator type={session.backfill} /> },
+                    { label: 'Transferred', value: formatBytes(session.backfillDetails.sizeBytes) },
+                    { label: 'Documents', value: session.backfillDetails.docs },
+                    {
+                      label: 'Duration',
+                      value: formatDuration(session.backfillDetails.durationSeconds)
+                    },
+                    {
+                      label: 'Throughput (MB/sec)',
+                      value: session.backfillDetails.throughputMbPerSec.toFixed(2)
+                    },
+                    {
+                      label: 'Raw Logs',
+                      value: <Link href="#">96 worker logs</Link>
+                    }
+                  ]}
+                />
+                <LineChart
+                  series={backfillData}
+                  xTitle="Time"
+                  yTitle="MB/sec"
+                  height={250}
+                  ariaLabel="Backfill Throughput"
+                  hideLegend
+                  hideFilter
+                  xTickFormatter={(e) =>
+                    new Date(e).toLocaleTimeString('en-US', { hour12: true })
+                  }
+                />
+              </SpaceBetween>
+            </Container>
+          )}
+        </>
+      )}
     </SpaceBetween>
   );
 }

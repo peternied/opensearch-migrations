@@ -20,46 +20,14 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@cloudscape-design/components';
-
-type WorkflowOption = {
-  value: SessionWorkflow;
-  label: string;
-  description: string;
-};
-
-const WORKFLOW_OPTIONS: WorkflowOption[] = [
-  {
-    value: 'backfill',
-    label: 'Backfill',
-    description:
-      'Transfer existing historical data to the new system without impacting live traffic.'
-  },
-  {
-    value: 'replay',
-    label: 'Traffic Capture/Replay',
-    description:
-      'Capture live traffic and replay it in the new environment for testing and validation.'
-  },
-  {
-    value: 'full',
-    label: 'Combined Capture + Replay',
-    description:
-      'Perform backfill and then begin traffic capture and replay in a single workflow.'
-  },
-  {
-    value: 'freeform',
-    label: 'Freeform Exploration',
-    description:
-      'Explore the Migration Assistant website without committing to a specific workflow.'
-  }
-];
+import WorkflowPicker from '@/components/session/workflow-picker';
 
 export default function CreateMigrationSessionPage() {
   const router = useRouter();
   const { addSession } = useMigrationSessions();
   const [name, setName] = useState('');
   const [updating, setUpdating] = useState(false);
-  const [workflow, setWorkflow] = useState('backfill' as SessionWorkflow);
+  const [workflow, setWorkflow] = useState<SessionWorkflow>('backfill');
 
   const handleAddSession = () => {
     setUpdating(true);
@@ -72,7 +40,8 @@ export default function CreateMigrationSessionPage() {
       replay: 'pending',
       etaSeconds: null,
       sizeBytes: 0,
-      workflow: workflow
+      workflow: 'backfill',
+      snapshot: 'pending'
     };
 
     addSession(newSession);
@@ -93,29 +62,7 @@ export default function CreateMigrationSessionPage() {
             />
           </FormField>
 
-          <FormField
-            label="Workflow Type"
-            description="Choose the appropriate workflow."
-          >
-            <Tiles
-              value={workflow}
-              onChange={({ detail }) =>
-                setWorkflow(detail.value as SessionWorkflow)
-              }
-              items={WORKFLOW_OPTIONS.map((option) => ({
-                value: option.value,
-                label: (
-                  <SpaceBetween size="xs">
-                    <Box display="inline" padding={{ right: 's' }}>
-                      <Icon name={workflowIcon(option.value)} size="big" />
-                    </Box>
-                    <span>{option.label}</span>
-                  </SpaceBetween>
-                ),
-                description: option.description
-              }))}
-            />
-          </FormField>
+          <WorkflowPicker value={workflow} onChange={setWorkflow} />
 
           <SpaceBetween size="m" direction="horizontal">
             <Button
