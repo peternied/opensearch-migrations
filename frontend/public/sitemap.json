@@ -28,7 +28,8 @@
       "CS:SpaceBetween",
       "CS:Spinner",
       "CS:Tiles",
-      "MA:DemoWrapper"
+      "MA:DemoWrapper",
+      "MA:WorkflowPicker"
     ]
   },
   {

@@ -1,6 +1,7 @@
 import { SessionWorkflow, workflowIcon } from "@/context/migration-session";
 import { Box, FormField, Icon, Popover, SpaceBetween, Tiles } from "@cloudscape-design/components";
 import { ReactNode, useState } from "react";
+import DemoWrapper from "../demoWrapper";
 
 export type WorkflowOption = {
   value: SessionWorkflow;
@@ -74,6 +75,7 @@ const WORKFLOW_OPTIONS: WorkflowOption[] = [
   export default function WorkflowPicker({ value, onChange }: WorkflowPickerProps) {
     return (
       <FormField label="Workflow Type" description="Choose the appropriate workflow.">
+        <SpaceBetween size="l">
         <Tiles
           value={value}
           onChange={({ detail }) =>
@@ -89,6 +91,8 @@ const WORKFLOW_OPTIONS: WorkflowOption[] = [
             };
           })}
         />
+        <DemoWrapper>Icons are place holders</DemoWrapper>
+        </SpaceBetween>
       </FormField>
     );
   }

@@ -91,6 +91,9 @@
     "/loading/",
     "/session/"
   ],
+  "MA:WorkflowPicker": [
+    "/create/"
+  ],
   "MA:MigrationSessionReviewPage": [
     "/current/",
     "/session/"

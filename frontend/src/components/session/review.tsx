@@ -14,6 +14,8 @@ import {
   StatusIndicatorProps
 } from '@cloudscape-design/components';
 import { MigrationSession } from '@/context/migration-session';
+import CreateSessionForm from './create-session-form';
+import DemoWrapper from '../demoWrapper';
 
 // Format utilities
 function formatDuration(seconds: number): string {
@@ -40,7 +42,33 @@ function generateSeries(durationSeconds: number, average: number, label: string,
 
 // Dummy data (same as before)...
 // Dummy sessions
-const emptySession: MigrationSession | null = null;
+const newSession: MigrationSession | null = null;
+
+const emptySession: MigrationSession = {
+  id: 'session-empty',
+  name: 'Metadata Only',
+  createdAt: Date.now(),
+  etaSeconds: 0,
+  sizeBytes: 0,
+  metadata: 'pending',
+  backfill: 'pending',
+  replay: 'pending',
+  workflow: 'backfill',
+  snapshot: 'pending'
+};
+
+const snapshotSession: MigrationSession = {
+  id: 'session-snapshot',
+  name: 'Metadata Only',
+  createdAt: Date.now(),
+  etaSeconds: 0,
+  sizeBytes: 0,
+  metadata: 'pending',
+  backfill: 'pending',
+  replay: 'pending',
+  workflow: 'backfill',
+  snapshot: 'in-progress'
+};
 
 const metadataSession: MigrationSession = {
   id: 'session-meta',
@@ -57,8 +85,8 @@ const metadataSession: MigrationSession = {
   },
   backfill: 'pending',
   replay: 'pending',
-  workflow: 'metadata-only',
-  snapshot: 'pending'
+  workflow: 'backfill',
+  snapshot: 'success'
 };
 
 const inProgressSession: MigrationSession = {
@@ -150,13 +178,21 @@ export default function MigrationSessionReviewPage() {
 
   const sessionOptions = [
     { label: 'None', value: 'none' },
-    { label: 'Metadata Only', value: 'metadata' },
+    { label: 'New empty session', value: 'empty'},
+    { label: 'Snapshot', value: 'snapshot'},
+    { label: 'Metadata', value: 'metadata' },
     { label: 'Backfill In Progress', value: 'in-progress' },
     { label: 'Completed', value: 'completed' }
   ];
 
   let session: MigrationSession | null = null;
   switch (selectedSession) {
+    case 'empty':
+      session = emptySession;
+      break;
+    case 'snapshot':
+      session = snapshotSession;
+      break;
     case 'metadata':
       session = metadataSession;
       break;
@@ -172,7 +208,10 @@ export default function MigrationSessionReviewPage() {
 
   const getOverallStatus = (): { type: StatusIndicatorProps.Type; label: string } => {
     if (!session) return { type: 'pending', label: 'No Session Selected' };
-    if (session.backfill === 'in-progress' || session.metadata === 'in-progress') {
+    if (session.backfill === 'pending' || session.metadata === 'pending' || session.snapshot === 'pending') {
+      return { type: 'pending', label: 'Waiting on user input' };
+    }
+    if (session.backfill === 'in-progress' || session.metadata === 'in-progress' || session.snapshot === 'in-progress') {
       return { type: 'in-progress', label: 'Migration In Progress' };
     }
     return { type: 'success', label: 'Migration Completed' };
@@ -190,7 +229,8 @@ export default function MigrationSessionReviewPage() {
   const nextActions = getNextStageAction(session);
 
   return (
-    <SpaceBetween size="l">
+    <SpaceBetween size="xl">
+      <DemoWrapper>
       <Select
         selectedOption={sessionOptions.find((o) => o.value === selectedSession)}
         onChange={({ detail }) => setSelectedSession(detail.selectedOption.value)}
@@ -198,9 +238,25 @@ export default function MigrationSessionReviewPage() {
         selectedAriaLabel="Session"
         placeholder="Select a session"
       />
+      </DemoWrapper>
+
+      {!session && (
+        <>
+        <Container header={<Header variant='h2'>Create a session</Header>}>
+            <CreateSessionForm
+              name={'New Session'}
+              setName={() => {}}
+              workflow={'backfill'}
+              setWorkflow={() => {}}
+              onSubmit={() => {}}
+              loading={false}
+            />
+        </Container>
+        </>
+      )}
 
       {session && (
-        <>
+        <SpaceBetween size="l">
           <Container
             header={
               <Header variant="h2" actions={nextActions?.length ? <Button onClick={nextActions[0].onClick}>{nextActions[0].label}</Button> : undefined}>
@@ -240,7 +296,7 @@ export default function MigrationSessionReviewPage() {
                 {
                   label: 'Status',
                   value: (
-                    <StatusIndicator type={session.snapshot === 'success' ? 'success' : session.snapshot || 'pending'} />
+                    <StatusIndicator type={session.snapshot || 'pending'} />
                   )
                 },
                 {
@@ -311,7 +367,7 @@ export default function MigrationSessionReviewPage() {
               </SpaceBetween>
             </Container>
           )}
-        </>
+        </SpaceBetween>
       )}
     </SpaceBetween>
   );
