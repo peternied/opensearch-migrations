@@ -21,11 +21,13 @@ import MigrationSessionReviewPage from '@/components/session/review';
 import DemoWrapper from '@/components/demoWrapper';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  MigrationSession,
   SessionWorkflow,
   useMigrationSessions
 } from '@/context/migration-session';
 import CaptureProxiesOverview from '@/components/capture/captured-overview';
 import MetadataEvaluationAndMigration from '@/components/metadata/evaulation';
+import MigrationPath from '@/components/connection/migration-path';
 
 type StepId =
   | 'select-source'
@@ -52,8 +54,21 @@ function StepPageContent() {
   const { sessions } = useMigrationSessions();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('id');
-  const currentSession = sessions.find((s) => s.id == sessionId);
+  // const sessionId = searchParams.get('id');
+  // const currentSession = sessions.find((s) => s.id == sessionId);
+  const currentSession: MigrationSession =   {
+    id: 'beta',
+    name: 'Session Beta',
+    createdAt: new Date('2024-04-18').getTime(),
+    snapshot: 'success',
+    metadata: 'success',
+    backfill: 'pending',
+    replay: 'pending',
+    etaSeconds: null,
+    sizeBytes: 0,
+    workflow: 'backfill'
+  };
+  const sessionId = "1"
 
   const stepDefinitions: SessionStep[] = [
     {
@@ -181,6 +196,7 @@ function StepPageContent() {
     <SpaceBetween size="xxl">
       <Header>Session: {currentSession?.name}</Header>
       <Flashbar items={flashbarItems}></Flashbar>
+      <MigrationPath></MigrationPath>
       <Wizard
         steps={steps}
         activeStepIndex={activeStepIndex}
