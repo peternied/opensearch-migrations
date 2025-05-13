@@ -10,6 +10,11 @@ import { useCollection } from '@cloudscape-design/collection-hooks';
 
 export interface MigrationEntity {
   name: string;
+  type:
+    | 'Index'
+    | 'Alias'
+    | 'Index Template'
+    | 'Component Template'
   status:
     | 'success'
     | 'already-exists'
@@ -69,6 +74,11 @@ export default function MigrationEntityTable({
       width: '3%'
     },
     {
+      id: 'entity-type',
+      header: 'Type',
+      cell: (item) => item.type
+    },
+    {
       id: 'name',
       header: 'Name',
       cell: (item) => item.name,
@@ -82,27 +92,32 @@ export default function MigrationEntityTable({
     {
       id: 'message',
       header: 'Message',
-      cell: (item) => item.message,
+      cell: (item) => (item?.message &&
+        <Popover
+          triggerType={'text'}
+          content={item?.message}
+        >{item?.message?.substring(0, 80)}</Popover>
+      ),
       sortingField: 'message'
     },
-    {
-      id: 'drill-down',
-      header: 'Drill Down',
-      cell: (item) => (
-        <Popover
-          content={
-            <Box>
-              {`GET /${label}/${item.name}`}
-              <pre>
-                {JSON.stringify(JSON.parse('{ "foo": "bar" }'), null, 3)}
-              </pre>
-            </Box>
-          }
-        >
-          <Link>{`GET /${label}/${item.name}`}</Link>
-        </Popover>
-      )
-    }
+    // {
+    //   id: 'drill-down',
+    //   header: 'Drill Down',
+    //   cell: (item) => (
+    //     <Popover
+    //       content={
+    //         <Box>
+    //           {`GET /${label}/${item.name}`}
+    //           <pre>
+    //             {JSON.stringify(JSON.parse('{ "foo": "bar" }'), null, 3)}
+    //           </pre>
+    //         </Box>
+    //       }
+    //     >
+    //       <Link>{`GET /${label}/${item.name}`}</Link>
+    //     </Popover>
+    //   )
+    // }
   ];
   return (
     <Table

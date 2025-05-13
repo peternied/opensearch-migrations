@@ -10,25 +10,24 @@ import MigrationEntityTable, { MigrationEntity } from './entity-table';
 import { Spinner, Box, Alert } from '@cloudscape-design/components';
 import { MigrationSession } from '@/context/migration-session';
 
-const allIndexes: MigrationEntity[] = [
-  { name: 'geonames', status: 'success' },
-  { name: 'nyc_taxis', status: 'success' },
-  { name: 'percolator', status: 'success' },
+const allItems: MigrationEntity[] = [
+  { name: 'geonames', status: 'success', type: 'Index' },
+  { name: 'nyc_taxis', status: 'success', type: 'Index' },
+  { name: 'percolator', status: 'success', type: 'Index' },
   {
     name: 'logs-181998',
     status: 'target-failure',
     message:
-      'IndexMappingTypeRemoval unsupported. Specify --multi-type-behavior.'
+      `Create object failed for _index_template/synthetics
+{"error":{"root_cause":[{"type":"x_content_parse_exception","reason":"[1:269] [index_template] unknown field [allow_auto_create]"}],"type":"x_content_parse_exception","reason":"[1:269] [index_template] unknown field [allow_auto_create]"},"status":400}`,
+    type: 'Index'
   },
-  { name: 'logs-191998', status: 'success' },
-  { name: 'logs-201998', status: 'success' },
-  { name: 'logs-211998', status: 'success' }
+  { name: 'logs-191998', status: 'success', type: 'Index' },
+  { name: 'logs-201998', status: 'success', type: 'Index' },
+  { name: 'logs-211998', status: 'success', type: 'Index' },
+  { name: 'daily_logs', status: 'success', type: 'Index Template' },
+  { name: 'logs-all', status: 'success', type: 'Alias' }
 ];
-const allIndexTemplates: MigrationEntity[] = [
-  { name: 'daily_logs', status: 'success' }
-];
-const allComponentTemplates: MigrationEntity[] = [];
-const allAliases: MigrationEntity[] = [{ name: 'logs-all', status: 'success' }];
 
 export interface MetadataProps {
   session: MigrationSession;
@@ -41,42 +40,31 @@ export default function MetadataEvaluationAndMigration({
     'completed'
   );
   const [indexes, setIndexes] = useState<MigrationEntity[]>([]);
-  const [indexTemplates, setIndexTemplates] = useState<MigrationEntity[]>([]);
-  const [componentTemplates, setComponentTemplates] = useState<
-    MigrationEntity[]
-  >([]);
-  const [aliases, setAliases] = useState<MigrationEntity[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
 
   const validateSession = useCallback(() => {
     const validationErrors: string[] = [];
     console.log(`*** session info: ${JSON.stringify(session)}`);
     if (session?.snapshot !== 'success') {
-      validationErrors.push(
-        'Snapshot must be defined before running evaluation.'
-      );
+      // validationErrors.push(
+      //   'Snapshot must be defined before running evaluation.'
+      // );
     }
     setErrors(validationErrors);
   }, [session, setErrors]);
 
   const loadItems = () => {
     setIndexes([]);
-    setIndexTemplates([]);
-    setComponentTemplates([]);
-    setAliases([]);
     setTimeout(() => {
-      setIndexes(allIndexes);
-      setIndexTemplates(allIndexTemplates);
-      setComponentTemplates(allComponentTemplates);
-      setAliases(allAliases);
+      setIndexes(allItems);
       setStatus('completed');
     }, 1500);
   };
 
   const runProcess = () => {
-    if (errors) {
-      return;
-    }
+    // if (errors) {
+    //   return;
+    // }
     setStatus('running');
     loadItems();
   };
@@ -89,6 +77,7 @@ export default function MetadataEvaluationAndMigration({
 
   useEffect(() => {
     validateSession();
+    runProcess();
   }, [validateSession]);
 
   const renderStatus = () => {
@@ -100,7 +89,8 @@ export default function MetadataEvaluationAndMigration({
       case 'running':
         return <StatusIndicator type="in-progress">Running</StatusIndicator>;
       case 'completed':
-        return <StatusIndicator type="success">Completed</StatusIndicator>;
+        return <StatusIndicator type="stopped">Idle</StatusIndicator>;
+        // return <StatusIndicator type="success">Completed</StatusIndicator>;
       default:
         return <StatusIndicator type="stopped">Idle</StatusIndicator>;
     }
@@ -122,17 +112,17 @@ export default function MetadataEvaluationAndMigration({
         columns={3}
         items={[
           { label: 'Status', value: renderStatus() },
-          { label: 'Indices', value: indexes.length },
-          { label: 'Templates', value: indexTemplates.length },
-          { label: 'Aliases', value: aliases.length },
-          {
-            label: 'Raw Logs',
-            value: (
-              <Link href="#" external>
-                Metadata {mode} logs
-              </Link>
-            )
-          }
+          { label: 'Indices', value: allItems.filter(x => x.type === 'Index').length },
+          { label: 'Templates', value: allItems.filter(x => x.type === 'Index Template' || x.type === 'Component Template').length },
+          { label: 'Aliases', value: allItems.filter(x => x.type === 'Alias').length },
+          // {
+          //   label: 'Raw Logs',
+          //   value: (
+          //     <Link href="#" external>
+          //       Metadata {mode} logs
+          //     </Link>
+          //   )
+          // }
         ]}
       />
 
@@ -143,7 +133,7 @@ export default function MetadataEvaluationAndMigration({
         >
           Rerun {mode === 'evaluation' ? 'Evaluation' : 'Migration'}
         </Button>
-        {mode === 'evaluation' && (
+        {(
           <Button
             variant="primary"
             onClick={toggleMode}
@@ -156,18 +146,7 @@ export default function MetadataEvaluationAndMigration({
 
       {status === 'completed' ? (
         <>
-          <MigrationEntityTable items={indexes} label="Indexes" mode={mode} />
-          <MigrationEntityTable
-            items={indexTemplates}
-            label="Index Templates"
-            mode={mode}
-          />
-          <MigrationEntityTable
-            items={componentTemplates}
-            label="Component Templates"
-            mode={mode}
-          />
-          <MigrationEntityTable items={aliases} label="Aliases" mode={mode} />
+          <MigrationEntityTable items={indexes} label="Items" mode={mode} />
         </>
       ) : errors.length == 0 ? (
         <>
