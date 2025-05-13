@@ -23,7 +23,8 @@ export default function DemoWrapper({
   const current = styles['orange'];
 
   return (
-    <div
+    <>
+    {/* <div
       style={{
         backgroundColor: current.backgroundColor,
         border: `2px dashed ${current.borderColor}`,
@@ -37,6 +38,7 @@ export default function DemoWrapper({
         </Box>
         {children}
       </SpaceBetween>
-    </div>
+    </div> */}
+    </>
   );
 }

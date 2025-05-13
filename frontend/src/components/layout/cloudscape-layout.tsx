@@ -23,6 +23,7 @@ export default function AppLayoutWrapper({
         onNavigationChange={toggleNavigation}
         navigation={<MigrationNavItems />}
         tools={<MAHelpPanel />}
+        toolsHide={true}
         content={
           <ContentLayout>
             <div className="contentPlaceholder">{children}</div>

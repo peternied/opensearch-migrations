@@ -7,6 +7,7 @@ import SpaceBetween from '@cloudscape-design/components/space-between';
 import Select from '@cloudscape-design/components/select';
 import Button from '@cloudscape-design/components/button';
 import {
+  Box,
   KeyValuePairs,
   LineChart,
   Link,
@@ -76,7 +77,7 @@ const metadataSession: MigrationSession = {
   createdAt: Date.now(),
   etaSeconds: 0,
   sizeBytes: 0,
-  metadata: 'in-progress',
+  metadata: 'pending',
   metadataDetails: {
     status: 'in-progress',
     indices: 10,
@@ -175,6 +176,7 @@ const getNextStageAction = (session: MigrationSession | null) => {
 
 export default function MigrationSessionReviewPage() {
   const [selectedSession, setSelectedSession] = useState('none');
+  const [name, setName] = useState('');
 
   const sessionOptions = [
     { label: 'None', value: 'none' },
@@ -230,7 +232,7 @@ export default function MigrationSessionReviewPage() {
 
   return (
     <SpaceBetween size="xl">
-      <DemoWrapper>
+      {/* <DemoWrapper>s */}
       <Select
         selectedOption={sessionOptions.find((o) => o.value === selectedSession)}
         onChange={({ detail }) => setSelectedSession(detail.selectedOption.value)}
@@ -238,19 +240,25 @@ export default function MigrationSessionReviewPage() {
         selectedAriaLabel="Session"
         placeholder="Select a session"
       />
-      </DemoWrapper>
+      {/* </DemoWrapper> */}
 
       {!session && (
         <>
-        <Container header={<Header variant='h2'>Create a session</Header>}>
+        <Container header={<Header variant='h2'>Create a migration session</Header>}>
+        <SpaceBetween size='m' direction='vertical'>
+          <Box>
+            To start a migration name the session.
+          </Box>
             <CreateSessionForm
-              name={'New Session'}
-              setName={() => {}}
+              name={name}
+              setName={setName}
               workflow={'backfill'}
               setWorkflow={() => {}}
               onSubmit={() => {}}
               loading={false}
+              showDisabled={false}
             />
+            </SpaceBetween>
         </Container>
         </>
       )}
@@ -265,11 +273,11 @@ export default function MigrationSessionReviewPage() {
             }
           >
             <KeyValuePairs
-              columns={3}
+              columns={2}
               items={[
                 { label: 'Session', value: session.name },
                 { label: 'Created At', value: new Date(session.createdAt).toLocaleString() },
-                { label: 'Total Size', value: formatBytes(session.sizeBytes) },
+                // { label: 'Total Size', value: formatBytes(session.sizeBytes) },
                 {
                   label: 'Migration Status',
                   value: (
@@ -285,7 +293,7 @@ export default function MigrationSessionReviewPage() {
           {/* Snapshot */}
           <Container
             header={
-              <Header variant="h2" actions={<Button>Re-run Snapshot</Button>}>
+              <Header variant="h2" actions={<Button>{session?.snapshot === 'pending' ? "Create" : "Recreate"} Snapshot</Button>}>
                 Snapshot
               </Header>
             }
@@ -296,33 +304,42 @@ export default function MigrationSessionReviewPage() {
                 {
                   label: 'Status',
                   value: (
-                    <StatusIndicator type={session.snapshot || 'pending'} />
+                    <StatusIndicator type={session.snapshot || 'pending'}>Created</StatusIndicator>
                   )
                 },
                 {
-                  label: 'Snapshot Logs',
-                  value: (
-                    <Link href="#">View snapshot logs</Link>
-                  )
+                  label: 'Completed',
+                  value: '17 minutes ago' 
                 }
+                // {
+                //   label: 'Snapshot Logs',
+                //   value: (
+                //     <Link href="#">View snapshot logs</Link>
+                //   )
+                // }
               ]}
             />
           </Container>
 
           {/* Metadata */}
           {session.metadataDetails && (
-            <Container header={<Header variant="h2" actions={<Button>Re-run Metadata</Button>}>Metadata</Header>}>
+            <Container header={<Header variant="h2" actions={<Button>{session?.metadata === 'pending' ? "Migrate" : "Recreate"} Metadata</Button>}>Metadata</Header>}>
               <KeyValuePairs
                 columns={2}
                 items={[
-                  { label: 'Status', value: <StatusIndicator type={session.metadata} /> },
+                  { label: 'Status', value: <StatusIndicator type={session.metadata}>Not started</StatusIndicator> },
+                  {
+                    label: 'Completed',
+                    value: '6 minutes ago' 
+                  },
                   { label: 'Indices', value: session.metadataDetails.indices },
                   { label: 'Templates', value: session.metadataDetails.templates },
                   { label: 'Aliases', value: session.metadataDetails.aliases },
-                  {
-                    label: 'Raw Logs',
-                    value: <Link href="#">Metadata migration logs</Link>
-                  }
+                  // {
+                  //   label: 'Raw Logs',
+                  //   value: <Link href="#">Metadata migration logs</Link>
+                  // }
+                  
                 ]}
               />
             </Container>
@@ -335,7 +352,8 @@ export default function MigrationSessionReviewPage() {
                 <KeyValuePairs
                   columns={2}
                   items={[
-                    { label: 'Status', value: <StatusIndicator type={session.backfill} /> },
+                    { label: 'Status', value: <StatusIndicator type={session.backfill}>In Progress</StatusIndicator> },
+                    { label: 'Completed', value: '-' },
                     { label: 'Transferred', value: formatBytes(session.backfillDetails.sizeBytes) },
                     { label: 'Documents', value: session.backfillDetails.docs },
                     {
@@ -346,10 +364,10 @@ export default function MigrationSessionReviewPage() {
                       label: 'Throughput (MB/sec)',
                       value: session.backfillDetails.throughputMbPerSec.toFixed(2)
                     },
-                    {
-                      label: 'Raw Logs',
-                      value: <Link href="#">96 worker logs</Link>
-                    }
+                    // {
+                    //   label: 'Raw Logs',
+                    //   value: <Link href="#">96 worker logs</Link>
+                    // }
                   ]}
                 />
                 <LineChart

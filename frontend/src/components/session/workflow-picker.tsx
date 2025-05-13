@@ -14,7 +14,7 @@ const WORKFLOW_OPTIONS: WorkflowOption[] = [
       value: 'backfill',
       label: 'Backfill',
       description:
-        'Transfer existing historical data to the new system without impacting live traffic.'
+        'Transfer existing historical data to the target cluster.'
     },
     {
       value: 'replay',
@@ -39,6 +39,7 @@ const WORKFLOW_OPTIONS: WorkflowOption[] = [
   interface WorkflowPickerProps {
     value: SessionWorkflow;
     onChange: (value: SessionWorkflow) => void;
+    showDisabled: boolean;
   }
   function renderLabelWithIcon(
     option: WorkflowOption,
@@ -72,9 +73,9 @@ const WORKFLOW_OPTIONS: WorkflowOption[] = [
     );
   }
   
-  export default function WorkflowPicker({ value, onChange }: WorkflowPickerProps) {
+  export default function WorkflowPicker({ value, onChange, showDisabled }: WorkflowPickerProps) {
     return (
-      <FormField label="Workflow Type" description="Choose the appropriate workflow.">
+      <FormField label="Workflow Type" description="Choose the workflow that describes how to move data from the source to the target cluster.">
         <SpaceBetween size="l">
         <Tiles
           value={value}
@@ -89,6 +90,11 @@ const WORKFLOW_OPTIONS: WorkflowOption[] = [
               disabled: isDisabled,
               description: option.description
             };
+          }).filter(tile => {
+            if (!showDisabled && tile.disabled) {
+              return false; // Exclude disabled tiles 
+            }
+            return true;
           })}
         />
         <DemoWrapper>Icons are place holders</DemoWrapper>

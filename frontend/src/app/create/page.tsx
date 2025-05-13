@@ -53,6 +53,7 @@ export default function CreateMigrationSessionPage() {
           setWorkflow={setWorkflow}
           onSubmit={handleAddSession}
           loading={updating}
+          showDisabled={true}
         />
       </Container>
     </SpaceBetween>

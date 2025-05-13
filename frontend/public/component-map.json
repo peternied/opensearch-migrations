@@ -31,8 +31,28 @@
   "MA:MigrationAssistantVersion": [
     "/about/"
   ],
-  "CS:Box": [
+  "CS:Container": [
     "/create/",
+    "/dashboard/",
+    "/developer/ux-inspector/",
+    "/playground/",
+    "/tasks/gather/",
+    "/tasks/manage/",
+    "/tasks/workflow/"
+  ],
+  "CS:Spinner": [
+    "/create/",
+    "/current/",
+    "/dashboard/"
+  ],
+  "MA:CreateSessionForm": [
+    "/create/"
+  ],
+  "MA:MigrationSessionReviewPage": [
+    "/current/",
+    "/session/"
+  ],
+  "CS:Box": [
     "/dashboard/",
     "/developer/ux-inspector/",
     "/loading/",
@@ -43,7 +63,6 @@
     "/tasks/workflow/components/WorkflowProgress"
   ],
   "CS:Button": [
-    "/create/",
     "/dashboard/",
     "/loading/",
     "/session/",
@@ -54,49 +73,8 @@
     "/tasks/workflow/components/steps/MetadataMigrationStep",
     "/teardown/"
   ],
-  "CS:Container": [
-    "/create/",
-    "/dashboard/",
-    "/developer/ux-inspector/",
-    "/playground/",
-    "/tasks/gather/",
-    "/tasks/manage/",
-    "/tasks/workflow/"
-  ],
-  "CS:FormField": [
-    "/create/",
-    "/tasks/gather/",
-    "/tasks/workflow/components/steps/MetadataMigrationStep"
-  ],
   "CS:Icon": [
-    "/create/",
     "/dashboard/"
-  ],
-  "CS:Input": [
-    "/create/",
-    "/tasks/gather/",
-    "/tasks/workflow/components/steps/MetadataMigrationStep"
-  ],
-  "CS:Spinner": [
-    "/create/",
-    "/current/",
-    "/dashboard/"
-  ],
-  "CS:Tiles": [
-    "/create/"
-  ],
-  "MA:DemoWrapper": [
-    "/create/",
-    "/dashboard/",
-    "/loading/",
-    "/session/"
-  ],
-  "MA:WorkflowPicker": [
-    "/create/"
-  ],
-  "MA:MigrationSessionReviewPage": [
-    "/current/",
-    "/session/"
   ],
   "CS:StatusIndicator": [
     "/dashboard/",
@@ -110,6 +88,11 @@
   ],
   "CS:TableProps": [
     "/dashboard/"
+  ],
+  "MA:DemoWrapper": [
+    "/dashboard/",
+    "/loading/",
+    "/session/"
   ],
   "MA:EstimateCompletionTime": [
     "/dashboard/",
@@ -169,6 +152,14 @@
   ],
   "CS:ExpandableSection": [
     "/developer/ux-inspector/"
+  ],
+  "CS:FormField": [
+    "/tasks/gather/",
+    "/tasks/workflow/components/steps/MetadataMigrationStep"
+  ],
+  "CS:Input": [
+    "/tasks/gather/",
+    "/tasks/workflow/components/steps/MetadataMigrationStep"
   ],
   "CS:KeyValuePairs": [
     "/tasks/workflow/components/TaskDetails"

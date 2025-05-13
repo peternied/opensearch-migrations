@@ -15,6 +15,7 @@ interface CreateSessionFormProps {
   setWorkflow: (workflow: SessionWorkflow) => void;
   onSubmit: () => void;
   loading: boolean;
+  showDisabled: boolean;
 }
 
 export default function CreateSessionForm({
@@ -23,7 +24,8 @@ export default function CreateSessionForm({
   workflow,
   setWorkflow,
   onSubmit,
-  loading
+  loading,
+  showDisabled
 }: CreateSessionFormProps) {
   return (
     <SpaceBetween size="l">
@@ -35,7 +37,7 @@ export default function CreateSessionForm({
         />
       </FormField>
 
-      <WorkflowPicker value={workflow} onChange={setWorkflow} />
+      <WorkflowPicker showDisabled={showDisabled} value={workflow} onChange={setWorkflow} />
 
       <SpaceBetween size="m" direction="horizontal">
         <Button

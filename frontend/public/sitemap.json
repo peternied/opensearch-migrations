@@ -18,18 +18,11 @@
   {
     "route": "/create/",
     "components": [
-      "CS:Box",
-      "CS:Button",
       "CS:Container",
-      "CS:FormField",
       "CS:Header",
-      "CS:Icon",
-      "CS:Input",
       "CS:SpaceBetween",
       "CS:Spinner",
-      "CS:Tiles",
-      "MA:DemoWrapper",
-      "MA:WorkflowPicker"
+      "MA:CreateSessionForm"
     ]
   },
   {
