@@ -72,7 +72,7 @@ function StepPageContent() {
 
   const stepDefinitions: SessionStep[] = [
     {
-      title: 'Select Source',
+      title: 'Source Information',
       content: <SourceSelector />,
       stepId: 'select-source',
       requiredSteps: [],
@@ -86,7 +86,7 @@ function StepPageContent() {
       validWorkflows: ['freeform', 'full', 'replay']
     },
     {
-      title: 'Select Target',
+      title: 'Source Information',
       content: <Connection connectionType="target" />,
       stepId: 'select-target',
       requiredSteps: [],
@@ -193,8 +193,8 @@ function StepPageContent() {
   }
 
   return (
-    <SpaceBetween size="xxl">
-      <Header>Session: {currentSession?.name}</Header>
+    <>
+      <Header>Migration Session: {currentSession?.name}</Header>
       <Flashbar items={flashbarItems}></Flashbar>
       <MigrationPath></MigrationPath>
       <Wizard
@@ -211,7 +211,7 @@ function StepPageContent() {
           not be present in the final version.
         </Box>
       </DemoWrapper>
-    </SpaceBetween>
+    </  >
   );
 }
 

@@ -72,15 +72,15 @@ export default function SnapshotCreation() {
     <SpaceBetween size="m">
       <Table
         header={
-          <Header variant="h2">
-            Select indices to include in the snapshot
+          <Header variant="h3">
+            Indexes included in the snapshot
           </Header>
         }
         columnDefinitions={columnDefinitions}
         items={MOCK_INDICES}
         selectedItems={selectedItems}
-        onSelectionChange={handleSelectionChange}
-        selectionType="multi"
+        // onSelectionChange={handleSelectionChange}
+        // selectionType="multi"
         trackBy="name"
         isItemDisabled={() => isSnapshotting || snapshotComplete}
         variant="embedded"
@@ -90,7 +90,7 @@ export default function SnapshotCreation() {
       <EstimateCompletionTime
         etaSeconds={estimatedTime}
         variant="overall"
-        label="Snapshot creation time"
+        label="Taking full snapshot"
         status={
           !isSnapshotting && !snapshotComplete
             ? 'pending'

@@ -66,6 +66,7 @@ export default function BucketConnection() {
       <FormField
         label="S3 Bucket URI"
         description="e.g., s3://my-snapshot-bucket/repo/"
+        stretch
       >
         <Input
           value={s3Bucket}
@@ -75,6 +76,7 @@ export default function BucketConnection() {
       <FormField
         label="Snapshot Name"
         description="The specific snapshot to use"
+        stretch
       >
         <Input
           value={snapshotName}

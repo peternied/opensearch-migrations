@@ -8,6 +8,7 @@ import Icon from '@cloudscape-design/components/icon';
 import Popover from '@cloudscape-design/components/popover';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import styles from './migration-path.module.css';
+import Link from 'next/link';
 
 const checks = [
   {
@@ -36,20 +37,20 @@ const checks = [
 export default function MigrationPathPage() {
   return (
     <SpaceBetween size="l">
-      <Header variant="h1">Migration path</Header>
+      <Header variant="h3">Migration path</Header>
 
       <Container>
         <div className={styles.pathContainer}>
-          <ClusterNode label="Source Cluster" health="success" clusterId="source" />
+          <ClusterNode label="Source: Elasticsearch 6.8" name="log-data" health="success" clusterId="source" />
           <PathArrow label="Backfill" />
-          <ClusterNode label="Target Cluster" health="error" clusterId="target" />
+          <ClusterNode label="Target: OpenSearch 3.0" name="new-logs-data" health="error" clusterId="target" />
         </div>
       </Container>
     </SpaceBetween>
   );
 }
 
-function ClusterNode({ label, health, clusterId }) {
+function ClusterNode({ label, name, health, clusterId }) {
   const healthMessages = {
     success: 'Cluster is healthy.',
     warning: 'Cluster has warnings.',
@@ -60,8 +61,12 @@ function ClusterNode({ label, health, clusterId }) {
 
   return (
     <div className={styles.clusterNodeBox}>
-      <Icon name={clusterId === "source" ? "upload" : 'download'} size="big" />
+      {clusterId === "source"
+        ? <Icon size="big" name='multiscreen'/>
+        : <Icon size="big" url='opensearch-icon.png'/>
+      }
       <Box variant="strong" margin={{ top: 'xs' }}>{label}</Box>
+      <Link href="#">{name}</Link>
       <Popover
         dismissAriaLabel="Close status"
         position="top"

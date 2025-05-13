@@ -51,7 +51,7 @@ export default function EstimateCompletionTime({
 }: EstimateCompletionTimeProps) {
   const formattedETA = formatTimeDuration(etaSeconds);
   const progressLabel =
-    percentage !== undefined ? `${formatPercent(percentage)}%` : 'In Progress';
+    status === 'success' ? 'Complete' : percentage !== undefined ? `${formatPercent(percentage)}%` : 'In Progress';
 
   if (variant === 'overall') {
     return (
@@ -68,6 +68,7 @@ export default function EstimateCompletionTime({
                   ? 'error'
                   : 'in-progress'
             }
+            variant='flash'
           />
           <StatusIndicator type={status}>
             {error !== undefined
