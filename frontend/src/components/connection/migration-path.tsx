@@ -40,7 +40,7 @@ export default function MigrationPathPage() {
       <Header variant="h3">Migration path</Header>
       <Grid
         disableGutters
-        gridDefinition={[{ colspan: 4 }, { colspan: 2 }, { colspan: 4 }]}
+        gridDefinition={[{ colspan: 4 }, { colspan: 4 }, { colspan: 4 }]}
       >
         <ClusterNode label="Source" version="Elasticsearch 6.8" name="log-data" health="success" clusterId="source" />
         <PathArrow label="Backfill" />
