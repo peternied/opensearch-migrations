@@ -101,6 +101,7 @@
       "MA:Connection",
       "MA:DemoWrapper",
       "MA:MetadataEvaluationAndMigration",
+      "MA:MigrationPath",
       "MA:MigrationSessionReviewPage",
       "MA:RequestTimeline",
       "MA:SnapshotCreation",

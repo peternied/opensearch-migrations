@@ -109,7 +109,7 @@ export default function MetadataEvaluationAndMigration({
       )}
 
       <KeyValuePairs
-        columns={3}
+        columns={2}
         items={[
           { label: 'Status', value: renderStatus() },
           { label: 'Indices', value: allItems.filter(x => x.type === 'Index').length },

@@ -101,6 +101,12 @@
   "MA:formatTimeDuration": [
     "/dashboard/"
   ],
+  "CS:ContentLayout": [
+    "/playground/"
+  ],
+  "CS:Grid": [
+    "/playground/"
+  ],
   "CS:Flashbar": [
     "/loading/",
     "/session/"
@@ -111,12 +117,6 @@
   ],
   "CS:ProgressBar": [
     "/loading/"
-  ],
-  "CS:ContentLayout": [
-    "/playground/"
-  ],
-  "CS:Grid": [
-    "/playground/"
   ],
   "CS:Link": [
     "/developer/ux-inspector/",
@@ -139,6 +139,9 @@
     "/session/"
   ],
   "MA:MetadataEvaluationAndMigration": [
+    "/session/"
+  ],
+  "MA:MigrationPath": [
     "/session/"
   ],
   "MA:RequestTimeline": [

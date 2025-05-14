@@ -55,12 +55,13 @@ export default function EstimateCompletionTime({
 
   if (variant === 'overall') {
     return (
-      <Container header={<Header variant="h2">{label}</Header>}>
+      <Box>
+      <Header variant="h2">{label}</Header>
         <SpaceBetween size="m">
           <ProgressBar
             value={percentage}
-            label={`Progress: ${progressLabel}`}
-            additionalInfo={`Estimated time remaining: ${formattedETA}`}
+            // label={`Progress: ${progressLabel}`}
+            label={`Estimated time remaining: ${formattedETA}`}
             status={
               status === 'success'
                 ? 'success'
@@ -68,7 +69,6 @@ export default function EstimateCompletionTime({
                   ? 'error'
                   : 'in-progress'
             }
-            variant='flash'
           />
           <StatusIndicator type={status}>
             {error !== undefined
@@ -80,7 +80,7 @@ export default function EstimateCompletionTime({
                   : status}
           </StatusIndicator>
         </SpaceBetween>
-      </Container>
+      </Box>
     );
   }
 
@@ -89,7 +89,9 @@ export default function EstimateCompletionTime({
     <Box>
       <StatusIndicator type={status}>
         {percentage !== undefined
-          ? `${formatPercent(percentage)}% • ETA: ${formattedETA}`
+          ? percentage >= 100 
+            ? `${formatPercent(percentage)}%`
+            : `${formatPercent(percentage)}% • ETA: ${formattedETA}`
           : `ETA: ${formattedETA}`}
       </StatusIndicator>
     </Box>
