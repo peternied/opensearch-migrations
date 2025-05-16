@@ -2,5 +2,5 @@ import Header from '@cloudscape-design/components/header';
 import { TaskHeaderProps } from '../types';
 
 export function TaskHeader({ taskId }: TaskHeaderProps) {
-  return <Header variant="h1">Migration Workflow for {taskId}</Header>;
+  return <Header variant="h1">Migration workflow for {taskId}</Header>;
 }
