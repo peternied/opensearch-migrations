@@ -7,7 +7,7 @@ export default function MigrationNavItems() {
       header={{
         href: '/',
         text: 'Migration Assistant',
-        logo: { src: 'migrations-icon-160x160.png', alt: '' }
+        logo: { src: '/migrations-icon-160x160.png', alt: '' }
       }}
       items={[
         { type: 'link', text: `Current Session`, href: `/current` },
