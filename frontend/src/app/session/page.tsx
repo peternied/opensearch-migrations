@@ -13,6 +13,7 @@ import {
   FlashbarProps,
   Header,
   Link,
+  Modal,
   SpaceBetween,
   Wizard,
   WizardProps
@@ -52,6 +53,8 @@ function findStepIndexByName(stepId: StepId, steps: SessionStep[]) {
 }
 
 function StepPageContent() {
+  const [showConfirmation, setShowConfirmation] = useState(false);
+
   const { sessions } = useMigrationSessions();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -193,6 +196,18 @@ function StepPageContent() {
     });
   }
 
+  const handleSubmit = () => {
+    setShowConfirmation(true); // Show modal instead of completing immediately
+  };
+
+  const handleConfirmReset = () => {
+    setShowConfirmation(false);
+    // Add logic here to erase data and start a new session
+    console.log('Session reset. Data erased.');
+    // Optionally reset wizard step
+    setActiveStepIndex(0);
+  };
+
   return (
     <SpaceBetween size='xxl'>
       <Header>Migration Session: {currentSession?.name}</Header>
@@ -206,6 +221,7 @@ function StepPageContent() {
         onNavigate={handleStepChange}
         submitButtonText="Mark Complete"
         allowSkipTo
+        onSubmit={handleSubmit}
       ></Wizard>
       <DemoWrapper>
         <Box>
@@ -216,6 +232,33 @@ function StepPageContent() {
       </DemoWrapper>
       </SpaceBetween>
     </Container>
+    
+    <Modal
+        onDismiss={() => setShowConfirmation(false)}
+        visible={showConfirmation}
+        header="Start New Session?"
+        closeAriaLabel="Close confirmation dialog"
+        footer={
+          <SpaceBetween size='m' direction='horizontal'>
+            <Button
+              onClick={() => setShowConfirmation(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+            variant='primary'
+              onClick={handleConfirmReset}
+            >
+              Confirm
+            </Button>
+          </SpaceBetween>
+        }
+      >
+        <Box>
+          This will erase all current data and start a new session. Are you sure
+          you want to continue?
+        </Box>
+      </Modal>
     </SpaceBetween>
   );
 }

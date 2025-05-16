@@ -5,7 +5,7 @@ import StatusIndicator, {
   StatusIndicatorProps
 } from '@cloudscape-design/components/status-indicator';
 import Popover from '@cloudscape-design/components/popover';
-import { Box, Header, Link, TextFilter } from '@cloudscape-design/components';
+import { Box, Button, Header, Link, SpaceBetween, TextFilter } from '@cloudscape-design/components';
 import { useCollection } from '@cloudscape-design/collection-hooks';
 
 export interface MigrationEntity {
@@ -125,7 +125,20 @@ export default function MigrationEntityTable({
       {...collection.collectionProps}
       items={collection.items}
       variant="embedded"
-      header={<Header variant="h3">{label}</Header>}
+      header={<Header variant="h3" actions={
+        <SpaceBetween size="s" direction="horizontal">
+        <Button
+        >
+          Evaluate
+        </Button>
+        {(
+          <Button
+          >
+            Migrate
+          </Button>
+        )}
+      </SpaceBetween>
+      }>{label}</Header>}
       filter={
           <TextFilter {...collection.filterProps}></TextFilter>
       }

@@ -8,7 +8,7 @@ import Popover from '@cloudscape-design/components/popover';
 import StatusIndicator from '@cloudscape-design/components/status-indicator';
 import styles from './migration-path.module.css';
 import Link from 'next/link';
-import { ColumnLayout, Grid, KeyValuePairs } from '@cloudscape-design/components';
+import { ColumnLayout, Grid, KeyValuePairs, Spinner } from '@cloudscape-design/components';
 
 const checks = [
   {
@@ -118,7 +118,7 @@ function PathArrow({ label }) {
     <div className={styles.pathArrow}>
       <Icon name="arrow-right" />
       <Box variant="small" textAlign="center">
-        {label}
+        <Spinner /> {label}
       </Box>
     </div>
   );

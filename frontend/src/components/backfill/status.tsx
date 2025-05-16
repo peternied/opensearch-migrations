@@ -4,7 +4,7 @@ import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import Box from '@cloudscape-design/components/box';
 import Table from '@cloudscape-design/components/table';
-import { Button, FormField, Input, LineChart, StatusIndicator } from '@cloudscape-design/components';
+import { Button, ButtonDropdown, FormField, Input, LineChart, StatusIndicator, TextFilter } from '@cloudscape-design/components';
 import EstimateCompletionTime, { Status } from '../time/eta';
 import Head from 'next/head';
 
@@ -55,21 +55,8 @@ export default function Page() {
     <SpaceBetween size="m">
       <Box>
         During the backfill data from the source will be copied onto the target
-        cluster as quickly as possible. Dynamical scaling will be used to
-        increase the number of workers, or it can be manually controlled at the
-        bottom of the page.
+        cluster as quickly as possible.
       </Box>
-      <SpaceBetween size="s" direction="horizontal">
-        <Button variant="primary" >
-          Start
-        </Button>
-        <Button>
-          Pause
-        </Button>
-        <FormField label="Workers" description="Number of workers running">
-          <Input value='5' type='number' readOnly></Input>
-        </FormField>
-      </SpaceBetween>
 
       <EstimateCompletionTime
         status="in-progress"
@@ -80,6 +67,7 @@ export default function Page() {
       ></EstimateCompletionTime>
 
       <Table
+        filter={<TextFilter filteringText={''}></TextFilter>}
         columnDefinitions={[
           {
             id: 'id',
@@ -120,10 +108,28 @@ export default function Page() {
         ]}
         items={indices}
         trackBy="id"
-        header={<Header variant="h2">Index Backfill Status</Header>}
+        header={<Header variant="h2" actions={
+        <SpaceBetween size='m' direction='horizontal'>
+          <Button variant="primary" >
+          Start/Pause
+        </Button>
+        <ButtonDropdown items={[
+          { id: '1', text: 'Set worker count', itemType: 'group',
+            items: [
+              {id: '2', text: '1'},
+              {id: '2', text: '5 - Default'},
+              {id: '2', text: '10'},
+              {id: '2', text: 'Max'},
+            ]
+          }
+        ]}>
+          Advanced
+        </ButtonDropdown>
+        </SpaceBetween>}>Index Backfill Status</Header>}
         variant="borderless"
         stickyHeader={true}
       />
+      
       {/* <Header variant='h3'>Activity</Header>
       <LineChart
           series={backfillData}

@@ -109,7 +109,7 @@ export default function MetadataEvaluationAndMigration({
       )}
 
       <KeyValuePairs
-        columns={2}
+        columns={4}
         items={[
           { label: 'Status', value: renderStatus() },
           { label: 'Indices', value: allItems.filter(x => x.type === 'Index').length },
@@ -126,35 +126,7 @@ export default function MetadataEvaluationAndMigration({
         ]}
       />
 
-      <SpaceBetween size="s" direction="horizontal">
-        <Button
-          onClick={runProcess}
-          disabled={status === 'running' || errors.length > 0}
-        >
-          Rerun {mode === 'evaluation' ? 'Evaluation' : 'Migration'}
-        </Button>
-        {(
-          <Button
-            variant="primary"
-            onClick={toggleMode}
-            disabled={status === 'running' || errors.length > 0}
-          >
-            Migrate Items
-          </Button>
-        )}
-      </SpaceBetween>
-
-      {status === 'completed' ? (
-        <>
-          <MigrationEntityTable items={indexes} label="Items" mode={mode} />
-        </>
-      ) : errors.length == 0 ? (
-        <>
-          <Spinner /> Loading results...
-        </>
-      ) : (
-        <></>
-      )}
+      <MigrationEntityTable items={indexes} label="Items" mode={mode} />
     </SpaceBetween>
   );
 }

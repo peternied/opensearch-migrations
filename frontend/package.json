@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/generate-sitemap.js",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
@@ -29,7 +28,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@cloudscape-design/collection-hooks": "^1.0.70",
+    "@cloudscape-design/collection-hooks": "^1.0.73",
     "@eslint/eslintrc": "^3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",

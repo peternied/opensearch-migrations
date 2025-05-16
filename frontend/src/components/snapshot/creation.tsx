@@ -72,8 +72,18 @@ export default function SnapshotCreation() {
     <SpaceBetween size="m">
       <Table
         header={
-          <Header variant="h3">
-            Indexes included in the snapshot
+          <Header variant="h3" actions={
+            <SpaceBetween size="m">
+              <Button
+                onClick={handleTakeSnapshot}
+                disabled={isSnapshotting}
+                variant="primary"
+              >
+                Take Snapshot
+              </Button>
+            </SpaceBetween>
+          }>
+            Review items to snapshot
           </Header>
         }
         columnDefinitions={columnDefinitions}
@@ -86,18 +96,6 @@ export default function SnapshotCreation() {
         variant="embedded"
         stickyHeader
       />
-
-      {!snapshotComplete && (
-        <SpaceBetween size="m">
-          <Button
-            onClick={handleTakeSnapshot}
-            disabled={isSnapshotting}
-            variant="primary"
-          >
-            Take Snapshot
-          </Button>
-        </SpaceBetween>
-      )}
       {(isSnapshotting || snapshotComplete) &&
       <EstimateCompletionTime
         etaSeconds={estimatedTime}

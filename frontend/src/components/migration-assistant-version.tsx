@@ -1,5 +1,6 @@
 'use client';
 
+import { Box } from '@cloudscape-design/components';
 import Link from 'next/link';
 
 interface MigrationAssistantVersionProps {
@@ -15,16 +16,19 @@ export default function MigrationAssistantVersion({
 }: MigrationAssistantVersionProps) {
   return (
     <>
-      <p>
-        Migration Assistant version <code>{versionIdentifier}</code>.
-      </p>
-      <p>
+      <Box variant="p">
+        Migration Assistant version <Box variant="code">{versionIdentifier}</Box>.
+      </Box>
+      <Box variant="p">
         Built from commit{' '}
-        <Link href="https://github.com/opensearch-project/opensearch-migrations/commits/">
-          <code>{commitSha}</code>
+        <Link
+          external
+          href={`https://github.com/opensearch-project/opensearch-migrations/commit/${commitSha}`}
+        >
+        <Box variant="code">{commitSha}</Box>
         </Link>{' '}
-        on <code>{commitDate.toLocaleDateString()}</code>.
-      </p>
+        on <Box variant="code">{commitDate.toLocaleDateString()}</Box>.
+      </Box>
     </>
   );
 }
