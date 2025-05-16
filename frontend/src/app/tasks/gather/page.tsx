@@ -11,7 +11,8 @@ import {
   FormField,
   Icon,
   Input,
-  StatusIndicator
+  StatusIndicator,
+  TextFilter
 } from '@cloudscape-design/components';
 import SupportPromptGroup from "@cloudscape-design/chat-components/support-prompt-group";
 
@@ -73,6 +74,7 @@ export default function SourceCaptureAndTaskCreationPage() {
             group logical items together or add them one by one.
           </Box>
           <Table
+            filter={<TextFilter filteringText={''}></TextFilter>}
             columnDefinitions={[
               { header: 'Index Name', cell: (item) => item.name },
               {

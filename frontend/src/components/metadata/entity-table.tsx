@@ -127,9 +127,7 @@ export default function MigrationEntityTable({
       variant="embedded"
       header={<Header variant="h3">{label}</Header>}
       filter={
-        collection.items.length > MIN_ITEM_COUNT_FOR_FILTERING && (
           <TextFilter {...collection.filterProps}></TextFilter>
-        )
       }
     />
   );
