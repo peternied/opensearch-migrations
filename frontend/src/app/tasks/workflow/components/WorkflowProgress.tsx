@@ -78,8 +78,8 @@ export function WorkflowProgress({
         allowSkipTo={true}
         secondaryActions={
           <SpaceBetween size="m" direction="horizontal">
-            <Button onClick={handleNavigateToTasks}>Back to Tasks</Button>
-            <Button onClick={handleIgnoreTask}>Ignore this task</Button>
+            {/* <Button onClick={handleNavigateToTasks}>Back to Tasks</Button> */}
+            {/* <Button onClick={handleIgnoreTask}>Ignore this task</Button> */}
           </SpaceBetween>
         }
         steps={wizardSteps}

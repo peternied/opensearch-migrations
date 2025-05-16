@@ -136,6 +136,8 @@
     "route": "/tasks/manage/task-table",
     "components": [
       "CS:Button",
+      "CS:ButtonDropdown",
+      "CS:Header",
       "CS:SpaceBetween",
       "CS:StatusIndicator",
       "CS:Table"

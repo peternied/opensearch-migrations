@@ -17,7 +17,7 @@ const associatedItems: TaskItem[] = [
 export default function TaskWorkflowPage() {
   // Get taskId from URL params
   const params = useParams();
-  const taskId = (params.taskId as string) || '1'; // Default to '1' if not provided
+  const taskId = (params.taskId as string) || 'Indices (a,b,c)'; // Default to '1' if not provided
   const router = useRouter();
 
   // Use our custom workflow hook to manage workflow state

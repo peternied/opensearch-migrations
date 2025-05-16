@@ -9,9 +9,11 @@ import { useState } from 'react';
 import {
   Box,
   FormField,
+  Icon,
   Input,
   StatusIndicator
 } from '@cloudscape-design/components';
+import SupportPromptGroup from "@cloudscape-design/chat-components/support-prompt-group";
 
 interface Index {
   name: string;
@@ -115,6 +117,12 @@ export default function SourceCaptureAndTaskCreationPage() {
               Create Task Association
             </Button>
           </SpaceBetween>
+          <Header variant='h3'><Icon name='gen-ai'></Icon> Suggest grouping</Header>
+          <SupportPromptGroup items={[
+            {id: '1', text: 'Index Types'},
+            {id: '2', text: 'Data Size'},
+            {id: '3', text: 'Recent Usage'},
+          ]} onItemClick={undefined} ariaLabel={''} alignment='horizontal'></SupportPromptGroup>
         </SpaceBetween>
       </Container>
       <Container>

@@ -9,6 +9,7 @@
     "/session/",
     "/tasks/gather/",
     "/tasks/manage/",
+    "/tasks/manage/task-table",
     "/tasks/workflow/components/TaskHeader",
     "/teardown/"
   ],
@@ -163,6 +164,9 @@
   "CS:Input": [
     "/tasks/gather/",
     "/tasks/workflow/components/steps/MetadataMigrationStep"
+  ],
+  "CS:ButtonDropdown": [
+    "/tasks/manage/task-table"
   ],
   "CS:KeyValuePairs": [
     "/tasks/workflow/components/TaskDetails"
