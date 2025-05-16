@@ -8,6 +8,7 @@ import RequestTimeline from '@/components/capture/request-timeline';
 import {
   Box,
   Button,
+  Container,
   Flashbar,
   FlashbarProps,
   Header,
@@ -193,9 +194,11 @@ function StepPageContent() {
   }
 
   return (
-    <>
+    <SpaceBetween size='xxl'>
       <Header>Migration Session: {currentSession?.name}</Header>
+      <Container>
       <Flashbar items={flashbarItems}></Flashbar>
+      <SpaceBetween size='l'>
       <MigrationPath></MigrationPath>
       <Wizard
         steps={steps}
@@ -211,7 +214,9 @@ function StepPageContent() {
           not be present in the final version.
         </Box>
       </DemoWrapper>
-    </  >
+      </SpaceBetween>
+    </Container>
+    </SpaceBetween>
   );
 }
 
