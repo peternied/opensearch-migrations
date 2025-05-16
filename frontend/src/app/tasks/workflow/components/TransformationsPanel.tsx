@@ -6,8 +6,8 @@ export function TransformationsPanel({
   onEdit
 }: TransformationsPanelProps) {
   return (
-    <Button variant="normal" onClick={onEdit}>
-      Edit Transformations ({count})
+    <Button variant="inline-link" onClick={onEdit} iconName='edit'>
+      Modify ({count})
     </Button>
   );
 }

@@ -101,12 +101,6 @@
   "MA:formatTimeDuration": [
     "/dashboard/"
   ],
-  "CS:ContentLayout": [
-    "/playground/"
-  ],
-  "CS:Grid": [
-    "/playground/"
-  ],
   "CS:Flashbar": [
     "/loading/",
     "/session/"
@@ -117,6 +111,12 @@
   ],
   "CS:ProgressBar": [
     "/loading/"
+  ],
+  "CS:ContentLayout": [
+    "/playground/"
+  ],
+  "CS:Grid": [
+    "/playground/"
   ],
   "CS:Link": [
     "/developer/ux-inspector/",

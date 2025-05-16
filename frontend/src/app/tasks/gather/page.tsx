@@ -86,7 +86,7 @@ export default function SourceCaptureAndTaskCreationPage() {
                 cell: (item) =>
                   item.status !== 'ignored' && (
                     <Button
-                      variant="inline-link"
+                      variant="normal"
                       onClick={() => handleIgnore(item)}
                     >
                       Ignore

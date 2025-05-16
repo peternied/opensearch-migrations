@@ -87,6 +87,18 @@ export default function SnapshotCreation() {
         stickyHeader
       />
 
+      {!snapshotComplete && (
+        <SpaceBetween size="m">
+          <Button
+            onClick={handleTakeSnapshot}
+            disabled={isSnapshotting}
+            variant="primary"
+          >
+            Take Snapshot
+          </Button>
+        </SpaceBetween>
+      )}
+      {(isSnapshotting || snapshotComplete) &&
       <EstimateCompletionTime
         etaSeconds={estimatedTime}
         variant="overall"
@@ -99,18 +111,8 @@ export default function SnapshotCreation() {
               : 'success'
         }
       ></EstimateCompletionTime>
+      }
 
-      {!isSnapshotting && !snapshotComplete && (
-        <SpaceBetween size="m">
-          <Button
-            onClick={handleTakeSnapshot}
-            disabled={selectedItems.length === 0}
-            variant="primary"
-          >
-            Take Snapshot
-          </Button>
-        </SpaceBetween>
-      )}
     </SpaceBetween>
   );
 }

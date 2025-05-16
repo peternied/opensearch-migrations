@@ -5,7 +5,7 @@ import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { StatusIndicator } from '@cloudscape-design/components';
+import { ButtonDropdown, Header, StatusIndicator } from '@cloudscape-design/components';
 
 interface Task {
   id: string;
@@ -85,12 +85,18 @@ export default function TaskTable() {
     <div style={{ position: 'relative' }}>
       <SpaceBetween size="l" direction="vertical">
         <SpaceBetween direction="horizontal" alignItems="end" size="m">
-          <Button
-            onClick={handleMarkAsIgnored}
-            disabled={selectedItems.length === 0}
-          >
-            Mark as Ignored
-          </Button>
+          <Header variant='h2' actions={
+            <ButtonDropdown
+            // onClick={handleMarkAsIgnored}
+            disabled={selectedItems.length === 0} items={[
+              {id: 'ignore', itemType: 'action', text: 'Mark as Ignored'}
+            ]}>
+            Task Actions
+          </ButtonDropdown>
+          }>
+            Tasks
+          </Header>
+          
         </SpaceBetween>
         <Table
           columnDefinitions={[

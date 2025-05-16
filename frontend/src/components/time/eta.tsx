@@ -70,7 +70,7 @@ export default function EstimateCompletionTime({
                   : 'in-progress'
             }
           />
-          <StatusIndicator type={status}>
+          {/* <StatusIndicator type={status}>
             {error !== undefined
               ? error
               : status === 'in-progress'
@@ -78,7 +78,7 @@ export default function EstimateCompletionTime({
                 : status === 'success'
                   ? 'Completed'
                   : status}
-          </StatusIndicator>
+          </StatusIndicator> */}
         </SpaceBetween>
       </Box>
     );

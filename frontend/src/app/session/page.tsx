@@ -58,7 +58,7 @@ function StepPageContent() {
   // const currentSession = sessions.find((s) => s.id == sessionId);
   const currentSession: MigrationSession =   {
     id: 'beta',
-    name: 'Session Beta',
+    name: 'Contoso Corp - Sales',
     createdAt: new Date('2024-04-18').getTime(),
     snapshot: 'success',
     metadata: 'success',
@@ -86,7 +86,7 @@ function StepPageContent() {
       validWorkflows: ['freeform', 'full', 'replay']
     },
     {
-      title: 'Source Information',
+      title: 'Target Information',
       content: <Connection connectionType="target" />,
       stepId: 'select-target',
       requiredSteps: [],

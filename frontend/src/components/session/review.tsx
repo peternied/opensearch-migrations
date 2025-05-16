@@ -175,7 +175,7 @@ const getNextStageAction = (session: MigrationSession | null) => {
 };
 
 export default function MigrationSessionReviewPage() {
-  const [selectedSession, setSelectedSession] = useState('none');
+  const [selectedSession, setSelectedSession] = useState('completed');
   const [name, setName] = useState('');
 
   const sessionOptions = [
@@ -233,13 +233,13 @@ export default function MigrationSessionReviewPage() {
   return (
     <SpaceBetween size="xl">
       {/* <DemoWrapper>s */}
-      <Select
+      {/* <Select
         selectedOption={sessionOptions.find((o) => o.value === selectedSession)}
         onChange={({ detail }) => setSelectedSession(detail.selectedOption.value)}
         options={sessionOptions}
         selectedAriaLabel="Session"
         placeholder="Select a session"
-      />
+      /> */}
       {/* </DemoWrapper> */}
 
       {!session && (

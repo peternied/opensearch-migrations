@@ -13,7 +13,7 @@ export default function SourceSelectionPage() {
 
   return (
     <SpaceBetween size="l">
-      <Box>
+      {/* <Box>
         Migration Assistant needs details to help determine the complexity of
         the migration, please select the source so these can be reviews through
         this workflow.
@@ -26,7 +26,7 @@ export default function SourceSelectionPage() {
           { value: 's3snapshot', label: 'Use S3 Snapshot Repository' },
           { value: 'template', label: 'Load from Migration Template' }
         ]}
-      />
+      /> */}
 
       {sourceType === 'connection' && (
         <SourceConnectionForm connectionType="source" />

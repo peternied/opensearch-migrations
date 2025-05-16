@@ -45,8 +45,8 @@ export function MetadataMigrationStep({
 
   return (
     <SpaceBetween size="l">
-      <FormField label="Migration Options">
-        <SpaceBetween size="s">
+      <FormField label="Select Migration Options" description='Determine which metadata options should be applied when the associated indexes (3) are migrated.'>
+        <SpaceBetween size="m">
           <Checkbox
             checked={migrationOptions.migrateAliases}
             onChange={({ detail }) =>

@@ -15,12 +15,12 @@ interface ConnectionSettingsProps {
 export default function Connection({
   connectionType
 }: ConnectionSettingsProps) {
-  const [host, setHost] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [awsRegion, setAwsRegion] = useState('');
-  const [awsServiceSigningName, setAwsServiceSigningName] = useState('');
-  const [insecure, setInsecure] = useState(false);
+  const [host, setHost] = useState(`http://${connectionType}.cluster.local:9200`);
+  const [username, setUsername] = useState(connectionType == 'source' ? 'admin' : '');
+  const [password, setPassword] = useState(connectionType == 'source' ? 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-plaintext-secret-AbC123' : '');
+  const [awsRegion, setAwsRegion] = useState(connectionType == 'source' ? '' : 'us-east-2');
+  const [awsServiceSigningName, setAwsServiceSigningName] = useState(connectionType == 'source' ? '' : 'es');
+  const [insecure, setInsecure] = useState(connectionType == 'source' ? true : false);
 
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(
@@ -80,64 +80,72 @@ export default function Connection({
       >
         <Input
           value={host}
+          readOnly
           onChange={({ detail }) => setHost(detail.value)}
-          placeholder="http://localhost:9200"
         />
       </FormField>
 
+      {!!username &&
       <FormField
         label={`${capitalize(connectionType)} Username`}
         description="Optional. Leave blank if no authentication is required."
       >
         <Input
           value={username}
+          readOnly
           onChange={({ detail }) => setUsername(detail.value)}
         />
-      </FormField>
+      </FormField>}
 
+      {!!password && 
       <FormField
-        label={`${capitalize(connectionType)} Password`}
-        description="Optional. Leave blank if no authentication is required."
+        label={`${capitalize(connectionType)} Password Arn`}
+        description="Leave blank if no authentication is required."
       >
         <Input
-          type="password"
+        readOnly
           value={password}
           onChange={({ detail }) => setPassword(detail.value)}
         />
-      </FormField>
+      </FormField>}
 
+      {!!awsRegion && 
       <FormField
         label="AWS Region"
         description="Optional. Required if using SigV4 auth (e.g., us-east-1)"
       >
         <Input
           value={awsRegion}
+          readOnly
           onChange={({ detail }) => setAwsRegion(detail.value)}
         />
-      </FormField>
+      </FormField>}
 
+      { !!awsServiceSigningName &&
       <FormField
         label="AWS Service Signing Name"
         description="Optional. e.g., 'es' for OpenSearch, 'aoss' for Serverless"
       >
         <Input
           value={awsServiceSigningName}
+          readOnly
           onChange={({ detail }) => setAwsServiceSigningName(detail.value)}
         />
-      </FormField>
+      </FormField>}
 
-      <FormField label="Allow untrusted SSL certificates">
+      {insecure && <FormField label="Allow untrusted SSL certificates">
         <Checkbox
           checked={insecure}
           onChange={({ detail }) => setInsecure(detail.checked)}
+          readOnly
         >
           Insecure SSL (allow self-signed certs)
         </Checkbox>
-      </FormField>
+      </FormField>}
 
-      <Button variant="primary" loading={isVerifying} onClick={handleVerify}>
+      {/* <Button variant="primary" loading={isVerifying} onClick={handleVerify}>
         Verify {capitalize(connectionType)} Connection
-      </Button>
+      </Button> */}
     </SpaceBetween>
   );
 }

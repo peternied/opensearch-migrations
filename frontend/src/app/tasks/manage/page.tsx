@@ -18,13 +18,13 @@ export default function Page() {
             Migrate your cluster in small steps, work through all these tasks to
             complete your migration.
           </Box>
-          <TaskTable />
           <EstimateCompletionTime
             percentage={18}
             etaSeconds={6 * 4000}
             variant={'overall'}
             label="Estimated remaining work"
           ></EstimateCompletionTime>
+          <TaskTable />
         </SpaceBetween>
       </Container>
     </SpaceBetween>

@@ -70,6 +70,15 @@ export default function Page() {
           <Input value='5' type='number' readOnly></Input>
         </FormField>
       </SpaceBetween>
+
+      <EstimateCompletionTime
+        status="in-progress"
+        etaSeconds={overallEta}
+        percentage={overallProgressPercent}
+        variant="overall"
+        label="All indices backfilled"
+      ></EstimateCompletionTime>
+
       <Table
         columnDefinitions={[
           {
@@ -115,7 +124,7 @@ export default function Page() {
         variant="borderless"
         stickyHeader={true}
       />
-      <Header variant='h3'>Activity</Header>
+      {/* <Header variant='h3'>Activity</Header>
       <LineChart
           series={backfillData}
           xTitle="Time"
@@ -127,15 +136,7 @@ export default function Page() {
           xTickFormatter={(e) =>
             new Date(e).toLocaleTimeString('en-US', { hour12: true })
           }
-        />
-      <EstimateCompletionTime
-        status="in-progress"
-        etaSeconds={overallEta}
-        percentage={overallProgressPercent}
-        variant="overall"
-        label="All indices backfilled"
-      ></EstimateCompletionTime>
-
+        /> */}
     </SpaceBetween>
   );
 }

@@ -27,7 +27,7 @@ export function TaskDetails({
   return (
     <>
       <Box variant="h2">Task Details</Box>
-      <KeyValuePairs items={itemKvp} columns={3} />
+      <KeyValuePairs items={itemKvp} columns={4} />
     </>
   );
 }
