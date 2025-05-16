@@ -18,6 +18,7 @@
     "@cloudscape-design/board-components": "^3.0.99",
     "@cloudscape-design/chat-components": "^1.0.44",
     "@cloudscape-design/components": "3.0.839",
+    "@cloudscape-design/design-tokens": "^3.0.57",
     "@cloudscape-design/global-styles": "1.0.32",
     "@cloudscape-design/test-utils-core": "^1.0.56",
     "@types/uuid": "^10.0.0",

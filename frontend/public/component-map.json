@@ -75,7 +75,9 @@
     "/teardown/"
   ],
   "CS:Icon": [
-    "/dashboard/"
+    "/dashboard/",
+    "/tasks/gather/",
+    "/tasks/manage/task-table"
   ],
   "CS:StatusIndicator": [
     "/dashboard/",

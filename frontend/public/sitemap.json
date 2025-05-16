@@ -116,6 +116,7 @@
       "CS:Container",
       "CS:FormField",
       "CS:Header",
+      "CS:Icon",
       "CS:Input",
       "CS:SpaceBetween",
       "CS:StatusIndicator",
@@ -138,6 +139,7 @@
       "CS:Button",
       "CS:ButtonDropdown",
       "CS:Header",
+      "CS:Icon",
       "CS:SpaceBetween",
       "CS:StatusIndicator",
       "CS:Table"

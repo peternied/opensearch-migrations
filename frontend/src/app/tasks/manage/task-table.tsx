@@ -5,7 +5,8 @@ import Button from '@cloudscape-design/components/button';
 import SpaceBetween from '@cloudscape-design/components/space-between';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ButtonDropdown, Header, StatusIndicator } from '@cloudscape-design/components';
+import { ButtonDropdown, Header, Icon, StatusIndicator } from '@cloudscape-design/components';
+import { SupportPromptGroup } from '@cloudscape-design/chat-components';
 
 interface Task {
   id: string;
@@ -86,6 +87,9 @@ export default function TaskTable() {
       <SpaceBetween size="l" direction="vertical">
         <SpaceBetween direction="horizontal" alignItems="end" size="m">
           <Header variant='h2' actions={
+            <SpaceBetween size='m' direction='horizontal' alignItems='end'>
+            <Button iconName='gen-ai'>Suggest next task</Button>
+
             <ButtonDropdown
             // onClick={handleMarkAsIgnored}
             disabled={selectedItems.length === 0} items={[
@@ -93,6 +97,7 @@ export default function TaskTable() {
             ]}>
             Task Actions
           </ButtonDropdown>
+          </SpaceBetween>
           }>
             Tasks
           </Header>
