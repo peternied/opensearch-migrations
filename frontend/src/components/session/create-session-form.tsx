@@ -37,7 +37,7 @@ export default function CreateSessionForm({
         />
       </FormField>
 
-      <WorkflowPicker showDisabled={showDisabled} value={workflow} onChange={setWorkflow} />
+      {/* <WorkflowPicker showDisabled={showDisabled} value={workflow} onChange={setWorkflow} /> */}
 
       <SpaceBetween size="m" direction="horizontal">
         <Button
