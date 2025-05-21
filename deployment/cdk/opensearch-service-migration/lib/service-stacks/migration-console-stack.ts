@@ -325,6 +325,7 @@ export class MigrationConsoleStack extends MigrationServiceCore {
         }
 
         this.createService({
+            websiteEnabled: true,
             serviceName: "migration-console",
             dockerImageName: "migrations/migration_console:latest",
             securityGroups: securityGroups,
