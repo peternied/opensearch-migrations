@@ -1,0 +1,32 @@
+plugins {
+    id 'org.opensearch.migrations.java-library-conventions'
+    id 'io.freefair.lombok'
+}
+
+dependencies {
+    implementation project(':transformation:transformationPlugins:jsonMessageTransformers:jsonMessageTransformerInterface')
+    implementation project(':transformation:transformationPlugins:jsonMessageTransformers:jsonTypeMappingsSanitizationTransformer')
+    implementation project(':transformation:transformationPlugins:jsonMessageTransformers:jsonJSTransformerProvider')
+
+    implementation libs.jackson.core
+    implementation libs.jackson.databind
+    implementation libs.slf4j.api
+
+    testImplementation project(':transformation:transformationPlugins:jsonMessageTransformers:jsonTypeMappingsSanitizationTransformer')
+    testImplementation testFixtures(project(path:':transformation:transformationPlugins:jsonMessageTransformers:jsonTypeMappingsSanitizationTransformer'))
+    testImplementation project(':coreUtilities')
+    testImplementation testFixtures(project(path: ':coreUtilities'))
+    testImplementation testFixtures(project(path: ':testHelperFixtures'))
+    testImplementation testFixtures(project(path: ':TrafficCapture:trafficReplayer'))
+
+    testImplementation libs.jackson.databind
+    testImplementation libs.netty.all
+    testImplementation libs.junit.jupiter.api
+    testImplementation libs.junit.jupiter.params
+    testImplementation libs.slf4j.api
+    testRuntimeOnly libs.junit.jupiter.engine
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

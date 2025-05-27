@@ -2,9 +2,7 @@
   "name": "js-module",
   "version": "1.0.0",
   "description": "JavaScript module for GraalJS integration",
-  "main": "src/index.js",
   "keywords": [
-    "calculator",
     "graaljs",
     "java-integration"
   ],
@@ -12,11 +10,6 @@
     "src/**/*.js",
     "README.md"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yourusername/your-repo.git"
-  },
-  "license": "Apache-2.0",
   "scripts": {
     "test": "jest --coverage",
     "test:watch": "jest --watch",
