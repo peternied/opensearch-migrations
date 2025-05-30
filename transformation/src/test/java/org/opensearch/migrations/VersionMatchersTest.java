@@ -43,7 +43,7 @@ public class VersionMatchersTest {
     @Test
     void equalOrGreaterThanES_7_10Test() {
         testPredicate(
-            VersionMatchers.equalOrGreaterThanES_7_10,
+            VersionMatchers.equalOrGreaterThanES_7_9,
             "equalOrGreaterThanES_7_10",
             List.of("ES 7.10", "ES 7.11.1"),
             List.of("ES 7", "ES 7.1", "ES 7.9", "OS 7.10")
