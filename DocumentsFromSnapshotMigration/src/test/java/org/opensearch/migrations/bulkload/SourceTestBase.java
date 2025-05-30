@@ -219,6 +219,7 @@ public class SourceTestBase {
             } catch (Exception e) {
                 log.atError().setCause(e).setMessage("Caught an exception, " +
                     "but just going to run again with this worker to simulate task/container recycling").log();
+                throw new ExpectedMigrationWorkTerminationException(null, runNumber);
             }
         }
     }
@@ -253,7 +254,7 @@ public class SourceTestBase {
                 return d;
             };
 
-            var sourceResourceProvider = ClusterProviderRegistry.getSnapshotReader(sourceVersion, sourceRepo, false);
+            var sourceResourceProvider = ClusterProviderRegistry.getSnapshotReader(sourceVersion, sourceRepo, true);
 
             DefaultSourceRepoAccessor repoAccessor = new DefaultSourceRepoAccessor(sourceRepo);
             SnapshotShardUnpacker.Factory unpackerFactory = new SnapshotShardUnpacker.Factory(
@@ -304,7 +305,7 @@ public class SourceTestBase {
                     new DocumentReindexer(clientFactory.determineVersionAndCreate(), 1000, Long.MAX_VALUE, 1, () -> docTransformer),
                     progressCursor,
                     workCoordinator,
-                    Duration.ofMinutes(10),
+                    Duration.ofSeconds(20),
                     processManager,
                     sourceResourceProvider.getIndexMetadata(),
                     snapshotName,

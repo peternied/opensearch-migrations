@@ -78,6 +78,31 @@ class EndToEndTest extends BaseMigrationTest {
         }
     }
 
+    private static Stream<Arguments> extendedScenarios() {
+        return SupportedClusters.extendedSources().stream().map(s -> Arguments.of(s));
+    }
+
+    @ParameterizedTest(name = "From version {0} to version OS 1.3")
+    @MethodSource(value = "extendedScenarios")
+    void extendedMetadata(SearchClusterContainer.ContainerVersion sourceVersion) {
+        try (
+            final var sourceCluster = new SearchClusterContainer(sourceVersion);
+            final var targetCluster = new SearchClusterContainer(SearchClusterContainer.OS_V1_3_16);
+        ) {
+            this.sourceCluster = sourceCluster;
+            this.targetCluster = targetCluster;
+            metadataCommandOnClusters(
+                TransferMedium.SnapshotImage,
+                MetadataCommands.EVALUATE,
+                List.of(TemplateType.Legacy));
+            metadataCommandOnClusters(
+                TransferMedium.SnapshotImage,
+                MetadataCommands.MIGRATE,
+                List.of(TemplateType.Legacy));
+        }
+    }
+
+
     private enum TransferMedium {
         SnapshotImage,
         Http
@@ -151,11 +176,11 @@ class EndToEndTest extends BaseMigrationTest {
         }
 
         // If the target is not part of  supported target matrix enable loose version matching
-        if (!(SupportedClusters.supportedTargets(false)
-            .stream()
-            .anyMatch(v -> v.equals(targetCluster.getContainerVersion().getVersion())))) {
+        // if (!(SupportedClusters.supportedTargets(false)
+        //     .stream()
+        //     .anyMatch(v -> v.equals(targetCluster.getContainerVersion().getVersion())))) {
             arguments.versionStrictness.allowLooseVersionMatches = true;
-        }
+        // }
 
         arguments.metadataTransformationParams.multiTypeResolutionBehavior = MultiTypeResolutionBehavior.UNION;
 
