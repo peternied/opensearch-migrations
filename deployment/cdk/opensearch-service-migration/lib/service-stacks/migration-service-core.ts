@@ -153,7 +153,7 @@ export class MigrationServiceCore extends Stack {
         }
 
         if (props.otelCollectorEnabled) {
-            OtelCollectorSidecar.addOtelCollectorContainer(serviceTaskDef, serviceLogGroup.logGroupName);
+            OtelCollectorSidecar.addOtelCollectorContainer(serviceTaskDef, serviceLogGroup.logGroupName, props.stage);
         }
 
         if (props.websiteEnabled) {
