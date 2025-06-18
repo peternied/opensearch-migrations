@@ -11,6 +11,9 @@ pyyaml = "*"
 Click = "*"
 cerberus = "*"
 awscli = "*"
+uvicorn = "*"
+fastapi = "*"
+pydantic = "*"
 
 [dev-packages]
 pytest = "*"
