@@ -2,7 +2,7 @@ from logging import log
 import logging
 from typing import Any, Dict, List, Literal, Optional
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from console_link.models.cluster import Cluster, HttpMethod
 from console_link.models.snapshot import Snapshot
@@ -22,7 +22,7 @@ router = APIRouter(
 
 
 class ClusterConfig(BaseModel):
-    endpoint: str
+    endpoint: str = Field(description="The address of the cluster.")
     auth_type: Literal['basic_auth', 'no_auth', 'sigv4']
     auth_details: Optional[Dict[str, Any]] = None
     allow_insecure: Optional[bool] = False
