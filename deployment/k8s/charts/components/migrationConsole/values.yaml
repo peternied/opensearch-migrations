@@ -10,7 +10,4 @@ parameters:
     value: false
     allowRuntimeOverride: false
 website:
-  enabled: true
   image: migrations/website:latest
-  ingress:
-    enabled: true
