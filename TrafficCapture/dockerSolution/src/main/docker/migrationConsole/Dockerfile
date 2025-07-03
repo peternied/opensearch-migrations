@@ -1,6 +1,12 @@
 ARG BASE_IMAGE=migrations/elasticsearch_client_test_console:latest
+ARG GIT_TAG
+ARG GIT_COMMIT
+ARG GIT_COMMIT_DATE
 
 FROM ${BASE_IMAGE} AS migration-console-base
+ENV GIT_TAG=${GIT_TAG}
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV GIT_COMMIT_DATE=${GIT_COMMIT_DATE}
 
 RUN ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/') && \
     if [ "$ARCH" != "amd64" ] && [ "$ARCH" != "arm64" ]; then \
