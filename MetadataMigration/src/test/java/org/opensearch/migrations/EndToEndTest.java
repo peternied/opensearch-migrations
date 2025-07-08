@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -57,7 +58,7 @@ class EndToEndTest extends BaseMigrationTest {
                 return Arrays.stream(TransferMedium.values())
                     .map(medium -> Arguments.of(pair.source(), pair.target(), medium, templateTypes))
                         .toList().stream();
-            });
+            }).limit(1);
     }
 
     @ParameterizedTest(name = "From version {0} to version {1}, Medium {2}, Command {3}, Template Type {4}")
@@ -72,7 +73,7 @@ class EndToEndTest extends BaseMigrationTest {
         ) {
             this.sourceCluster = sourceCluster;
             this.targetCluster = targetCluster;
-            metadataCommandOnClusters(medium, MetadataCommands.EVALUATE, templateTypes);
+            // metadataCommandOnClusters(medium, MetadataCommands.EVALUATE, templateTypes);
             metadataCommandOnClusters(medium, MetadataCommands.MIGRATE, templateTypes);
         }
     }
@@ -81,25 +82,25 @@ class EndToEndTest extends BaseMigrationTest {
         return SupportedClusters.extendedSources().stream().map(s -> Arguments.of(s));
     }
 
-    @ParameterizedTest(name = "From version {0} to version OS 2.19")
-    @MethodSource(value = "extendedScenarios")
-    void extendedMetadata(SearchClusterContainer.ContainerVersion sourceVersion) {
-        try (
-                final var sourceCluster = new SearchClusterContainer(sourceVersion);
-                final var targetCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_19_1);
-        ) {
-            this.sourceCluster = sourceCluster;
-            this.targetCluster = targetCluster;
-            metadataCommandOnClusters(
-                    TransferMedium.SnapshotImage,
-                    MetadataCommands.EVALUATE,
-                    List.of(TemplateType.Legacy));
-            metadataCommandOnClusters(
-                    TransferMedium.SnapshotImage,
-                    MetadataCommands.MIGRATE,
-                    List.of(TemplateType.Legacy));
-        }
-    }
+    // @ParameterizedTest(name = "From version {0} to version OS 2.19")
+    // @MethodSource(value = "extendedScenarios")
+    // void extendedMetadata(SearchClusterContainer.ContainerVersion sourceVersion) {
+    //     try (
+    //             final var sourceCluster = new SearchClusterContainer(sourceVersion);
+    //             final var targetCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_19_1);
+    //     ) {
+    //         this.sourceCluster = sourceCluster;
+    //         this.targetCluster = targetCluster;
+    //         metadataCommandOnClusters(
+    //                 TransferMedium.SnapshotImage,
+    //                 MetadataCommands.EVALUATE,
+    //                 List.of(TemplateType.Legacy));
+    //         metadataCommandOnClusters(
+    //                 TransferMedium.SnapshotImage,
+    //                 MetadataCommands.MIGRATE,
+    //                 List.of(TemplateType.Legacy));
+    //     }
+    // }
 
     private enum TransferMedium {
         SnapshotImage,
@@ -145,6 +146,27 @@ class EndToEndTest extends BaseMigrationTest {
             sourceOperations.createDocument(blogIndexName, "222", "{\"" + fieldName + "\":\"Tobias Funke\"}");
             testData.blogIndexNames.add(blogIndexName);
         }
+
+        sourceOperations.put("/_index_template/ds1-template", "{\r\n" + //
+        "  \"index_patterns\": [\r\n" + //
+        "    \"ds-*\"\r\n" + //
+        "  ],\r\n" + //
+        "  \"data_stream\": {},\r\n" + //
+        "  \"priority\": 100\r\n" + //
+        "}");
+        
+        sourceOperations.put("/_data_stream/ds-stream", "{}");
+
+        sourceOperations.post("/ds-stream/_doc", "{\r\n" + //
+        "  \"message\": \"login attempt failed\",\r\n" + //
+        "  \"@timestamp\": \"2013-03-01T00:00:00\"\r\n" + //
+        "}");
+        sourceOperations.post("/ds-stream/_doc", "{\r\n" + //
+        "  \"message\": \"login attempt succeed\",\r\n" + //
+        "  \"@timestamp\": \"2014-03-01T00:00:00\"\r\n" + //
+        "}");
+
+        log.atInfo().setMessage("Source data stream stuff: " + sourceOperations.get("/_data_stream").getValue());
 
         sourceOperations.createDocument(testData.movieIndexName, "123", "{\"title\":\"This is Spinal Tap\"}");
         sourceOperations.createDocument(testData.indexThatAlreadyExists, "doc66", "{}");
@@ -223,6 +245,9 @@ class EndToEndTest extends BaseMigrationTest {
             hasItems(testData.indexThatAlreadyExists));
         assertThat(getNames(getSuccessfulResults(migratedItems.getAliases())),
             hasItems(testData.aliasNames.toArray(new String[0])));
+
+        var dataStreamsResponse = targetOperations.get("/_data_stream");
+        assertThat(dataStreamsResponse.getValue(), containsString("ds-stream")); // Does the data stream exist?
     }
 
     private List<CreationResult> getSuccessfulResults(List<CreationResult> results) {

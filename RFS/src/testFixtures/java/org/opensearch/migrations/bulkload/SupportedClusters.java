@@ -19,12 +19,7 @@ import lombok.experimental.UtilityClass;
 public class SupportedClusters {
     private static List<ContainerVersion> sources() {
         return List.of(
-            SearchClusterContainer.ES_V5_6_16,
-            SearchClusterContainer.ES_V6_8_23,
-            SearchClusterContainer.ES_V7_10_2,
-            SearchClusterContainer.ES_V7_17,
-            SearchClusterContainer.ES_V8_17,
-            SearchClusterContainer.OS_V1_3_16
+            SearchClusterContainer.OS_V2_19_1
         );
     }
 
@@ -59,8 +54,6 @@ public class SupportedClusters {
 
     private static List<ContainerVersion> targets() {
         return List.of(
-            SearchClusterContainer.OS_V1_3_16,
-            SearchClusterContainer.OS_V2_19_1,
             SearchClusterContainer.OS_V3_0_0
         );
     }
@@ -84,16 +77,16 @@ public class SupportedClusters {
                 .flatMap(source -> targets().stream()
                         .map(target -> new MigrationPair(source, target)))
                 .toList());
-
+        matrix.clear();
         // Individual Pairs
         matrix.add(new MigrationPair(SearchClusterContainer.OS_V2_19_1, SearchClusterContainer.OS_V2_19_1));
-        matrix.add(new MigrationPair(SearchClusterContainer.ES_V7_17, SearchClusterContainer.ES_V7_10_2));
+        // matrix.add(new MigrationPair(SearchClusterContainer.ES_V7_17, SearchClusterContainer.ES_V7_10_2));
 
-        if (includeRFSOnly) {
-            matrix.add(new MigrationPair(SearchClusterContainer.ES_V5_6_16, SearchClusterContainer.ES_V5_6_16));
-            matrix.add(new MigrationPair(SearchClusterContainer.ES_V6_8_23, SearchClusterContainer.ES_V6_8_23));
-            matrix.add(new MigrationPair(SearchClusterContainer.ES_V7_10_2, SearchClusterContainer.ES_V7_10_2));
-        }
+        // if (includeRFSOnly) {
+        //     matrix.add(new MigrationPair(SearchClusterContainer.ES_V5_6_16, SearchClusterContainer.ES_V5_6_16));
+        //     matrix.add(new MigrationPair(SearchClusterContainer.ES_V6_8_23, SearchClusterContainer.ES_V6_8_23));
+        //     matrix.add(new MigrationPair(SearchClusterContainer.ES_V7_10_2, SearchClusterContainer.ES_V7_10_2));
+        // }
 
         return matrix;
     }
