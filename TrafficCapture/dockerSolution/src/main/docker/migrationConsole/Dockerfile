@@ -92,7 +92,7 @@ RUN dnf install -y bash-completion --setopt=install_weak_deps=False && \
 
 RUN echo '. /etc/profile.d/bash_completion.sh' >> ~/.bashrc && \
     echo '. /etc/profile.d/venv.sh' >> ~/.bashrc && \
-    echo 'echo Welcome to the Migration Assistant Console' >> ~/.bashrc && \
+    echo 'echo Welcome to the Migration Assistant Console77' >> ~/.bashrc && \
     echo 'eval "$(register-python-argcomplete cluster_tools)"' >> ~/.bashrc && \
     echo 'source /.venv/bin/activate' >> ~/.bashrc && \
     echo 'console --config-file=/root/lib/console_link/services.yaml completion bash > /usr/share/bash-completion/completions/console' >> ~/.bashrc && \
