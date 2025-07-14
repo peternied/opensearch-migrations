@@ -11,9 +11,10 @@ pyyaml = "*"
 Click = "*"
 cerberus = "*"
 awscli = "*"
-uvicorn = "*"
 fastapi = "*"
 pydantic = "*"
+gunicorn = "*"
+uvicorn = {extras = ["standard"], version = "*"}
 
 [dev-packages]
 pytest = "*"
