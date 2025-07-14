@@ -1,0 +1,13 @@
+{{- if .Values.localRepoMount }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: build-images-pvc
+  namespace: {{ .Values.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+{{- end }}

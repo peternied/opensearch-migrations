@@ -19,9 +19,11 @@ export interface CaptureProxyProps extends StackPropsExt {
     readonly fargateCpuArch: CpuArchitecture,
     readonly destinationConfig: DestinationConfig,
     readonly otelCollectorEnabled: boolean,
+    readonly skipClusterCertCheck?: boolean,
     readonly serviceName?: string,
     readonly targetGroups: ELBTargetGroup[],
     readonly extraArgs?: string,
+    readonly taskInstanceCount?: number,
 }
 
 interface MigrationSSMDestinationConfig {
@@ -78,11 +80,6 @@ function getDestinationEndpoint(scope: Construct, config: DestinationConfig, pro
     }
 }
 
-/*
- * The stack for the "capture-proxy" service. This service will spin up a Capture Proxy instance, and will be partially
- * duplicated by the "capture-proxy-es" service which contains a Capture Proxy instance and an Elasticsearch with
- * Search Guard instance.
- */
 export class CaptureProxyStack extends MigrationServiceCore {
     public static readonly DEFAULT_PROXY_PORT = 9200;
 
@@ -120,7 +117,9 @@ export class CaptureProxyStack extends MigrationServiceCore {
 
         const extraArgsDict = parseArgsToDict(props.extraArgs)
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--destinationUri", destinationEndpoint)
-        command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--insecureDestination")
+        if (props.skipClusterCertCheck != false) { // when true or unspecified, add the flag
+            command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--insecureDestination")
+        }
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--listenPort", "9200")
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--sslConfigFile", "/usr/share/captureProxy/config/proxy_tls.yml")
         if (props.streamingSourceType !== StreamingSourceType.DISABLED) {

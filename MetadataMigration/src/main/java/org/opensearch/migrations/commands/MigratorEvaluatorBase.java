@@ -2,6 +2,7 @@ package org.opensearch.migrations.commands;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.opensearch.migrations.MigrateOrEvaluateArgs;
 import org.opensearch.migrations.MigrationMode;
@@ -77,7 +78,10 @@ public abstract class MigratorEvaluatorBase {
         );
         var customTransformer = getCustomTransformer();
         var compositeTransformer = new FanOutCompositeTransformer(customTransformer, versionTransformer);
-        log.atInfo().setMessage("Selected transformer: {}").addArgument(compositeTransformer).log();
+        log.atInfo().setMessage("Selected transformer composite: custom = {}, version = {}")
+            .addArgument(customTransformer.getClass().getSimpleName())
+            .addArgument(versionTransformer.getClass().getSimpleName())
+            .log();
         return compositeTransformer;
     }
 
@@ -134,4 +138,10 @@ public abstract class MigratorEvaluatorBase {
         var indexResults = indexRunner.migrateIndices(mode, context.createIndexContext());
         log.info("Index copy complete.");
         return indexResults;
-    } }
+    }
+
+    protected String createUnexpectedErrorMessage(Throwable e) {
+        var causeMessage = Optional.of(e).map(Throwable::getCause).map(Throwable::getMessage).orElse(null);
+        return "Unexpected failure: " + e.getMessage() + (causeMessage == null ? "" : ", inner cause: " + causeMessage);
+    }
+}

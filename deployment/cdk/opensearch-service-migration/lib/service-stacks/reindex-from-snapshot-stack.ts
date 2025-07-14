@@ -6,18 +6,20 @@ import {
     CpuArchitecture,
     ServiceManagedVolume,
     FileSystemType,
-    EbsPropagatedTagSource
+    EbsPropagatedTagSource,
+    Secret as EcsSecret
 } from "aws-cdk-lib/aws-ecs";
+import {Secret as SecretsManagerSecret} from "aws-cdk-lib/aws-secretsmanager";
 import {Construct} from "constructs";
 import {MigrationServiceCore} from "./migration-service-core";
 import {Effect, PolicyStatement} from "aws-cdk-lib/aws-iam";
 import {
     MigrationSSMParameter,
-    createOpenSearchIAMAccessPolicy,
-    createOpenSearchServerlessIAMAccessPolicy,
+    createAllAccessOpenSearchIAMAccessPolicy,
+    createAllAccessOpenSearchServerlessIAMAccessPolicy,
     getSecretAccessPolicy,
     getMigrationStringParameterValue,
-    ClusterAuth, parseArgsToDict, appendArgIfNotInExtraArgs, isStackInGovCloud
+    ClusterAuth, parseArgsToDict, appendArgIfNotInExtraArgs, isStackInGovCloud, ContainerEnvVarNames
 } from "../common-utilities";
 import { RFSBackfillYaml, SnapshotYaml } from "../migration-services-yaml";
 import { OtelCollectorSidecar } from "./migration-otel-collector-sidecar";
@@ -30,7 +32,8 @@ export interface ReindexFromSnapshotProps extends StackPropsExt {
     readonly fargateCpuArch: CpuArchitecture,
     readonly extraArgs?: string,
     readonly otelCollectorEnabled: boolean,
-    readonly clusterAuthDetails: ClusterAuth
+    readonly clusterAuthDetails: ClusterAuth,
+    readonly skipClusterCertCheck?: boolean,
     readonly sourceClusterVersion?: string,
     readonly maxShardSizeGiB?: number,
     readonly reindexFromSnapshotWorkerSize: "default" | "maximum",
@@ -77,6 +80,9 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
         const planningSizeBuffer = 1.10
         const maxShardSizeGiB = planningSize * planningSizeBuffer
         const maxShardSizeBytes = maxShardSizeGiB * (1024 ** 3)
+        if (props.skipClusterCertCheck != false) { // when true or unspecified, add the flag
+            command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--target-insecure")
+        }
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--s3-local-dir", `"${storagePath}/s3_files"`)
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--s3-repo-uri", `"${props.snapshotYaml.s3?.repo_uri}"`)
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--s3-region", props.snapshotYaml.s3?.aws_region)
@@ -99,28 +105,21 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
             command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--source-version", `"${props.sourceClusterVersion}"`)
         }
 
-        let targetUser = "";
-        let targetPassword = "";
-        let targetPasswordArn = "";
+        const secrets: Record<string, EcsSecret> = {}
         if (props.clusterAuthDetails.basicAuth) {
-            // Only set user or password if not overridden in extraArgs
-            if (extraArgsDict["--target-username"] === undefined) {
-                targetUser = props.clusterAuthDetails.basicAuth.username
-            }
-            if (extraArgsDict["--target-password"] === undefined) {
-                targetPassword = props.clusterAuthDetails.basicAuth.password ?? ""
-                targetPasswordArn = props.clusterAuthDetails.basicAuth.password_from_secret_arn ?? ""
-            }
+            const secret = SecretsManagerSecret.fromSecretCompleteArn(this, "RfsTargetSecretImport", props.clusterAuthDetails.basicAuth.user_secret_arn)
+            secrets[ContainerEnvVarNames.TARGET_USERNAME] = EcsSecret.fromSecretsManager(secret, "username")
+            secrets[ContainerEnvVarNames.TARGET_PASSWORD] = EcsSecret.fromSecretsManager(secret, "password")
         }
         command = props.extraArgs?.trim() ? command.concat(` ${props.extraArgs?.trim()}`) : command
 
         const sharedLogFileSystem = new SharedLogFileSystem(this, props.stage, props.defaultDeployId);
-        const openSearchPolicy = createOpenSearchIAMAccessPolicy(this.partition, this.region, this.account);
-        const openSearchServerlessPolicy = createOpenSearchServerlessIAMAccessPolicy(this.partition, this.region, this.account);
+        const openSearchPolicy = createAllAccessOpenSearchIAMAccessPolicy();
+        const openSearchServerlessPolicy = createAllAccessOpenSearchServerlessIAMAccessPolicy();
         const servicePolicies = [sharedLogFileSystem.asPolicyStatement(), s3AccessPolicy, openSearchPolicy, openSearchServerlessPolicy];
 
-        const getSecretsPolicy = props.clusterAuthDetails.basicAuth?.password_from_secret_arn ?
-            getSecretAccessPolicy(props.clusterAuthDetails.basicAuth.password_from_secret_arn) : null;
+        const getSecretsPolicy = props.clusterAuthDetails.basicAuth?.user_secret_arn ?
+            getSecretAccessPolicy(props.clusterAuthDetails.basicAuth.user_secret_arn) : null;
         if (getSecretsPolicy) {
             servicePolicies.push(getSecretsPolicy);
         }
@@ -200,11 +199,9 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
             ephemeralStorageGiB: ephemeralStorageGiB,
             environment: {
                 "RFS_COMMAND": command,
-                "RFS_TARGET_USER": targetUser,
-                "RFS_TARGET_PASSWORD": targetPassword,
-                "RFS_TARGET_PASSWORD_ARN": targetPasswordArn,
                 "SHARED_LOGS_DIR_PATH": `${sharedLogFileSystem.mountPointPath}/reindex-from-snapshot-${props.defaultDeployId}`,
             },
+            secrets: secrets,
             ...props
         });
 
