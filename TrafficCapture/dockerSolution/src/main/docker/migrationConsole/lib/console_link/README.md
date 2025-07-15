@@ -20,6 +20,9 @@
   - [Development](#development)
     - [Unit Tests](#unit-tests)
     - [Coverage](#coverage)
+    - [API Server](#api-server)
+      - [Locally testing](#locally-testing)
+      - [Website passthrough](#website-passthrough)
 
 The console link library is designed to provide a unified interface for the many possible backend services involved in a migration. The interface can be used by multiple frontends--a CLI app and a web API, for instance.
 
@@ -323,4 +326,33 @@ or generated as HTML:
 
 ```shell
 pipenv run coverage html
+```
+
+### API Server
+
+Consult the [frontend readme](../../../../../../../../frontend/README.md) for access when hosted in AWS or kubernetes.
+
+#### Locally testing
+
+```shell
+pipenv run gunicorn console_link.api.main:app \
+    -k uvicorn.workers.UvicornWorker \
+    -w 4 \
+    -b 0.0.0.0:8000 \
+    --access-logfile - \
+    --error-logfile -
+```
+
+#### Website passthrough
+
+Update `frontend/nginx.conf` to allow communication to the local host
+`        proxy_pass         http://127.0.0.1:8000/;` -> 
+`        proxy_pass         http://host.docker.internal:8000/;`
+
+```shell
+./gradlew :frontend:buildDockerImage
+```
+
+```shell
+docker run -p 8080:80  migrations/website --add-host=host.docker.internal:host-gateway
 ```

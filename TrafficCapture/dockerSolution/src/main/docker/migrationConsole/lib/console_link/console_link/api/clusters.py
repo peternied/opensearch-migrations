@@ -8,11 +8,11 @@ from console_link.models.cluster import Cluster, HttpMethod
 from console_link.models.snapshot import Snapshot
 # import your existing funcs — change this path to wherever you put them
 from console_link.middleware.clusters import (
-    call_api as call_api_fn,
-    cat_indices as cat_indices_fn,
-    connection_check as connection_check_fn,
-    run_test_benchmarks as run_test_benchmarks_fn,
-    clear_indices as clear_indices_fn,
+    call_api,
+    cat_indices,
+    connection_check,
+    run_test_benchmarks,
+    clear_indices,
 )
 
 router = APIRouter(
@@ -67,7 +67,7 @@ class GenericResponse(BaseModel):
 
 
 @router.post("/call_api", response_model=CallApiResponse)
-def call_api(req: CallApiRequest):
+def call_api_api(req: CallApiRequest):
     c = Cluster(dict[str, Any](
         endpoint=req.cluster.endpoint,
         auth_type=req.cluster.auth_type,
@@ -75,7 +75,7 @@ def call_api(req: CallApiRequest):
         allow_insecure=req.cluster.allow_insecure,
     ))
     try:
-        r = call_api_fn(
+        r = call_api(
             cluster=c,
             path=req.path,
             method=req.method,
@@ -90,20 +90,20 @@ def call_api(req: CallApiRequest):
 
 
 @router.post("/cat_indices", response_model=CatIndicesResponse)
-def cat_indices(req: CatIndicesRequest):
+def cat_indices_api(req: CatIndicesRequest):
     logging.info(f"cat indices with: {req.cluster.dict()}")
     c = Cluster(req.cluster.dict())
     try:
-        res = cat_indices_fn(c, refresh=req.refresh or True, as_json=True)
+        res = cat_indices(c, refresh=req.refresh or True, as_json=True)
         return CatIndicesResponse(result=res)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/connection_check", response_model=ConnectionCheckResponse)
-def connection_check(req: ConnectionCheckRequest):
+def connection_check_api(req: ConnectionCheckRequest):
     c = Cluster(req.cluster.dict())
-    result = connection_check_fn(c)
+    result = connection_check(c)
     return ConnectionCheckResponse(
         connection_message=result.connection_message,
         connection_established=result.connection_established,
@@ -112,20 +112,20 @@ def connection_check(req: ConnectionCheckRequest):
 
 
 @router.post("/run_benchmarks", response_model=GenericResponse)
-def run_benchmarks(req: ConnectionCheckRequest):
+def run_benchmarks_api(req: ConnectionCheckRequest):
     c = Cluster(**req.cluster.dict())
     try:
-        run_test_benchmarks_fn(c)
+        run_test_benchmarks(c)
         return GenericResponse(message="Benchmarks kicked off")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/clear_indices", response_model=CatIndicesResponse)
-def clear_indices(req: CatIndicesRequest):
+def clear_indices_api(req: CatIndicesRequest):
     c = Cluster(**req.cluster.dict())
     try:
-        res = clear_indices_fn(c)
+        res = clear_indices(c)
         return CatIndicesResponse(result=res)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

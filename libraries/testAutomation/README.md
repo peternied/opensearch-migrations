@@ -22,5 +22,6 @@ pipenv run app --source-version=ES_8.x --target-version=OS_2.x
 
 Or to execute a specific test
 ```shell
+pipenv run app --source-version=ES_8.x --target-version=OS_2.x --test-ids=0004 --delete-only
 pipenv run app --source-version=ES_8.x --target-version=OS_2.x --test-ids=0004 --skip-delete
 ```
