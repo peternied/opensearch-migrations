@@ -139,6 +139,7 @@ class TestRunner:
         logger.info(f"Retrieving test report at {output_file_path}")
         cmd_response = self.k8s_service.exec_migration_console_cmd(command_list=["cat", output_file_path],
                                                                    unbuffered=False)
+        print(cmd_response)
         test_data = ast.literal_eval(cmd_response)
         logger.debug(f"Received the following test data: {test_data}")
         test_report = self._parse_test_report(test_data)

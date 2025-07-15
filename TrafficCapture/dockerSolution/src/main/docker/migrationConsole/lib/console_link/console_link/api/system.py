@@ -1,7 +1,7 @@
 from enum import Enum
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import List, Callable, Dict, Any, Literal
+from typing import Callable, Dict
 import os
 
 system_router = APIRouter(
@@ -9,13 +9,14 @@ system_router = APIRouter(
     tags=["system"],
 )
 
-class HealthStatus(str, Enum):
-    ok = "ok"
-    error = "error"
-
 
 class HealthApiRequest(BaseModel):
     pass
+
+
+class HealthStatus(str, Enum):
+    ok = "ok"
+    error = "error"
 
 
 class HealthApiResponse(BaseModel):
