@@ -114,7 +114,7 @@ cd ../.. || exit
 eval $(minikube docker-env)
 
 if [ "$SKIP_BUILD" = "false" ]; then
-  ./gradlew :buildDockerImages -x test
+  ./gradlew :buildDockerImages :frontend:buildDockerImage -x test
 fi
 
 if [ "$SYNC_ECR" = "true" ]; then
