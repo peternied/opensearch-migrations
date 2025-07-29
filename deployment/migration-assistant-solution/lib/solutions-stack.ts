@@ -195,6 +195,7 @@ export class SolutionsInfrastructureStack extends Stack {
             "MIGRATIONS_USER_AGENT": solutionsUserAgent,
             "VPC_ID": vpc.vpcId,
             "STAGE": stageParameter.valueAsString,
+            "PATH": "$HOME/.local/bin:$PATH",
         })
         const cfnInitConfig: InitElement[] = [
             InitCommand.shellCommand(`echo "${exportString}" > /etc/profile.d/solutionsEnv.sh`),
