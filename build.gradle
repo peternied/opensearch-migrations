@@ -74,7 +74,7 @@ allprojects {
 }
 
 task buildDockerImages() {
-    // TODO: Reenable after a solutions release is published with updated dependencies 
+    // TODO: Reenable after a solutions release is published with updated dependencies
     // dependsOn(':frontend:buildDockerImage')
     dependsOn(':TrafficCapture:dockerSolution:buildDockerImages')
     dependsOn(':DocumentsFromSnapshotMigration:buildDockerImages')
