@@ -57,6 +57,47 @@ export type SessionBase = {
 };
 
 /**
+ * SessionStatus
+ */
+export type SessionStatus = {
+  /**
+   * Name
+   */
+  name: string;
+  /**
+   * Created
+   */
+  created: string;
+  /**
+   * Updated
+   */
+  updated: string;
+  snapshot: StepDetail;
+  metadata: StepDetail;
+  backfill: StepDetail;
+};
+
+/**
+ * StepDetail
+ */
+export type StepDetail = {
+  /**
+   * Started
+   */
+  started?: string | null;
+  /**
+   * Finished
+   */
+  finished?: string | null;
+  status: StepState;
+};
+
+/**
+ * StepState
+ */
+export type StepState = "Pending" | "Running" | "Completed" | "Failed";
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -229,6 +270,37 @@ export type SessionUpdateResponses = {
 
 export type SessionUpdateResponse =
   SessionUpdateResponses[keyof SessionUpdateResponses];
+
+export type SessionStatusData = {
+  body?: never;
+  path: {
+    /**
+     * Session Name
+     */
+    session_name: string;
+  };
+  query?: never;
+  url: "/sessions/{session_name}/status";
+};
+
+export type SessionStatusErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type SessionStatusError = SessionStatusErrors[keyof SessionStatusErrors];
+
+export type SessionStatusResponses = {
+  /**
+   * Successful Response
+   */
+  200: SessionStatus;
+};
+
+export type SessionStatusResponse =
+  SessionStatusResponses[keyof SessionStatusResponses];
 
 export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});

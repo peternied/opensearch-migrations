@@ -48,6 +48,29 @@ class Session(SessionBase):
         return v
 
 
+class StepState(str, Enum):
+    PENDING = "Pending"
+    RUNNING = "Running"
+    COMPLETED = "Completed"
+    FAILED = "Failed"
+
+
+class StepDetail(BaseModel):
+    started: datetime | None = None
+    finished: datetime | None = None
+    status: StepState
+
+    @field_serializer("started", "finished")
+    def serialize_completed(self, dt: datetime | None) -> str | None:
+        return dt.isoformat() if dt else None
+
+
+class SessionStatus(Session):
+    snapshot: StepDetail
+    metadata: StepDetail
+    backfill: StepDetail
+
+
 class SessionExistence(Enum):
     MUST_EXIST = "must_exist"
     MAY_NOT_EXIST = "may_not_exist"
@@ -123,3 +146,27 @@ def delete_session(session_name: str):
         return {"detail": f"Session '{session_name}' deleted."}
     else:
         raise HTTPException(status_code=404, detail="Session not found.")
+
+
+@session_router.get("/{session_name}/status", response_model=SessionStatus, operation_id="sessionStatus")
+def session_status(session_name: str):
+    session = find_session(session_name, SessionExistence.MUST_EXIST)
+
+    session_obj: Session
+    try:
+        session_obj = Session.model_validate(session)
+    except ValidationError as e:
+        raise HTTPException(status_code=500, detail=f"Invalid session data: {e}")
+
+    return SessionStatus(
+        **session_obj.model_dump(),
+        snapshot=StepDetail(status=StepState.COMPLETED,
+                            started=datetime(2025, 7, 29, 11, 30, tzinfo=UTC),
+                            finished=datetime(2025, 7, 29, 11, 45, tzinfo=UTC)),
+        metadata=StepDetail(status=StepState.FAILED,
+                            started=datetime(2025, 7, 29, 11, 30, tzinfo=UTC),
+                            finished=datetime(2025, 7, 29, 11, 45, tzinfo=UTC)),
+        backfill=StepDetail(status=StepState.RUNNING,
+                            started=datetime(2025, 7, 29, 11, 30, tzinfo=UTC))
+
+    )

@@ -51,7 +51,8 @@ const nextConfig: NextConfig = {
     dirs: ["src/app", "src/component", "src/context", "src/hooks", "src/lib","src/types", "src/utils"]
   },
   trailingSlash: true,
-  output: 'export'
+  output: 'export',
+  allowedDevOrigins: ["127.0.0.1", "localhost"]
 };
 
 export default nextConfig;
