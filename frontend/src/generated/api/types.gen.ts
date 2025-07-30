@@ -44,6 +44,12 @@ export type Session = {
    * Updated
    */
   updated: string;
+  /**
+   * Env
+   */
+  env: {
+    [key: string]: unknown;
+  };
 };
 
 /**
@@ -54,6 +60,16 @@ export type SessionBase = {
    * Name
    */
   name: string;
+};
+
+/**
+ * SessionDeleteResponse
+ */
+export type SessionDeleteResponse = {
+  /**
+   * Detail
+   */
+  detail: string;
 };
 
 /**
@@ -72,9 +88,34 @@ export type SessionStatus = {
    * Updated
    */
   updated: string;
+  /**
+   * Env
+   */
+  env: {
+    [key: string]: unknown;
+  };
   snapshot: StepDetail;
   metadata: StepDetail;
   backfill: StepDetail;
+};
+
+/**
+ * SnapshotStatus
+ */
+export type SnapshotStatus = {
+  state: StepState;
+  /**
+   * Percentage Completed
+   */
+  percentage_completed: number;
+  /**
+   * Elapsed Time Ms
+   */
+  elapsed_time_ms: number;
+  /**
+   * Eta Ms
+   */
+  eta_ms: number | null;
 };
 
 /**
@@ -201,8 +242,11 @@ export type SessionDeleteResponses = {
   /**
    * Successful Response
    */
-  200: unknown;
+  200: SessionDeleteResponse;
 };
+
+export type SessionDeleteResponse2 =
+  SessionDeleteResponses[keyof SessionDeleteResponses];
 
 export type SessionGetData = {
   body?: never;
@@ -301,6 +345,38 @@ export type SessionStatusResponses = {
 
 export type SessionStatusResponse =
   SessionStatusResponses[keyof SessionStatusResponses];
+
+export type SnapshotStatusData = {
+  body?: never;
+  path: {
+    /**
+     * Session Name
+     */
+    session_name: string;
+  };
+  query?: never;
+  url: "/sessions/{session_name}/snapshot/status";
+};
+
+export type SnapshotStatusErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type SnapshotStatusError =
+  SnapshotStatusErrors[keyof SnapshotStatusErrors];
+
+export type SnapshotStatusResponses = {
+  /**
+   * Successful Response
+   */
+  200: SnapshotStatus;
+};
+
+export type SnapshotStatusResponse =
+  SnapshotStatusResponses[keyof SnapshotStatusResponses];
 
 export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {});

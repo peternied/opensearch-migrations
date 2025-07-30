@@ -14,7 +14,7 @@ function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  return `${h}h ${m}m ${s}s`;
+  return `${h}h ${m}m ${s.toFixed(0)}s`;
 }
 
 function mapStatus(state: StepState): StatusIndicatorProps.Type {
@@ -74,7 +74,7 @@ export default function SessionStatusView({session}: SessionStatusProps) {
             },
             {
                 label: 'Duration',
-                value: durationFromTimes(session.metadata.started, session.metadata.finished)
+                value: durationFromTimes(session.snapshot.started, session.snapshot.finished)
             }
           ]}
         />

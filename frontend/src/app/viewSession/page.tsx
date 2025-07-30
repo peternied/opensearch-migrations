@@ -7,7 +7,7 @@ import {
   Button,
   Spinner,
 } from "@cloudscape-design/components";
-import { sessionStatus } from "@/generated/api";
+import { sessionStatus, snapshotStatus } from "@/generated/api";
 import DebugCommands from "@/components/playground/debug/DebugCommands";
 import { useSearchParams } from "next/navigation";
 import SessionStatusView from "@/components/session/SessionStatus";
@@ -28,11 +28,15 @@ export default function ViewSessionPage() {
   };
     try {
       const res = await sessionStatus({ path: { session_name: sessionName } });
-      if (res.response.status === 200) {
-        setSessionData(res.data);
+      const res2 = await snapshotStatus({ path: { session_name: 'fake'}});
+      if (res.response.status === 200 && res2.response.status === 200) {
+        const data: any = res.data
+        data.snapshot = res2.data
+        setSessionData(data);
         setIsReady(true);
         return;
       }
+
     } catch (err) {
       console.error("Error loading session:", err);
     }
