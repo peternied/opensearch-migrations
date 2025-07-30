@@ -103,19 +103,23 @@ export type SessionStatus = {
  * SnapshotStatus
  */
 export type SnapshotStatus = {
-  state: StepState;
+  status: StepState;
   /**
    * Percentage Completed
    */
   percentage_completed: number;
   /**
-   * Elapsed Time Ms
-   */
-  elapsed_time_ms: number;
-  /**
    * Eta Ms
    */
   eta_ms: number | null;
+  /**
+   * Started
+   */
+  started?: string | null;
+  /**
+   * Finished
+   */
+  finished?: string | null;
 };
 
 /**

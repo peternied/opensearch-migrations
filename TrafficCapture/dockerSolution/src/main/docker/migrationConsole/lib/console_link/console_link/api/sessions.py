@@ -48,16 +48,16 @@ class Session(SessionBase):
             return datetime.fromisoformat(v)
         return v
 
-    # @field_serializer('env')
-    # def serialize_environment(self, env: Environment) -> Dict:
-    #     return env.config
+    @field_serializer('env')
+    def serialize_environment(self, env: Environment) -> Dict:
+        return env.config
 
-    # @field_validator('env', mode='before')
-    # @classmethod
-    # def parse_environment(cls, v):
-    #     if isinstance(v, Dict):
-    #         return Environment(config=v)
-    #     return v
+    @field_validator('env', mode='before')
+    @classmethod
+    def parse_environment(cls, v):
+        if isinstance(v, Dict):
+            return Environment(config=v)
+        return v
 
 
 class StepState(str, Enum):

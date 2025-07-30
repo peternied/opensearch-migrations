@@ -1,12 +1,9 @@
 from datetime import datetime
-import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_serializer
 from console_link.models.factories import get_snapshot
 from console_link.models.snapshot import SnapshotNotStarted, SnapshotStatusUnavaliable, get_latest_snapshot_status_raw
 from console_link.api.sessions import StepState, existance_check, find_session
-
-logger = logging.getLogger("uvicorn")
 
 snapshot_router = APIRouter(
     prefix="/snapshot",
@@ -17,17 +14,16 @@ snapshot_router = APIRouter(
 class SnapshotStatus(BaseModel):
     status: StepState
     percentage_completed: float
-    elapsed_time_ms: int
     eta_ms: int | None
     started: datetime | None = None
     finished: datetime | None = None
 
+    class Config:
+        orm_mode = True
+
     @field_serializer("started", "finished")
     def serialize_completed(self, dt: datetime | None) -> str | None:
         return dt.isoformat() if dt else None
-    
-    class Config:
-        orm_mode = True
 
     @classmethod
     def from_snapshot_info(cls, snapshot_info: dict) -> "SnapshotStatus":
@@ -36,28 +32,23 @@ class SnapshotStatus(BaseModel):
         processed_bytes = snapshot_info.get("stats", {}).get("processed", {}).get("size_in_bytes", 0)
         incremental_bytes = snapshot_info.get("stats", {}).get("incremental", {}).get("size_in_bytes", 0)
         percentage = ((processed_bytes + incremental_bytes) / total_bytes) * 100 if total_bytes > 0 else 0
-        logger.info(f"Looking at snapshot details, total: {total_bytes}, processed: {processed_bytes},"
-                    " incremental: {incremental_bytes}, % complete {percentage}")
 
-        # Get start time and elapsed time
-        duration_in_millis = snapshot_info.get("stats", {}).get("time_in_millis", 0)
-        elapsed_time = duration_in_millis
-        
-        # Calculate ETA (estimated time of arrival) for completion
+        # Collect timing information
+        started_ms = snapshot_info.get("stats", {}).get("start_time_in_millis", 0)
+        finished_ms = started_ms + snapshot_info.get("stats", {}).get("time_in_millis", 0)
+
+        # Calculate ETA for completion
         eta = None
         if percentage > 0:
+            duration_in_millis = snapshot_info.get("stats", {}).get("time_in_millis", 0)
             remaining_duration_in_millis = (duration_in_millis / percentage) * (100 - percentage)
             eta = remaining_duration_in_millis
 
-        # Determine success based on snapshot state
         state = convert_snapshot_state_to_step_state(snapshot_info.get("state", "Unknown"))
 
-        started_ms = snapshot_info.get("stats", {}).get("start_time_in_millis", 0)
-        finished_ms = started_ms + snapshot_info.get("stats", {}).get("time_in_millis", 0)
         return cls(
             status=state,
             percentage_completed=percentage,
-            elapsed_time_ms=elapsed_time,
             eta_ms=eta,
             started=started_ms,
             finished=finished_ms,
