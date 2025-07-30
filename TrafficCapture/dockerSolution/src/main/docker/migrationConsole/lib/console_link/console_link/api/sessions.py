@@ -2,7 +2,8 @@ from enum import Enum
 from fastapi import HTTPException, Body, APIRouter
 from pydantic import BaseModel, ValidationError, field_validator, field_serializer
 from datetime import datetime, UTC
-from tinydb import TinyDB, Query
+from tinydb import Query
+from console_link.db.datastore import db
 from typing import Dict, List
 import re
 
@@ -11,8 +12,6 @@ session_router = APIRouter(
     tags=["sessions"],
 )
 
-# Initialize TinyDB
-db = TinyDB("sessions_db.json")
 sessions_table = db.table("sessions")
 
 

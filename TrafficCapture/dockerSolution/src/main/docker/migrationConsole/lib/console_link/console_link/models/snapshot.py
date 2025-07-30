@@ -10,10 +10,12 @@ from console_link.models.command_result import CommandResult
 from console_link.models.command_runner import CommandRunner, CommandRunnerError, FlagOnlyArgument
 from console_link.models.schema_tools import contains_one_of
 from console_link.models.utils import DEFAULT_SNAPSHOT_REPO_NAME
-
+from console_link.db.datastore import db
+from datetime import datetime, UTC
 
 logger = logging.getLogger(__name__)
 
+snapshot_table = db.table("snapshot")
 
 SNAPSHOT_SCHEMA = {
     'snapshot': {
@@ -151,12 +153,20 @@ class S3Snapshot(Snapshot):
 
         command_runner = CommandRunner(base_command, command_args, sensitive_fields=["--source-password"])
         try:
+            snapshot_table.insert({
+                "command": "start",
+                "time": datetime.now(UTC),
+            })
             command_runner.run()
             logger.info(f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
             return CommandResult(success=True,
                                  value=f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
         except CommandRunnerError as e:
             logger.debug(f"Failed to create snapshot: {str(e)}")
+            snapshot_table.insert({
+                "command": "failure",
+                "time": datetime.now(UTC),
+            })
             return CommandResult(success=False, value=f"Failed to create snapshot: {str(e)}")
 
     def status(self, *args, deep_check=False, **kwargs) -> CommandResult:
