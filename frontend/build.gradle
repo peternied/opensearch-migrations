@@ -33,8 +33,11 @@ def buildOutputs = [
     'out'
 ]
 
+// Register copy version file task
+CommonUtils.copyVersionFileToDockerStaging(project, "frontend", "build/")
+
 def backendApiProject = project(':console_link')
-tasks.register('syncBackendClientDefinition', Copy) {
+tasks.register('syncBackendClientDefinition', Sync) {
     dependsOn backendApiProject.tasks.named('generateOpenApiSpec')
     from backendApiProject.layout.buildDirectory.file('openapi.json')
     into layout.buildDirectory.dir('openapi')
@@ -75,6 +78,7 @@ tasks.register('cleanFrontend', Delete) {
 
 tasks.register('buildDockerImage', DockerBuildImage) {
     dependsOn 'buildFrontend'
+    dependsOn 'copyVersionFile_frontend'
     inputs.files fileTree(dir: '.', include: buildInputs, exclude: buildExclusions)
     outputs.file(imageIdFile)
 

@@ -30,7 +30,5 @@ app.add_middleware(
 
 session_router.include_router(snapshot_router, prefix="/{session_name}", tags=["snapshot"])
 
-
 app.include_router(system_router)
 app.include_router(session_router)
-

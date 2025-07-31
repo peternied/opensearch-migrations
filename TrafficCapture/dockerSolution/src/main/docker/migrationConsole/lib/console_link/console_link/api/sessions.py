@@ -3,7 +3,7 @@ from fastapi import HTTPException, Body, APIRouter
 from pydantic import BaseModel, ValidationError, field_validator, field_serializer
 from datetime import datetime, UTC
 from console_link.environment import Environment
-from tinydb import Query, TinyDB
+from tinydb import TinyDB, Query
 from typing import Dict, List
 import re
 
@@ -12,6 +12,7 @@ session_router = APIRouter(
     tags=["sessions"],
 )
 
+# Initialize TinyDB
 db = TinyDB("sessions_db.json")
 sessions_table = db.table("sessions")
 
@@ -92,9 +93,12 @@ class SessionExistence(Enum):
     MAY_NOT_EXIST = "may_not_exist"
 
 
-def find_session(session_name: str) -> Session | None:
+def find_session(session_name: str, existence: SessionExistence = SessionExistence.MAY_NOT_EXIST) -> Session | None:
     session_query = Query()
-    return sessions_table.get(session_query.name == session_name)
+    session = sessions_table.get(session_query.name == session_name)
+    if existence == SessionExistence.MUST_EXIST and not session:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    return session
 
 
 def existance_check(session: Session | None) -> Session:
@@ -114,10 +118,10 @@ def list_sessions() -> List[Session]:
 
 @session_router.get("/{session_name}", response_model=List[Session], operation_id="sessionGet")
 def single_session(session_name: str) -> Session | None:
-    return existance_check(find_session(session_name))
+    return existance_check(find_session(session_name, SessionExistence.MUST_EXIST))
 
 
-@session_router.post("/", response_model=Session, operation_id="sessionCreate")
+@session_router.post("/", response_model=Session, status_code=201, operation_id="sessionCreate")
 def create_session(session: SessionBase) -> Session:
     if not is_url_safe(session.name):
         raise HTTPException(status_code=400, detail="Session name must be URL-safe (letters, numbers, '_', '-').")
@@ -147,7 +151,7 @@ def create_session(session: SessionBase) -> Session:
 @session_router.put("/{session_name}", response_model=Session, operation_id="sessionUpdate")
 def update_session(session_name: str, data: Dict = Body(...)) -> Session:
     session_query = Query()
-    existing = existance_check(find_session(session_name))
+    existing = existance_check(find_session(session_name, SessionExistence.MUST_EXIST))
 
     try:
         updated_session = Session.model_validate(existing)
@@ -163,7 +167,7 @@ def update_session(session_name: str, data: Dict = Body(...)) -> Session:
 @session_router.delete("/{session_name}", response_model=SessionDeleteResponse, operation_id="sessionDelete")
 def delete_session(session_name: str) -> SessionDeleteResponse:
     # Make sure the session exists before we attempt to delete it
-    existance_check(find_session(session_name))
+    existance_check(find_session(session_name, SessionExistence.MUST_EXIST))
 
     session_query = Query()
     if sessions_table.remove(session_query.name == session_name):
@@ -192,5 +196,4 @@ def session_status(session_name: str):
                             finished=datetime(2025, 7, 29, 11, 45, tzinfo=UTC)),
         backfill=StepDetail(status=StepState.RUNNING,
                             started=datetime(2025, 7, 29, 11, 30, tzinfo=UTC))
-
     )
