@@ -4,7 +4,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import org.opensearch.migrations.bulkload.tracing.IRfsContexts;
 import org.opensearch.migrations.bulkload.worker.WorkItemCursor;
@@ -20,8 +27,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -345,5 +355,189 @@ class DocumentReindexerTest {
     private RfsLuceneDocument createTestDocumentWithType(int id, String type) {
         String source = "{\"field\":\"value\"}";
         return new RfsLuceneDocument(id, String.valueOf(id), type, source, null);
+    }
+
+    /**
+     * Tests that scheduler disposal during batch processing is handled gracefully.
+     * Simulates a race condition where the scheduler becomes unavailable while processing documents.
+     */
+    @Test
+    void reindex_shouldHandleSchedulerDisposalGracefully() {
+        int numDocs = 2;
+        Flux<RfsLuceneDocument> documentStream = Flux.range(1, numDocs)
+            .map(this::createTestDocument);
+
+        when(mockClient.sendBulkRequest(eq("test-index"), any(), any()))
+            .thenReturn(Mono.just(new OpenSearchClient.BulkResponse(200, "OK", null, 
+                "{\"took\":1,\"errors\":false,\"items\":[{}]}")));
+
+        DocumentReindexer testReindexer = createReindexerWithDisposingScheduler(numDocs);
+
+        StepVerifier.create(testReindexer.reindex("test-index", documentStream, mockContext))
+            .expectError(RejectedExecutionException.class)
+            .verify();
+
+        verify(mockClient, times(numDocs)).sendBulkRequest(eq("test-index"), any(), any());
+    }
+
+    /**
+     * Tests that concurrent requests handle scheduler disposal during subscribeOn operations.
+     * Focuses on the specific race condition in sendBulkRequest's subscribeOn call.
+     */
+    @Test 
+    void reindex_shouldHandleRejectionDuringSubscribeOn() {
+        int numDocs = 1;
+        Flux<RfsLuceneDocument> documentStream = Flux.just(createTestDocument(1));
+
+        when(mockClient.sendBulkRequest(eq("test-index"), any(), any()))
+            .thenReturn(Mono.just(new OpenSearchClient.BulkResponse(200, "OK", null, 
+                "{\"took\":1,\"errors\":false,\"items\":[{}]}")));
+
+        DocumentReindexer testReindexer = createReindexerWithSubscribeOnRejection();
+
+        StepVerifier.create(testReindexer.reindex("test-index", documentStream, mockContext))
+            .expectError(RejectedExecutionException.class)
+            .verify();
+
+        verify(mockClient, times(1)).sendBulkRequest(eq("test-index"), any(), any());
+    }
+
+    private DocumentReindexer createReindexerWithDisposingScheduler(int maxCallsBeforeRejection) {
+        return new DocumentReindexer(
+            mockClient, 1, MAX_BYTES_PER_BULK_REQUEST, MAX_CONCURRENT_REQUESTS, null
+        ) {
+            @Override
+            Flux<WorkItemCursor> reindexDocsInParallelBatches(
+                Flux<RfsDocument> docs, 
+                String indexName, 
+                IDocumentMigrationContexts.IDocumentReindexContext context) {
+                
+                var mockScheduler = createDisposingScheduler(maxCallsBeforeRejection);
+                var bulkDocsBatches = batchDocsBySizeOrCount(docs);
+                
+                return bulkDocsBatches
+                    .publishOn(mockScheduler, 1)
+                    .flatMapSequential(docsGroup -> 
+                        sendBulkRequest(UUID.randomUUID(), docsGroup, indexName, context, mockScheduler),
+                        MAX_CONCURRENT_REQUESTS)
+                    .doFinally(signalType -> mockScheduler.dispose());
+            }
+        };
+    }
+
+    private DocumentReindexer createReindexerWithSubscribeOnRejection() {
+        return new DocumentReindexer(
+            mockClient, 1, MAX_BYTES_PER_BULK_REQUEST, MAX_CONCURRENT_REQUESTS, null
+        ) {
+            @Override
+            Mono<WorkItemCursor> sendBulkRequest(
+                UUID batchId, 
+                List<RfsDocument> docsBatch, 
+                String indexName, 
+                IDocumentMigrationContexts.IDocumentReindexContext context, 
+                Scheduler scheduler) {
+                
+                var rejectionScheduler = createRejectionOnFirstCallScheduler();
+                var lastDoc = docsBatch.get(docsBatch.size() - 1);
+                var bulkDocSections = docsBatch.stream()
+                    .map(rfsDocument -> rfsDocument.document)
+                    .collect(Collectors.toList());
+                
+                return mockClient.sendBulkRequest(indexName, bulkDocSections, context.createBulkRequest())
+                    .onErrorResume(e -> Mono.empty())
+                    .then(Mono.just(new WorkItemCursor(lastDoc.progressCheckpointNum))
+                        .subscribeOn(rejectionScheduler));
+            }
+        };
+    }
+
+    private Scheduler createDisposingScheduler(int maxCallsBeforeRejection) {
+        var callCount = new AtomicInteger(0);
+        var disposed = new AtomicBoolean(false);
+        
+        return new Scheduler() {
+            @Override
+            public Disposable schedule(Runnable task) {
+                int currentCall = callCount.incrementAndGet();
+                
+                if (currentCall > maxCallsBeforeRejection || disposed.get()) {
+                    throw new RejectedExecutionException("Scheduler disposed - task rejected");
+                }
+                
+                if (currentCall == maxCallsBeforeRejection) {
+                    disposed.set(true);
+                }
+                
+                return Schedulers.immediate().schedule(task);
+            }
+            
+            @Override
+            public Disposable schedule(Runnable task, long delay, TimeUnit unit) {
+                return schedule(task);
+            }
+            
+            @Override
+            public Scheduler.Worker createWorker() {
+                return new Scheduler.Worker() {
+                    @Override
+                    public Disposable schedule(Runnable task) {
+                        return createDisposingScheduler(maxCallsBeforeRejection).schedule(task);
+                    }
+                    
+                    @Override
+                    public void dispose() {}
+                    
+                    @Override
+                    public boolean isDisposed() { return disposed.get(); }
+                };
+            }
+            
+            @Override
+            public void dispose() { disposed.set(true); }
+            
+            @Override
+            public boolean isDisposed() { return disposed.get(); }
+        };
+    }
+
+    private Scheduler createRejectionOnFirstCallScheduler() {
+        var firstCall = new AtomicBoolean(true);
+        
+        return new Scheduler() {
+            @Override
+            public Disposable schedule(Runnable task) {
+                if (firstCall.compareAndSet(true, false)) {
+                    return Schedulers.immediate().schedule(task);
+                }
+                throw new RejectedExecutionException("Scheduler disposed during subscribeOn");
+            }
+            
+            @Override
+            public Disposable schedule(Runnable task, long delay, TimeUnit unit) {
+                return schedule(task);
+            }
+            
+            @Override
+            public Scheduler.Worker createWorker() {
+                return new Scheduler.Worker() {
+                    @Override
+                    public Disposable schedule(Runnable task) {
+                        return createRejectionOnFirstCallScheduler().schedule(task);
+                    }
+                    
+                    @Override
+                    public void dispose() {}
+                    
+                    @Override
+                    public boolean isDisposed() { return false; }
+                };
+            }
+            
+            @Override
+            public void dispose() {}
+            
+            @Override
+            public boolean isDisposed() { return false; }
+        };
     }
 }
