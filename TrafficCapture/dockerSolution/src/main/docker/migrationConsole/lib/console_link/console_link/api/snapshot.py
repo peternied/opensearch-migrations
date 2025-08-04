@@ -4,6 +4,11 @@ from pydantic import BaseModel, field_serializer
 from console_link.models.factories import get_snapshot
 from console_link.models.snapshot import SnapshotNotStarted, SnapshotStatusUnavaliable, get_latest_snapshot_status_raw
 from console_link.api.sessions import StepState, existance_check, find_session
+import logging
+
+logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 snapshot_router = APIRouter(
     prefix="/snapshot",
@@ -104,7 +109,7 @@ def get_snapshot_status(session_name: str):
         raise HTTPException(status_code=400,
                             detail=f"No source cluster defined in the configuration: {env}")
 
-    snapshot = get_snapshot(env.config, env.source_cluster)
+    snapshot = get_snapshot(env.config["snapshot"], env.source_cluster)
     try:
         lastest_status = get_latest_snapshot_status_raw(snapshot.source_cluster,
                                                         snapshot.snapshot_name,
@@ -112,9 +117,9 @@ def get_snapshot_status(session_name: str):
                                                         deep=True)
         return SnapshotStatus.from_snapshot_info(lastest_status.details)
     except SnapshotNotStarted:
-        return SnapshotStatus(state=StepState.PENDING, percentage_completed=0, elapsed_time_ms=0, eta_ms=None)
+        return SnapshotStatus(status=StepState.PENDING, percentage_completed=0, eta_ms=None)
     except SnapshotStatusUnavaliable:
         return HTTPException(status_code=500, detail="Snapshot status not available")
     except Exception as e:
-        logger.error(f"Unable to lookup snapshot information: {str(e)}")
-        return HTTPException(status_code=500, detail=f"Failed to get full snapshot status: {str(e)}")
+        logger.error(f"Unable to lookup snapshot information: {type(e).__name__} {str(e)}")
+        return HTTPException(status_code=500, detail=f"Failed to get full snapshot status: {type(e).__name__} {str(e)}")

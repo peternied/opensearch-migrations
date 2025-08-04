@@ -291,10 +291,13 @@ def get_latest_snapshot_status_raw(cluster: Cluster,
                                    snapshot: str,
                                    repository: str,
                                    deep: bool) -> SnapshotStateAndDetails:
-    path = f"/_snapshot/{repository}/{snapshot}"
-    response = cluster.call_api(path, HttpMethod.GET)
-    logging.debug(f"Raw get snapshot status response: {response.text}")
-    response.raise_for_status()
+    try:
+        path = f"/_snapshot/{repository}/{snapshot}"
+        response = cluster.call_api(path, HttpMethod.GET)
+        logging.debug(f"Raw get snapshot status response: {response.text}")
+        response.raise_for_status()
+    except HTTPError:
+        raise SnapshotNotStarted()
 
     snapshot_data = response.json()
     snapshots = snapshot_data.get('snapshots', [])
@@ -307,10 +310,13 @@ def get_latest_snapshot_status_raw(cluster: Cluster,
     if not deep:
         return SnapshotStateAndDetails(state, None)
 
-    path = f"/_snapshot/{repository}/{snapshot}/_status"
-    response = cluster.call_api(path, HttpMethod.GET)
-    logging.debug(f"Raw get snapshot status full response: {response.text}")
-    response.raise_for_status()
+    try:
+        path = f"/_snapshot/{repository}/{snapshot}/_status"
+        response = cluster.call_api(path, HttpMethod.GET)
+        logging.debug(f"Raw get snapshot status full response: {response.text}")
+        response.raise_for_status()
+    except HTTPError:
+        raise SnapshotStatusUnavaliable()
 
     snapshot_data = response.json()
     snapshots = snapshot_data.get('snapshots', [])
