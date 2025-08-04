@@ -12,7 +12,7 @@ from console_link.models.cluster import Cluster, HttpMethod
 from console_link.models.schema_tools import contains_one_of
 from console_link.models.command_result import CommandResult
 from console_link.models.kubectl_runner import DeploymentStatus, KubectlRunner
-from console_link.models.ecs_service import ECSService
+# from console_link.models.ecs_service import ECSService
 
 from cerberus import Validator
 
@@ -184,10 +184,10 @@ class ECSRFSBackfill(RFSBackfill):
         self.default_scale = self.config["reindex_from_snapshot"].get("scale", 5)
 
         self.ecs_config = self.config["reindex_from_snapshot"]["ecs"]
-        self.ecs_client = ECSService(cluster_name=self.ecs_config["cluster_name"],
-                                     service_name=self.ecs_config["service_name"],
-                                     aws_region=self.ecs_config.get("aws_region", None),
-                                     client_options=self.client_options)
+        # self.ecs_client = ECSService(cluster_name=self.ecs_config["cluster_name"],
+        #                              service_name=self.ecs_config["service_name"],
+        #                              aws_region=self.ecs_config.get("aws_region", None),
+        #                              client_options=self.client_options)
 
     def start(self, *args, **kwargs) -> CommandResult:
         logger.info(f"Starting RFS backfill by setting desired count to {self.default_scale} instances")

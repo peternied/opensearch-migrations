@@ -79,7 +79,7 @@ class Environment:
 
         # At some point, target and replayers should be stored as pairs, but for the time being
         # we can probably assume one target cluster.
-        if 'target_cluster' in self.config and self.client_options:
+        if 'target_cluster' in self.config:
             self.target_cluster = Cluster(config=self.config["target_cluster"],
                                           client_options=self.client_options)
             logger.info(f"Target cluster initialized: {self.target_cluster.endpoint}")
@@ -95,7 +95,7 @@ class Environment:
         else:
             logger.info("No metrics source provided")
 
-        if 'backfill' in self.config:
+        if 'backfill' in self.config and self.target_cluster:
             self.backfill = get_backfill(self.config["backfill"],
                                          target_cluster=self.target_cluster,
                                          client_options=self.client_options)

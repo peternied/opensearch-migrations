@@ -8,7 +8,8 @@ from console_link.api.snapshot import snapshot_router
 app = FastAPI(
     title="Migration Assistant API",
     version="0.0.1",
-    root_path=os.getenv("FASTAPI_ROOT_PATH", "")
+    root_path=os.getenv("FASTAPI_ROOT_PATH", ""),
+    debug=True
 )
 
 origins = [

@@ -17,10 +17,10 @@ pipenv run app
 
 Or alternatively specific versions for the source and target cluster can be specified, which will result in executing tests against this specific version combination:
 ```shell
-pipenv run app --source-version=ES_8.x --target-version=OS_2.x
+pipenv run app --source-version=ES_8.x --target-version=OS_2.x --test-ids=0004 --skip-delete
 ```
 
 Or to execute a specific test
 ```shell
-pipenv run app --test-ids=0004
+pipenv run app --test-ids=0004 --skip-delete
 ```

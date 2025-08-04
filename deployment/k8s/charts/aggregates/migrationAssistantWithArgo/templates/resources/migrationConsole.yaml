@@ -44,7 +44,7 @@ kind: StatefulSet
 metadata:
   name: migration-console
 spec:
-  serviceName: "migration-console"
+  serviceName: "migration-console2"
   replicas: 1
   selector:
     matchLabels:
@@ -64,9 +64,6 @@ spec:
             - "/bin/sh"
             - "-c"
             - |
-    {{- if .Values.developerModeEnabled }}
-              source /.venv/bin/activate && pipenv install -e ~/lib/console_link
-    {{- end }}
               tail -f /dev/null
           volumeMounts:
     {{- if $sharedLogsVolumeEnabled }}

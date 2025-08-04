@@ -123,29 +123,32 @@ def single_session(session_name: str) -> Session | None:
 
 @session_router.post("/", response_model=Session, status_code=201, operation_id="sessionCreate")
 def create_session(session: SessionBase) -> Session:
-    if not is_url_safe(session.name):
-        raise HTTPException(status_code=400, detail="Session name must be URL-safe (letters, numbers, '_', '-').")
-
-    if unexpected_length(session.name):
-        raise HTTPException(status_code=400, detail="Session name less than 50 characters in length.")
-
-    existing = find_session(session.name)
-    if existing:
-        raise HTTPException(status_code=409, detail="Session already exists.")
-
     try:
-        now = datetime.now(UTC)
-        session = Session(
-            name=session.name,
-            created=now,
-            updated=now,
-            # Use the current environmental configuration
-            env=None #Environment(config_file="/config/migration_services.yaml")
-        )
-        sessions_table.insert(session.model_dump())
+        if not is_url_safe(session.name):
+            raise HTTPException(status_code=400, detail="Session name must be URL-safe (letters, numbers, '_', '-').")
+
+        if unexpected_length(session.name):
+            raise HTTPException(status_code=400, detail="Session name less than 50 characters in length.")
+
+        existing = find_session(session.name)
+        if existing:
+            raise HTTPException(status_code=409, detail="Session already exists.")
+
+        try:
+            now = datetime.now(UTC)
+            session = Session(
+                name=session.name,
+                created=now,
+                updated=now,
+                # Use the current environmental configuration
+                env=Environment(config_file="/config/migration_services.yaml")
+            )
+            sessions_table.insert(session.model_dump())
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Unable to create session: {e}")
+        return session
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Unable to create session: {e}")
-    return session
+        raise HTTPException(status_code=400, detail=f"222Unable to create session: {e}")
 
 
 @session_router.put("/{session_name}", response_model=Session, operation_id="sessionUpdate")
