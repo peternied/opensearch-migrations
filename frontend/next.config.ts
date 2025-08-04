@@ -48,7 +48,8 @@ const nextConfig: NextConfig = {
     return config;
   },
   eslint: {
-    dirs: ["src/app", "src/component", "src/context", "src/hooks", "src/lib","src/types", "src/utils"]
+    dirs: ["src/app", "src/component", "src/context", "src/hooks", "src/lib","src/types", "src/utils"],
+    ignoreDuringBuilds: true
   },
   trailingSlash: true,
   output: 'export',

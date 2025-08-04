@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import {
   SpaceBetween,
   Header,
@@ -12,8 +12,15 @@ import DebugCommands from "@/components/playground/debug/DebugCommands";
 import { useSearchParams } from "next/navigation";
 import SessionStatusView from "@/components/session/SessionStatus";
 
-
 export default function ViewSessionPage() {
+  return (
+    <Suspense fallback={<Spinner size="large" />}>
+      <ViewSessionPageInner />
+    </Suspense>
+  );
+}
+
+function ViewSessionPageInner() {
   const searchParams = useSearchParams();
   const sessionName = searchParams.get("sessionName");
 
@@ -22,27 +29,26 @@ export default function ViewSessionPage() {
 
   const fetchSession = async () => {
     if (!sessionName) {
-      setSessionData({status: "Not Found"});
+      setSessionData({ status: "Not Found" });
       setIsReady(true);
       return;
-  };
+    }
     try {
       const res = await sessionStatus({ path: { session_name: sessionName } });
-      const res2 = await snapshotStatus({ path: { session_name: 'fake'}});
+      const res2 = await snapshotStatus({ path: { session_name: "fake" } });
       if (res.response.status === 200 && res2.response.status === 200) {
-        const data: any = res.data
-        data.snapshot = res2.data
+        const data: any = res.data;
+        data.snapshot = res2.data;
         setSessionData(data);
         setIsReady(true);
         return;
       }
-
     } catch (err) {
       console.error("Error loading session:", err);
     }
     setSessionData(null);
     setIsReady(true);
-};
+  };
 
   useEffect(() => {
     fetchSession();
@@ -51,12 +57,12 @@ export default function ViewSessionPage() {
   return (
     <SpaceBetween size="m">
       <Header variant="h1">Migration Session - {sessionName}</Header>
-        {!isReady && <Spinner size="large"></Spinner>}
-        {isReady && <SessionStatusView session={sessionData}></SessionStatusView>}
+      {!isReady && <Spinner size="large"></Spinner>}
+      {isReady && <SessionStatusView session={sessionData}></SessionStatusView>}
       <DebugCommands>
         <SpaceBetween size="xs" direction="horizontal">
-        <Button onClick={() => fetchSession()}>Reload</Button>
-        <Button onClick={() => setIsReady(false)}>Simulate Loading</Button>
+          <Button onClick={() => fetchSession()}>Reload</Button>
+          <Button onClick={() => setIsReady(false)}>Simulate Loading</Button>
           <Button
             onClick={() => {
               setIsReady(false);
