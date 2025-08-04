@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -21,6 +22,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 @Slf4j
 public class DocumentReindexer {
@@ -46,30 +49,47 @@ public class DocumentReindexer {
         this.threadSafeTransformer = new ThreadSafeTransformerWrapper((this.isNoopTransformer) ? NOOP_TRANSFORMER_SUPPLIER : transformerSupplier);
     }
 
-    public Flux<WorkItemCursor> reindex(String indexName, Flux<RfsLuceneDocument> documentStream, IDocumentReindexContext context) {
-        // Create executor with hook for threadSafeTransformer cleaner
-        AtomicInteger id = new AtomicInteger();
-        int transformationParallelizationFactor = Runtime.getRuntime().availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(transformationParallelizationFactor, r -> {
-            int threadNum = id.incrementAndGet();
-            return new Thread(() -> {
-                try {
-                    r.run();
-                } finally {
-                    threadSafeTransformer.close();
-                }
-            }, "DocumentBulkAggregator-" + threadNum);
-        });
-        Scheduler scheduler = Schedulers.fromExecutor(executor);
-        var rfsDocs = documentStream
-            .publishOn(scheduler, 1)
-            .buffer(Math.min(100, maxDocsPerBulkRequest)) // arbitrary
-            .concatMapIterable(docList -> transformDocumentBatch(threadSafeTransformer, docList, indexName));
-        return this.reindexDocsInParallelBatches(rfsDocs, indexName, context)
-            .doFinally(signalType -> {
-                scheduler.dispose();
-                executor.shutdown();
-            });
+    public Flux<WorkItemCursor> reindex(
+            String indexName,
+            Flux<RfsLuceneDocument> documentStream,
+            IDocumentReindexContext context) {
+    
+        int parallelism = Runtime.getRuntime().availableProcessors();
+        int batchSize    = Math.min(100, maxDocsPerBulkRequest);
+    
+        return Flux.using(
+            // 1) Resource factory: create executor + scheduler
+            () -> {
+                var id = new AtomicInteger();
+                var executor = Executors.newFixedThreadPool(parallelism, r -> {
+                    int threadNum = id.incrementAndGet();
+                    return new Thread(() -> {
+                        try {
+                            r.run();
+                        } finally {
+                            threadSafeTransformer.close();
+                        }
+                    }, "DocumentBulkAggregator-" + threadNum);
+                });
+                var scheduler = Schedulers.fromExecutor(executor);
+                return Tuples.of(executor, scheduler);
+            },
+            // 2) Flux factory: use that scheduler for the entire pipeline
+            tuple -> {
+                var scheduler = tuple.getT2();
+                var flux = documentStream
+                    .publishOn(scheduler, 1)
+                    .buffer(batchSize)
+                    .concatMapIterable(batch -> transformDocumentBatch(threadSafeTransformer, batch, indexName));
+    
+                return reindexDocsInParallelBatches(flux, indexName, context);
+            },
+            // 3) Cleanup: dispose scheduler and shut down executor once the Flux completes/errors/cancels
+            tuple -> {
+                tuple.getT2().dispose();
+                tuple.getT1().shutdown();
+            }
+        );
     }
 
     Flux<WorkItemCursor> reindexDocsInParallelBatches(Flux<RfsDocument> docs, String indexName, IDocumentReindexContext context) {
@@ -83,7 +103,14 @@ public class DocumentReindexer {
             .publishOn(scheduler, 1) // Switch scheduler
             .flatMapSequential(docsGroup -> sendBulkRequest(UUID.randomUUID(), docsGroup, indexName, context, scheduler),
                 maxConcurrentWorkItems)
-            .doFinally(s -> scheduler.dispose());
+            .doFinally(s -> scheduler.dispose())
+            // Allow threading/scheduler exceptions to propagate as they indicate serious issues
+            .onErrorResume(e -> {
+                if (e instanceof RejectedExecutionException) {
+                    return Flux.error(e);
+                }
+                return Flux.empty();
+            });
     }
 
     @SneakyThrows
@@ -119,10 +146,17 @@ public class DocumentReindexer {
                 .addArgument(batchId)
                 .addArgument(error::getMessage)
                 .log())
-            // Prevent the error from stopping the entire stream, retries occurring within sendBulkRequest
+            // Prevent recoverable errors from stopping the entire stream, retries occurring within sendBulkRequest
             .onErrorResume(e -> Mono.empty())
             .then(Mono.just(new WorkItemCursor(lastDoc.progressCheckpointNum))
-            .subscribeOn(scheduler));
+                .subscribeOn(scheduler))
+            // Apply error handling to the entire chain including subscribeOn
+            .onErrorResume(e -> {
+                if (e instanceof RejectedExecutionException) {
+                    return Mono.error(e);
+                }
+                return Mono.empty();
+            });
     }
 
     Flux<List<RfsDocument>> batchDocsBySizeOrCount(Flux<RfsDocument> docs) {
