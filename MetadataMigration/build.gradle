@@ -1,6 +1,7 @@
 plugins {
     id 'org.opensearch.migrations.java-application-conventions'
     id 'io.freefair.lombok'
+    id 'org.openapi.generator' version '7.3.0'
 }
 
 dependencies {
@@ -14,6 +15,11 @@ dependencies {
     implementation libs.log4j.slf4j2.impl
     implementation libs.log4j.core
     implementation libs.jackson.databind
+    implementation libs.jackson.annotations
+    
+    // Dependencies for OpenAPI generated code
+    implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+    implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
     testImplementation testFixtures(project(':RFS'))
     testImplementation testFixtures(project(':testHelperFixtures'))
@@ -33,3 +39,82 @@ dependencies {
 application {
     mainClass.set('org.opensearch.migrations.MetadataMigration')
 }
+
+// Define the location of the console_link project using the project reference from settings.gradle
+def backendApiProject = project(':console_link')
+
+// Task to create the necessary directories
+tasks.register('createOpenApiDirs') {
+    doLast {
+        layout.buildDirectory.dir('openapi').get().asFile.mkdirs()
+        layout.buildDirectory.dir('generated/openapi').get().asFile.mkdirs()
+    }
+}
+
+// Task to copy the OpenAPI spec from console_link to the MetadataMigration build directory
+tasks.register('syncOpenApiSpec', Copy) {
+    dependsOn createOpenApiDirs
+    dependsOn backendApiProject.tasks.named('generateOpenApiSpec')
+    
+    doFirst {
+        println "Copying from ${backendApiProject.buildDir}/openapi.json to ${layout.buildDirectory.get()}/openapi/openapi.json"
+    }
+    
+    from "${backendApiProject.buildDir}/openapi.json"
+    into layout.buildDirectory.dir('openapi')
+
+    outputs.file(layout.buildDirectory.file('openapi/openapi.json'))
+}
+
+// OpenAPI Generator configuration
+openApiGenerate {
+    generatorName = "java"
+    inputSpec = layout.buildDirectory.file("openapi/openapi.json").get().asFile.absolutePath
+    outputDir = layout.buildDirectory.dir("generated/openapi").get().asFile.absolutePath
+    apiPackage = "org.opensearch.migration.api"
+    modelPackage = "org.opensearch.migration.model"
+    configOptions = [
+        dateLibrary: "java8",
+        useJakartaEe: "true",
+        interfaceOnly: "true",
+        skipDefaultInterface: "true",
+        openApiNullable: "false",
+        serializationLibrary: "jackson",
+        hideGenerationTimestamp: "true"
+    ]
+    // Generate only models/interfaces, not the client implementation
+    globalProperties = [
+        models: "",
+        apis: "",
+        supportingFiles: "false"
+    ]
+}
+
+// Set up proper task dependencies for openApiGenerate
+tasks.named('openApiGenerate').configure {
+    dependsOn 'syncOpenApiSpec'
+}
+
+// Task to process OpenAPI-generated code
+tasks.register('generateApiInterfaces') {
+    dependsOn 'openApiGenerate'
+    description = "Generate Java interfaces from OpenAPI spec"
+    group = 'build'
+    
+    // Make the generated code available to the project
+    doLast {
+        println "API interfaces generated at ${layout.buildDirectory}/generated/openapi"
+    }
+}
+
+// Add generated sources to source sets
+sourceSets {
+    main {
+        java {
+            srcDir "${layout.buildDirectory}/generated/openapi/src/main/java"
+        }
+    }
+}
+
+// Add openApiGenerate to build process
+compileJava.dependsOn 'generateApiInterfaces'
