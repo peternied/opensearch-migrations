@@ -20,6 +20,7 @@ dependencies {
     // Dependencies for OpenAPI generated code
     implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
     implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
+    implementation 'com.google.code.gson:gson:2.10.1'
 
     testImplementation testFixtures(project(':RFS'))
     testImplementation testFixtures(project(':testHelperFixtures'))
