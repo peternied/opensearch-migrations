@@ -16,13 +16,34 @@ const sideNav = (
       logo: { src: "/migrations-icon-160x160.png", alt: "" },
     }}
     items={[
-      // Reference for future links
-      // { type: 'link', href: '/about', text: 'About'}
-      // { type: 'divider'},
+      {
+        type: "section-group",
+        title: "Migration",
+        items: [
+          { type: "link", href: "/", text: "Home" },
+          { type: "link", href: "/createSession", text: "Create Session" },
+          { type: "link", href: "/viewSession", text: "View Session" },
+          { type: "link", href: "/wizard", text: "Migration Wizard" },
+        ],
+      },
+      { type: "divider" },
+      {
+        type: "section-group",
+        title: "Tools",
+        items: [
+          {
+            type: "link",
+            href: "/playground",
+            text: "Transformation Playground",
+          },
+        ],
+      },
+      { type: "divider" },
       {
         type: "section-group",
         title: "Help",
         items: [
+          { type: "link", href: "/about", text: "About" },
           {
             type: "link",
             text: "Documentation",

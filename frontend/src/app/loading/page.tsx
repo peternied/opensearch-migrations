@@ -128,10 +128,10 @@ export default function LoadingPage() {
               isReady && (
                 <Button
                   variant="primary"
-                  onClick={() => router.push("/migration")}
+                  onClick={() => router.push("/wizard")}
                   data-testid="start-migration-button"
                 >
-                  Start data migration
+                  Start migration wizard
                 </Button>
               )
             }
