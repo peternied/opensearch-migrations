@@ -41,37 +41,83 @@ application {
     mainClass.set('org.opensearch.migrations.MetadataMigration')
 }
 
-// Define the location of the console_link project using the project reference from settings.gradle
-def backendApiProject = project(':console_link')
-
 // Task to create the necessary directories
 tasks.register('createOpenApiDirs') {
+    // Define outputs to make task cacheable
+    def openApiDir = layout.buildDirectory.dir('openapi')
+    def generatedDir = layout.buildDirectory.dir('generated/openapi')
+    
+    outputs.dir(openApiDir)
+    outputs.dir(generatedDir)
+    
     doLast {
-        layout.buildDirectory.dir('openapi').get().asFile.mkdirs()
-        layout.buildDirectory.dir('generated/openapi').get().asFile.mkdirs()
+        openApiDir.get().asFile.mkdirs()
+        generatedDir.get().asFile.mkdirs()
     }
 }
 
 // Task to copy the OpenAPI spec from console_link to the MetadataMigration build directory
 tasks.register('syncOpenApiSpec', Copy) {
     dependsOn createOpenApiDirs
-    dependsOn backendApiProject.tasks.named('generateOpenApiSpec')
+    dependsOn tasks.named('generateOpenApiSpecFromConsoleLink')
     
+    // Define source and destination paths for logging and copy operations
+    def sourceFile = layout.buildDirectory.file('openapi-source/openapi.json')
+    def targetDir = layout.buildDirectory.dir('openapi')
+    def targetFile = layout.buildDirectory.file('openapi/openapi.json')
+    
+    // Configure the Copy task
+    from sourceFile
+    into targetDir
+    
+    // Log the operation
     doFirst {
-        println "Copying from ${backendApiProject.buildDir}/openapi.json to ${layout.buildDirectory.get()}/openapi/openapi.json"
+        // Convert to strings to avoid project object references in closures
+        println "Copying from ${sourceFile.get().asFile.path} to ${targetFile.get().asFile.path}"
     }
     
-    from "${backendApiProject.buildDir}/openapi.json"
-    into layout.buildDirectory.dir('openapi')
+    outputs.file(targetFile)
+}
 
-    outputs.file(layout.buildDirectory.file('openapi/openapi.json'))
+// Task to generate OpenAPI spec by invoking the console_link task
+tasks.register('generateOpenApiSpecFromConsoleLink') {
+    // Store paths as strings during configuration time to avoid project references in closures
+    def consoleLinkProjectPath = ':console_link'
+    def consoleLinkBuildDirPath = project(consoleLinkProjectPath).buildDir.path
+    
+    // Create file path strings that can be used inside doLast without project references
+    def sourceFilePath = consoleLinkBuildDirPath + "/openapi.json"
+    
+    // Define the output directory and file using the layout API properly
+    def outputDir = layout.buildDirectory.dir('openapi-source')
+    def outputFile = layout.buildDirectory.file('openapi-source/openapi.json')
+    
+    inputs.file(sourceFilePath)
+    outputs.file(outputFile)
+    
+    // Use path-based dependency instead of project reference
+    dependsOn(":console_link:generateOpenApiSpec")
+    
+    doLast {
+        // Ensure the output directory exists
+        outputDir.get().asFile.mkdirs()
+        
+        // Copy the file content using the string paths
+        File sourceFile = new File(sourceFilePath)
+        if (sourceFile.exists()) {
+            outputFile.get().asFile.text = sourceFile.text
+        } else {
+            throw new GradleException("Source file not found at: ${sourceFilePath}")
+        }
+    }
 }
 
 // OpenAPI Generator configuration
-openApiGenerate {
+tasks.named('openApiGenerate').configure {
     generatorName = "java"
-    inputSpec = layout.buildDirectory.file("openapi/openapi.json").get().asFile.absolutePath
-    outputDir = layout.buildDirectory.dir("generated/openapi").get().asFile.absolutePath
+    // Use provider instead of directly accessing file during configuration
+    inputSpec.set(layout.buildDirectory.file("openapi/openapi.json").map { it.asFile.absolutePath })
+    outputDir.set(layout.buildDirectory.dir("generated/openapi").map { it.asFile.absolutePath })
     apiPackage = "org.opensearch.migration.api"
     modelPackage = "org.opensearch.migration.model"
     configOptions = [
@@ -102,9 +148,12 @@ tasks.register('generateApiInterfaces') {
     description = "Generate Java interfaces from OpenAPI spec"
     group = 'build'
     
+    def generatedDir = layout.buildDirectory.dir("generated/openapi")
+    outputs.dir(generatedDir)
+    
     // Make the generated code available to the project
     doLast {
-        println "API interfaces generated at ${layout.buildDirectory}/generated/openapi"
+        println "API interfaces generated at ${generatedDir.get().asFile.path}"
     }
 }
 
@@ -112,7 +161,7 @@ tasks.register('generateApiInterfaces') {
 sourceSets {
     main {
         java {
-            srcDir "${layout.buildDirectory}/generated/openapi/src/main/java"
+            srcDir layout.buildDirectory.dir("generated/openapi/src/main/java")
         }
     }
 }

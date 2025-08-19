@@ -8,6 +8,7 @@ import org.opensearch.migrations.cluster.ClusterSnapshotReader;
 import org.opensearch.migrations.cluster.ClusterWriter;
 import org.opensearch.migrations.cluster.RemoteCluster;
 import org.opensearch.migrations.commands.JsonOutput;
+import org.opensearch.migrations.cli.openapi.ClustersConverter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -75,6 +76,23 @@ public class Clusters implements JsonOutput {
     
     @Override
     public JsonNode asJsonOutput() {
+        try {
+            // Use the new OpenAPI-compatible converter and convert back to JsonNode for compatibility
+            String openApiJson = ClustersConverter.clustersToOpenApiJson(this);
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readTree(openApiJson);
+        } catch (Exception e) {
+            log.error("Error using OpenAPI converter, falling back to original implementation", e);
+            // Fallback to original implementation if OpenAPI conversion fails
+            return asJsonOutputOriginal();
+        }
+    }
+    
+    /**
+     * Original JSON output implementation as fallback.
+     * Preserves the existing behavior in case OpenAPI conversion fails.
+     */
+    private JsonNode asJsonOutputOriginal() {
         var root = JsonNodeFactory.instance.objectNode();
 
         var mapper = new ObjectMapper();
