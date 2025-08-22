@@ -1,0 +1,22 @@
+/* app/globals.css */
+
+.log-debug {
+  color: #888;
+}
+
+.log-info {
+  color: #0073bb;
+}
+
+.log-warn {
+  color: #e07900;
+}
+
+.log-error {
+  color: #d13212;
+}
+
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+}

@@ -1,5 +1,5 @@
 "use client";
-
+import './global.css';
 import {
   AppLayout,
   ContentLayout,
@@ -12,7 +12,7 @@ const sideNav = (
   <SideNavigation
     header={{
       href: "/",
-      text: "Migration Assistant",
+      text: "Migration Assistant",    
       logo: { src: "/migrations-icon-160x160.png", alt: "" },
     }}
     items={[

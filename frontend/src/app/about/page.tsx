@@ -10,6 +10,7 @@ import {
   Link,
   SpaceBetween,
 } from "@cloudscape-design/components";
+import LogViewer from "@/components/LogViewer";
 
 export default function Page() {
   return (
@@ -67,6 +68,9 @@ export default function Page() {
             .
           </Box>
         </SpaceBetween>
+      </Container>
+      <Container>
+        <LogViewer></LogViewer>
       </Container>
     </SpaceBetween>
   );
