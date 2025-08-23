@@ -348,3 +348,369 @@ def create_snapshot(request: CreateSnapshotRequest):
 - Each phase can be adjusted based on team capacity
 - Prioritize high-impact modules first
 - Maintain backward compatibility where possible
+
+---
+
+# Appendix: LLM Execution Guide
+
+## File Mapping Reference
+
+### Current to Target File Mappings
+
+| Current File | Target File(s) | Notes |
+|-------------|----------------|-------|
+| `models/snapshot.py` | `domain/entities/snapshot_entity.py`<br>`services/snapshot_service.py`<br>`infrastructure/command_executor.py` | Split by concern |
+| `models/cluster.py` | `domain/entities/cluster_entity.py`<br>`domain/value_objects/auth_config.py`<br>`services/cluster_service.py` | Extract auth to value object |
+| `models/command_result.py` | *(Delete)* | Replace with exceptions |
+| `middleware/snapshot.py` | `cli/commands/snapshot_commands.py` | Move to CLI layer |
+| `api/snapshot.py` | `api/routers/snapshot_router.py`<br>`api/schemas/snapshot_schemas.py` | Split router and schemas |
+
+## Execution Checkpoints
+
+### Phase 1 Validation
+```bash
+# After creating directory structure
+find console_link -type d -name "__pycache__" -prune -o -type d -print | sort
+
+# Expected output should match the planned structure
+```
+
+### Phase 2 Validation
+```python
+# Test that entities are properly defined
+from console_link.domain.entities.snapshot_entity import SnapshotEntity
+from console_link.domain.exceptions.snapshot_errors import SnapshotCreationError
+
+# Should import without errors
+```
+
+### Phase 3 Validation
+```bash
+# Run unit tests for each service
+pipenv run pytest tests/unit/services/test_snapshot_service.py -v
+```
+
+## Code Templates
+
+### Domain Entity Template
+```python
+# domain/entities/{entity_name}_entity.py
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
+from enum import Enum
+
+class {Entity}State(Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+@dataclass
+class {Entity}Entity:
+    """Domain entity for {entity_name}."""
+    id: str
+    name: str
+    state: {Entity}State
+    created_at: datetime
+    updated_at: datetime
+    # Add domain-specific fields
+    
+    def __post_init__(self):
+        """Validate entity invariants."""
+        if not self.id:
+            raise ValueError("Entity ID cannot be empty")
+```
+
+### Service Template
+```python
+# services/{service_name}_service.py
+import logging
+from typing import List, Optional
+from console_link.domain.entities.{entity}_entity import {Entity}Entity
+from console_link.domain.exceptions.{domain}_errors import (
+    {Domain}NotFoundError,
+    {Domain}CreationError,
+    {Domain}ValidationError
+)
+
+logger = logging.getLogger(__name__)
+
+class {Service}Service:
+    """Business logic for {domain} operations."""
+    
+    def __init__(self, repository, infrastructure_service):
+        self.repository = repository
+        self.infrastructure = infrastructure_service
+    
+    def create_{entity}(self, config: dict) -> {Entity}Entity:
+        """Create a new {entity}.
+        
+        Raises:
+            {Domain}ValidationError: If config is invalid
+            {Domain}CreationError: If creation fails
+        """
+        try:
+            # Validate input
+            self._validate_config(config)
+            
+            # Business logic here
+            result = self.infrastructure.execute_operation(config)
+            
+            # Create and persist entity
+            entity = {Entity}Entity(
+                id=result['id'],
+                name=config['name'],
+                state={Entity}State.PENDING
+            )
+            
+            self.repository.save(entity)
+            return entity
+            
+        except ValidationError as e:
+            logger.error(f"Validation failed: {e}")
+            raise {Domain}ValidationError(str(e))
+        except Exception as e:
+            logger.error(f"Failed to create {entity}: {e}")
+            raise {Domain}CreationError(f"Creation failed: {str(e)}")
+```
+
+### CLI Command Template
+```python
+# cli/commands/{domain}_commands.py
+import click
+from console_link.services.{service}_service import {Service}Service
+from console_link.domain.exceptions.{domain}_errors import {Domain}Error
+from console_link.cli.formatters.{domain}_formatter import {Domain}Formatter
+
+@click.group(name="{domain}")
+@click.pass_context
+def {domain}_group(ctx):
+    """Commands for {domain} operations."""
+    ctx.obj['{service}'] = {Service}Service(
+        repository=ctx.obj['repositories']['{domain}'],
+        infrastructure=ctx.obj['infrastructure']['{domain}']
+    )
+    ctx.obj['formatter'] = {Domain}Formatter(json_output=ctx.obj.get('json', False))
+
+@{domain}_group.command(name="create")
+@click.option('--name', required=True, help='Name of the {domain}')
+@click.pass_context
+def create_{domain}_cmd(ctx, name):
+    """Create a new {domain}."""
+    service = ctx.obj['{service}']
+    formatter = ctx.obj['formatter']
+    
+    try:
+        entity = service.create_{domain}({'name': name})
+        click.echo(formatter.format_entity(entity))
+    except {Domain}ValidationError as e:
+        click.echo(formatter.format_error(f"Validation error: {e}"), err=True)
+        ctx.exit(1)
+    except {Domain}Error as e:
+        click.echo(formatter.format_error(f"Operation failed: {e}"), err=True)
+        ctx.exit(1)
+```
+
+### API Router Template
+```python
+# api/routers/{domain}_router.py
+from fastapi import APIRouter, HTTPException, Depends
+from console_link.api.schemas.{domain}_schemas import (
+    Create{Domain}Request,
+    {Domain}Response,
+    {Domain}ErrorResponse
+)
+from console_link.services.{service}_service import {Service}Service
+from console_link.domain.exceptions.{domain}_errors import {Domain}Error
+
+router = APIRouter(prefix="/{domain}", tags=["{domain}"])
+
+@router.post("/", response_model={Domain}Response)
+async def create_{domain}(
+    request: Create{Domain}Request,
+    service: {Service}Service = Depends(get_{service}_service)
+):
+    """Create a new {domain}."""
+    try:
+        entity = service.create_{domain}(request.dict())
+        return {Domain}Response.from_entity(entity)
+    except {Domain}ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except {Domain}Error as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+## Migration Patterns
+
+### Pattern 1: Extracting Business Logic from CommandResult
+```python
+# BEFORE (in models or middleware)
+def create_snapshot(self, config) -> CommandResult:
+    try:
+        # business logic
+        result = self._do_something(config)
+        return CommandResult(success=True, value=result)
+    except Exception as e:
+        return CommandResult(success=False, value=str(e))
+
+# AFTER (in service)
+def create_snapshot(self, config) -> SnapshotEntity:
+    # business logic
+    result = self._do_something(config)
+    return SnapshotEntity.from_dict(result)
+    # Exceptions propagate naturally
+```
+
+### Pattern 2: Separating Infrastructure Concerns
+```python
+# BEFORE (mixed in model)
+class S3Snapshot:
+    def create(self):
+        command = f"/root/createSnapshot/bin/CreateSnapshot {args}"
+        result = subprocess.run(command, shell=True)
+        # ... handle result
+
+# AFTER 
+# In infrastructure/command_executor.py
+class CommandExecutor:
+    def execute(self, command: str, args: dict) -> dict:
+        # Handle subprocess execution
+        
+# In service
+class SnapshotService:
+    def create_snapshot(self, config):
+        result = self.command_executor.execute(
+            "/root/createSnapshot/bin/CreateSnapshot",
+            config
+        )
+        # Pure business logic
+```
+
+## Common Pitfalls and Solutions
+
+### Pitfall 1: Circular Dependencies
+**Problem**: Service A depends on Service B which depends on Service A
+**Solution**: Use dependency injection and interfaces
+```python
+# Define interface in domain layer
+class SnapshotRepositoryInterface(ABC):
+    @abstractmethod
+    def save(self, snapshot: SnapshotEntity): pass
+```
+
+### Pitfall 2: Leaking CLI Concepts into Services
+**Problem**: Services returning formatted strings or CLI-specific data
+**Solution**: Services return domain entities; formatting happens in presentation layer
+
+### Pitfall 3: Incomplete Exception Handling
+**Problem**: Not all error cases covered when removing CommandResult
+**Solution**: Map each CommandResult failure to a specific exception type
+
+## Testing Strategy for Each Phase
+
+### Unit Test Example
+```python
+# tests/unit/services/test_snapshot_service.py
+import pytest
+from unittest.mock import Mock, MagicMock
+from console_link.services.snapshot_service import SnapshotService
+from console_link.domain.exceptions.snapshot_errors import SnapshotCreationError
+
+class TestSnapshotService:
+    def test_create_snapshot_success(self):
+        # Arrange
+        mock_repo = Mock()
+        mock_infra = Mock()
+        mock_infra.execute_operation.return_value = {'id': '123', 'status': 'created'}
+        
+        service = SnapshotService(mock_repo, mock_infra)
+        
+        # Act
+        result = service.create_snapshot({'name': 'test-snapshot'})
+        
+        # Assert
+        assert result.id == '123'
+        assert result.name == 'test-snapshot'
+        mock_repo.save.assert_called_once()
+    
+    def test_create_snapshot_infrastructure_failure(self):
+        # Arrange
+        mock_repo = Mock()
+        mock_infra = Mock()
+        mock_infra.execute_operation.side_effect = Exception("Connection failed")
+        
+        service = SnapshotService(mock_repo, mock_infra)
+        
+        # Act & Assert
+        with pytest.raises(SnapshotCreationError) as exc_info:
+            service.create_snapshot({'name': 'test-snapshot'})
+        
+        assert "Connection failed" in str(exc_info.value)
+        mock_repo.save.assert_not_called()
+```
+
+### Integration Test Example
+```python
+# tests/integration/test_snapshot_integration.py
+import pytest
+from console_link.services.snapshot_service import SnapshotService
+from console_link.repositories.snapshot_repository import SnapshotRepository
+from console_link.infrastructure.command_executor import CommandExecutor
+
+@pytest.mark.integration
+class TestSnapshotIntegration:
+    def test_create_snapshot_end_to_end(self, test_db, test_config):
+        # Use real implementations but test database
+        repo = SnapshotRepository(test_db)
+        executor = CommandExecutor(test_mode=True)
+        service = SnapshotService(repo, executor)
+        
+        # Full integration test
+        result = service.create_snapshot(test_config)
+        
+        # Verify in database
+        saved = repo.get_by_id(result.id)
+        assert saved.name == test_config['name']
+```
+
+## Incremental Migration Checklist
+
+For each module being migrated:
+
+- [ ] Create domain entity with proper validation
+- [ ] Create domain exceptions for all error cases  
+- [ ] Create service with business logic (no CommandResult)
+- [ ] Create repository interface and implementation
+- [ ] Extract infrastructure concerns to separate class
+- [ ] Update CLI commands to use service
+- [ ] Update API routes to use service
+- [ ] Write unit tests for service (>90% coverage)
+- [ ] Write integration tests for critical paths
+- [ ] Update imports in dependent modules
+- [ ] Run full test suite
+- [ ] Update documentation
+
+## Validation Commands
+
+```bash
+# After each phase, run these commands to validate:
+
+# 1. Check imports are working
+python -c "from console_link.domain.entities import *"
+
+# 2. Run type checking
+mypy console_link/
+
+# 3. Run tests
+pipenv run pytest tests/ -v
+
+# 4. Check for CommandResult usage (should decrease over time)
+grep -r "CommandResult" console_link/ --include="*.py" | grep -v "__pycache__" | wc -l
+
+# 5. Verify API is working
+curl -X GET http://localhost:8000/docs
+
+# 6. Verify CLI is working
+console --help
+```
