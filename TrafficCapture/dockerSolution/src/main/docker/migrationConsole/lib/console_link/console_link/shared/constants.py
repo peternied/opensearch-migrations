@@ -1,0 +1,127 @@
+"""Shared constants for console_link.
+
+This module contains constant values that are used across multiple
+components of the application.
+"""
+
+# Default values
+DEFAULT_SNAPSHOT_REPO_NAME = "migration_assistant_repo"
+DEFAULT_PAGE_SIZE = 100
+DEFAULT_TIMEOUT = 300  # 5 minutes
+DEFAULT_RETRY_COUNT = 3
+DEFAULT_RETRY_DELAY = 1.0  # seconds
+
+# HTTP methods
+HTTP_GET = "GET"
+HTTP_POST = "POST"
+HTTP_PUT = "PUT"
+HTTP_DELETE = "DELETE"
+HTTP_HEAD = "HEAD"
+
+# Status codes
+STATUS_OK = 200
+STATUS_CREATED = 201
+STATUS_ACCEPTED = 202
+STATUS_NO_CONTENT = 204
+STATUS_BAD_REQUEST = 400
+STATUS_UNAUTHORIZED = 401
+STATUS_FORBIDDEN = 403
+STATUS_NOT_FOUND = 404
+STATUS_CONFLICT = 409
+STATUS_INTERNAL_ERROR = 500
+
+# Elasticsearch/OpenSearch specific
+ES_INDEX_SETTINGS_KEY = "settings"
+ES_INDEX_MAPPINGS_KEY = "mappings"
+ES_SNAPSHOT_STATE_KEY = "state"
+ES_SNAPSHOT_INDICES_KEY = "indices"
+
+# Snapshot states
+SNAPSHOT_STATE_IN_PROGRESS = "IN_PROGRESS"
+SNAPSHOT_STATE_SUCCESS = "SUCCESS"
+SNAPSHOT_STATE_FAILED = "FAILED"
+SNAPSHOT_STATE_PARTIAL = "PARTIAL"
+SNAPSHOT_STATE_INCOMPATIBLE = "INCOMPATIBLE"
+
+# Migration phases
+PHASE_SNAPSHOT = "snapshot"
+PHASE_BACKFILL = "backfill"
+PHASE_TRAFFIC_REPLAY = "traffic_replay"
+PHASE_VALIDATION = "validation"
+
+# Container platforms
+PLATFORM_LOCAL = "local"
+PLATFORM_DOCKER = "docker"
+PLATFORM_ECS = "ecs"
+PLATFORM_KUBERNETES = "kubernetes"
+
+# Environment variables
+ENV_AWS_REGION = "AWS_REGION"
+ENV_AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
+ENV_AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
+ENV_AWS_SESSION_TOKEN = "AWS_SESSION_TOKEN"
+
+# Command paths
+SNAPSHOT_COMMAND = "/root/createSnapshot/bin/CreateSnapshot"
+RFS_COMMAND = "/root/runDocumentMigration.sh"
+
+# API paths
+API_PREFIX = "/api/v1"
+HEALTH_CHECK_PATH = "/health"
+METRICS_PATH = "/metrics"
+
+# File extensions
+JSON_EXTENSION = ".json"
+YAML_EXTENSION = ".yaml"
+LOG_EXTENSION = ".log"
+
+# Content types
+CONTENT_TYPE_JSON = "application/json"
+CONTENT_TYPE_YAML = "application/yaml"
+CONTENT_TYPE_TEXT = "text/plain"
+CONTENT_TYPE_HTML = "text/html"
+
+# Character encoding
+DEFAULT_ENCODING = "utf-8"
+
+# Date/time formats
+ISO_DATE_FORMAT = "%Y-%m-%d"
+ISO_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+ISO_DATETIME_FORMAT_WITH_TZ = "%Y-%m-%dT%H:%M:%SZ"
+
+# Size units
+BYTES_PER_KB = 1024
+BYTES_PER_MB = 1024 * 1024
+BYTES_PER_GB = 1024 * 1024 * 1024
+
+# Retry strategies
+RETRY_EXPONENTIAL_BACKOFF = "exponential"
+RETRY_LINEAR_BACKOFF = "linear"
+RETRY_CONSTANT_BACKOFF = "constant"
+
+# Log levels
+LOG_LEVEL_DEBUG = "DEBUG"
+LOG_LEVEL_INFO = "INFO"
+LOG_LEVEL_WARNING = "WARNING"
+LOG_LEVEL_ERROR = "ERROR"
+LOG_LEVEL_CRITICAL = "CRITICAL"
+
+# Kafka topics
+KAFKA_TOPIC_TRAFFIC = "opensearch-traffic"
+KAFKA_TOPIC_METRICS = "opensearch-metrics"
+
+# Metric names
+METRIC_SNAPSHOT_DURATION = "snapshot_duration_seconds"
+METRIC_SNAPSHOT_SIZE = "snapshot_size_bytes"
+METRIC_BACKFILL_DOCS_MIGRATED = "backfill_documents_migrated"
+METRIC_REPLAY_REQUESTS_PROCESSED = "replay_requests_processed"
+
+# Error codes (for API responses)
+ERROR_CODE_VALIDATION = "VALIDATION_ERROR"
+ERROR_CODE_NOT_FOUND = "NOT_FOUND"
+ERROR_CODE_CONFLICT = "CONFLICT"
+ERROR_CODE_UNAUTHORIZED = "UNAUTHORIZED"
+ERROR_CODE_FORBIDDEN = "FORBIDDEN"
+ERROR_CODE_INTERNAL = "INTERNAL_ERROR"
+ERROR_CODE_TIMEOUT = "TIMEOUT"
+ERROR_CODE_SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
