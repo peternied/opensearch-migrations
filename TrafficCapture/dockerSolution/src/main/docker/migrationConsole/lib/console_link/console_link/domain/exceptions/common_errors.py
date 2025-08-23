@@ -97,3 +97,13 @@ class DataIntegrityError(MigrationAssistantError):
     or violates integrity constraints.
     """
     pass
+
+
+class InfrastructureError(MigrationAssistantError):
+    """Raised when there's an infrastructure-level failure.
+    
+    This exception is used for failures in the infrastructure layer,
+    such as command execution failures, container management issues,
+    or file system errors.
+    """
+    pass
