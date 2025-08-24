@@ -16,6 +16,7 @@ gunicorn = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 tinydb = "*"
 fastapi = {extras = ["standard"], version = "*"}
+console-link = {file = ".", editable = true}
 
 [dev-packages]
 pytest = "*"
