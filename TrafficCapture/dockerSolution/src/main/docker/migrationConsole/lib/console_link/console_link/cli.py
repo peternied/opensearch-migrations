@@ -1,773 +1,789 @@
 import json
-from pprint import pprint
-import sys
-import time
-from typing import Dict, Optional
-import click
 import logging
+from datetime import datetime, timezone
+from typing import Optional
 
-# Import services instead of middleware
+import click
+from click import ClickException
+
+from console_link.cli_options import (
+    backfill_options,
+    clusters_options,
+    kafka_options,
+    metadata_options,
+    metrics_source_options,
+    metrics_target_options,
+    replay_options,
+    snapshot_options,
+)
+from console_link.environment import Environment, init_logging
+from console_link.infrastructure.resource_injector import ServiceLoaderService
+
+# Import service interfaces
 from console_link.services.cluster_service import ClusterService
 from console_link.services.snapshot_service import SnapshotService
 from console_link.services.backfill_service import BackfillService
-from console_link.services.metadata_service import MetadataService
 from console_link.services.replay_service import ReplayService
+from console_link.services.metadata_service import MetadataService
 from console_link.services.kafka_service import KafkaService
 from console_link.services.metrics_service import MetricsService
 
 # Import domain exceptions
-# Import base exception
-from console_link.domain.exceptions.common_errors import MigrationAssistantError
-
-# Import specific domain exceptions
-from console_link.domain.exceptions.cluster_errors import ClusterConnectionError
-from console_link.domain.exceptions.snapshot_errors import SnapshotCreationError, SnapshotDeletionError
 from console_link.domain.exceptions.backfill_errors import BackfillError
-from console_link.domain.exceptions.metadata_errors import MetadataMigrationError
 from console_link.domain.exceptions.replay_errors import ReplayError
-from console_link.domain.exceptions.kafka_errors import KafkaError
-from console_link.domain.exceptions.metrics_errors import MetricsError
-
-# Import other dependencies
-from console_link.models.container_utils import get_version_str
-from console_link.models.cluster import HttpMethod
-from console_link.models.backfill_rfs import RfsWorkersInProgress, WorkingIndexDoesntExist
-from console_link.models.utils import DEFAULT_SNAPSHOT_REPO_NAME, ExitCode
-from console_link.environment import Environment
-from console_link.models.metrics_source import Component, MetricStatistic
-from click.shell_completion import get_completion_class
-
-# TODO: Import tuples service when available
-import console_link.middleware.tuples as tuples_
+from console_link.domain.exceptions.metadata_errors import MetadataError
+from console_link.domain.exceptions.common_errors import ServiceNotFoundError, ValidationError
 
 logger = logging.getLogger(__name__)
 
-# ################### UNIVERSAL ####################
+# Create a single instance of the service loader
+service_loader_service = ServiceLoaderService()
 
+def _create_env(config_file: str) -> Environment:
+    """Helper to create an Environment instance"""
+    ctx = click.get_current_context()
+    # We'll use the existing environment if it exists
+    if not hasattr(ctx, 'env'):
+        ctx.env = Environment(config_file)
+    return ctx.env
 
-class Context(object):
-    def __init__(self, config_file) -> None:
-        self.config_file = config_file
-        try:
-            self.env = Environment(config_file=config_file)
-        except Exception as e:
-            raise click.ClickException(str(e))
-        self.json = False
-        
-        # Initialize services (will pass model objects when needed)
-        self.cluster_service = ClusterService()
-        self.snapshot_service = SnapshotService()
-        self.backfill_service = BackfillService()
-        self.metadata_service = MetadataService(self.env.metadata) if self.env.metadata else None
-        self.replay_service = ReplayService(self.env.replay) if self.env.replay else None
-        self.kafka_service = KafkaService(self.env.kafka) if self.env.kafka else None
-        self.metrics_service = MetricsService()
-
-
-@click.group(invoke_without_command=True)
-@click.option("--config-file", default="/config/migration_services.yaml", help="Path to config file")
-@click.option("--json", is_flag=True)
-@click.option('-v', '--verbose', count=True, help="Verbosity level. Default is warn, -v is info, -vv is debug.")
-@click.option("--version", is_flag=True, is_eager=True, help="Show the Migration Assistant version.")
+@click.group()
+@click.option("--config-file", default="/etc/migration_services.yaml", 
+              help="Path to config file")
+@click.option("--json", "as_json", is_flag=True, default=False,
+              help="Output as JSON")
+@click.option("--debug", is_flag=True, default=False)
 @click.pass_context
-def cli(ctx, config_file, json, verbose, version):
-    if version:
-        click.echo(get_version_str())
-        ctx.exit(0)
-
-    # Enforce command required unless --version was passed
-    if ctx.invoked_subcommand is None:
-        click.echo("Error: Missing command.", err=True)
-        click.echo(cli.get_help(ctx))
-        ctx.exit(2)
-
-    logging.basicConfig(level=logging.WARN - (10 * verbose))
-    logger.info(f"Logging set to {logging.getLevelName(logger.getEffectiveLevel())}")
-    ctx.obj = Context(config_file)
-    ctx.obj.json = json
-
-
-# Create a wrapper to handle exceptions for the CLI
-def main():
-    try:
-        cli()
-    except Exception as e:
-        # Check if verbose mode is enabled by looking at the root logger level
-        # Verbose mode sets logging level to INFO (20) or DEBUG (10), default is WARN (30)
-        root_logger = logging.getLogger()
-        if root_logger.getEffectiveLevel() <= logging.INFO:
-            # Verbose mode is enabled, show full traceback
-            import traceback
-            click.echo("Error occurred with verbose mode enabled, showing full traceback:", err=True)
-            click.echo(traceback.format_exc(), err=True)
-        else:
-            # Normal mode, show clean error message
-            click.echo(f"Error: {str(e)}", err=True)
-        sys.exit(1)
-
-
-# ##################### CLUSTERS ###################
-
-
-@cli.group(name="clusters", help="Commands to interact with source and target clusters")
-@click.pass_obj
-def cluster_group(ctx):
-    if ctx.env.source_cluster is None and ctx.env.target_cluster is None:
-        raise click.UsageError("Neither source nor target cluster is defined.")
-
-
-@cluster_group.command(name="cat-indices")
-@click.option("--refresh", is_flag=True, default=False)
-@click.pass_obj
-def cat_indices_cmd(ctx, refresh):
-    """Simple program that calls `_cat/indices` on both a source and target cluster."""
-    try:
-        if ctx.json:
-            source_indices = None
-            target_indices = None
-            
-            if ctx.env.source_cluster:
-                source_indices = ctx.cluster_service.cat_indices(
-                    ctx.env.source_cluster, as_json=True, refresh=refresh
-                )
-            
-            if ctx.env.target_cluster:
-                target_indices = ctx.cluster_service.cat_indices(
-                    ctx.env.target_cluster, as_json=True, refresh=refresh
-                )
-            
-            click.echo(json.dumps({
-                "source_cluster": source_indices,
-                "target_cluster": target_indices
-            }))
-            return
-        
-        if not refresh:
-            click.echo("\nWARNING: Cluster information may be stale. Use --refresh to update.\n")
-        
-        click.echo("SOURCE CLUSTER")
-        if ctx.env.source_cluster:
-            result = ctx.cluster_service.cat_indices(ctx.env.source_cluster, refresh=refresh)
-            click.echo(result)
-        else:
-            click.echo("No source cluster defined.")
-        
-        click.echo("TARGET CLUSTER")
-        if ctx.env.target_cluster:
-            result = ctx.cluster_service.cat_indices(ctx.env.target_cluster, refresh=refresh)
-            click.echo(result)
-        else:
-            click.echo("No target cluster defined.")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@cluster_group.command(name="connection-check")
-@click.pass_obj
-def connection_check_cmd(ctx):
-    """Checks if a connection can be established to source and target clusters"""
-    try:
-        click.echo("SOURCE CLUSTER")
-        if ctx.env.source_cluster:
-            is_connected = ctx.cluster_service.connection_check(ctx.env.source_cluster)
-            click.echo("Connection successful" if is_connected else "Connection failed")
-        else:
-            click.echo("No source cluster defined.")
-        
-        click.echo("TARGET CLUSTER")
-        if ctx.env.target_cluster:
-            is_connected = ctx.cluster_service.connection_check(ctx.env.target_cluster)
-            click.echo("Connection successful" if is_connected else "Connection failed")
-        else:
-            click.echo("No target cluster defined.")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@cluster_group.command(name="run-test-benchmarks")
-@click.pass_obj
-def run_test_benchmarks_cmd(ctx):
-    """Run a series of OpenSearch Benchmark workloads against the source cluster"""
-    if not ctx.env.source_cluster:
-        raise click.UsageError("Cannot run test benchmarks because no source cluster is defined.")
+def cli(ctx, config_file, as_json, debug):
+    """Migration assistant CLI"""
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
     
-    try:
-        result = ctx.cluster_service.run_test_benchmarks(ctx.env.source_cluster)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@cluster_group.command(name="clear-indices")
-@click.option("--acknowledge-risk", is_flag=True, show_default=True, default=False,
-              help="Flag to acknowledge risk and skip confirmation")
-@click.option('--cluster',
-              type=click.Choice(['source', 'target'], case_sensitive=False),
-              help="Cluster to perform clear indices action on",
-              required=True)
-@click.pass_obj
-def clear_indices_cmd(ctx, acknowledge_risk, cluster):
-    """[Caution] Clear indices on a source or target cluster"""
-    cluster_focus = ctx.env.source_cluster if cluster.lower() == 'source' else ctx.env.target_cluster
-    if not cluster_focus:
-        raise click.UsageError(f"No {cluster.lower()} cluster defined.")
+    # Initialize environment
+    environment = _create_env(config_file)
+    init_logging(environment)
     
-    if acknowledge_risk:
-        click.echo("Performing clear indices operation...")
-    else:
-        if not click.confirm(f'Clearing indices WILL result in the loss of all data on the {cluster.lower()} cluster. '
-                            f'Are you sure you want to continue?'):
-            click.echo("Aborting command.")
-            return
-        click.echo(f"Performing clear indices operation on {cluster.lower()} cluster...")
-    
-    try:
-        ctx.cluster_service.clear_indices(cluster_focus)
-        click.echo("Indices cleared successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-def parse_headers(header: str) -> Dict:
-    headers = {}
-    for h in header:
-        try:
-            key, value = h.split(":", 1)
-            headers[key.strip()] = value.strip()
-        except ValueError:
-            raise click.BadParameter(f"Invalid header format: {h}. Expected format: 'Header: Value'.")
-    return headers
-
-
-@cluster_group.command(name="curl")
-@click.option('-X', '--request', default='GET', help="HTTP method to use",
-              type=click.Choice([m.name for m in HttpMethod]))
-@click.option('-H', '--header', multiple=True, help='Pass custom header(s) to the server.')
-@click.option('-d', '--data', help='Send specified data in a POST request.')
-@click.option('--json', 'json_data', help='Send data as JSON.')
-@click.argument('cluster', required=True, type=click.Choice(['target_cluster', 'source_cluster'], case_sensitive=False))
-@click.argument('path', required=True)
-@click.pass_obj
-def cluster_curl_cmd(ctx, cluster, path, request, header, data, json_data):
-    """This implements a small subset of curl commands, formatted for use against configured source or target clusters.
-    By default the cluster definition is configured to use the `/config/migration_services.yaml` file that is
-    pre-prepared on the migration console, but `--config-file` can point to any YAML file that defines a
-    source_cluster` or target_cluster` based on the schema of the `services.yaml` file.
-    
-    In specifying the path of the route, use the name of the YAML object as the domain, followed by a space and the
-    path, e.g. `source_cluster /_cat/indices`."""
-
-    headers = parse_headers(header)
-    
-    if json_data:
-        try:
-            data = json.dumps(json.loads(json_data))
-            headers['Content-Type'] = 'application/json'
-        except json.JSONDecodeError:
-            raise click.BadParameter("Invalid JSON format.")
-
-    try:
-        cluster_obj = ctx.env.__getattribute__(cluster)
-        if cluster_obj is None:
-            raise AttributeError
-    except AttributeError:
-        raise click.BadArgumentUsage(f"Unknown cluster {cluster}. Currently only `source_cluster` and `target_cluster`"
-                                     " are valid and must also be defined in the config file.")
-
-    if path[0] != '/':
-        path = '/' + path
-
-    try:
-        response_text = ctx.cluster_service.call_api(
-            cluster_obj, path, method=HttpMethod[request],
-            headers=headers, data=data
-        )
-        click.echo(response_text)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-# ##################### SNAPSHOT ###################
-
-
-def _external_snapshots_check(snapshot):
-    if snapshot.snapshot_repo_name != DEFAULT_SNAPSHOT_REPO_NAME:
-        logger.warning(f"External snapshot detected, normally snapshot commands are not necessary for external "
-                       f"snapshots. The snapshot repository: '{snapshot.snapshot_repo_name}' must belong to "
-                       f"the source cluster as snapshot commands will perform requests to the source cluster")
-
-
-@cli.group(name="snapshot",
-           help="Commands to create and check status of snapshots of the source cluster.")
-@click.pass_obj
-def snapshot_group(ctx):
-    """All actions related to snapshot creation"""
-    if ctx.env.snapshot is None:
-        raise click.UsageError("Snapshot is not set")
-    _external_snapshots_check(ctx.env.snapshot)
-
-
-@snapshot_group.command(name="create", context_settings={'ignore_unknown_options': True})
-@click.option('--wait', is_flag=True, default=False, help='Wait for snapshot completion')
-@click.option('--max-snapshot-rate-mb-per-node', type=int, default=None,
-              help='Maximum snapshot rate in MB/s per node')
-@click.argument('extra_args', nargs=-1, type=click.UNPROCESSED)
-@click.pass_obj
-def create_snapshot_cmd(ctx, wait, max_snapshot_rate_mb_per_node, extra_args):
-    """Create a snapshot of the source cluster"""
-    try:
-        result = ctx.snapshot_service.create(
-            ctx.env.snapshot, 
-            wait=wait,
-            max_snapshot_rate_mb_per_node=max_snapshot_rate_mb_per_node,
-            extra_args=extra_args
-        )
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@snapshot_group.command(name="status")
-@click.option('--deep-check', is_flag=True, default=False, help='Perform a deep status check of the snapshot')
-@click.pass_obj
-def status_snapshot_cmd(ctx, deep_check):
-    """Check the status of the snapshot"""
-    try:
-        result = ctx.snapshot_service.status(ctx.env.snapshot, deep_check=deep_check)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@snapshot_group.command(name="delete")
-@click.option("--acknowledge-risk", is_flag=True, show_default=True, default=False,
-              help="Flag to acknowledge risk and skip confirmation")
-@click.pass_obj
-def delete_snapshot_cmd(ctx, acknowledge_risk: bool):
-    """Delete the snapshot"""
-    if not acknowledge_risk:
-        confirmed = click.confirm('If you proceed with deleting the snapshot, the cluster will delete underlying local '
-                                  'and remote files associated with the snapshot. Are you sure you want to continue?')
-        if not confirmed:
-            click.echo("Aborting the command to delete snapshot.")
-            return
-    
-    logger.info("Deleting snapshot")
-    try:
-        ctx.snapshot_service.delete(ctx.env.snapshot)
-        click.echo("Snapshot deleted successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@snapshot_group.command(name="unregister-repo")
-@click.option("--acknowledge-risk", is_flag=True, show_default=True, default=False,
-              help="Flag to acknowledge risk and skip confirmation")
-@click.pass_obj
-def unregister_snapshot_repo_cmd(ctx, acknowledge_risk: bool):
-    """Remove the snapshot repository"""
-    if not acknowledge_risk:
-        confirmed = click.confirm('If you proceed with unregistering the snapshot repository, the cluster will '
-                                  'deregister the existing snapshot repository but will not perform cleanup of '
-                                  'existing snapshot files that may exist. To remove the existing snapshot files '
-                                  '"console snapshot delete" must be used while this repository still exists. '
-                                  'Are you sure you want to continue?')
-        if not confirmed:
-            click.echo("Aborting the command to remove snapshot repository.")
-            return
-    
-    logger.info("Removing snapshot repository")
-    try:
-        ctx.snapshot_service.delete_snapshot_repo(ctx.env.snapshot)
-        click.echo("Snapshot repository removed successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-# ##################### BACKFILL ###################
-
-# As we add other forms of backfill migrations, we should incorporate a way to dynamically allow different sets of
-# arguments depending on the type of backfill migration
-
-
-@cli.group(name="backfill", help="Commands related to controlling the configured backfill mechanism.")
-@click.pass_obj
-def backfill_group(ctx):
-    """All actions related to historical/backfill data migrations"""
-    if ctx.env.backfill is None:
-        raise click.UsageError("Backfill migration is not set")
-
-
-@backfill_group.command(name="describe")
-@click.pass_obj
-def describe_backfill_cmd(ctx):
-    try:
-        result = ctx.backfill_service.describe(ctx.env.backfill, as_json=ctx.json)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@backfill_group.command(name="start")
-@click.option('--pipeline-name', default=None, help='Optionally specify a pipeline name')
-@click.pass_obj
-def start_backfill_cmd(ctx, pipeline_name):
-    try:
-        ctx.backfill_service.start(ctx.env.backfill, pipeline_name=pipeline_name)
-        click.echo("Backfill started successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@backfill_group.command(name="pause")
-@click.option('--pipeline-name', default=None, help='Optionally specify a pipeline name')
-@click.pass_obj
-def pause_backfill_cmd(ctx, pipeline_name):
-    try:
-        ctx.backfill_service.pause(ctx.env.backfill, pipeline_name=pipeline_name)
-        click.echo("Backfill paused successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@backfill_group.command(name="stop")
-@click.option('--pipeline-name', default=None, help='Optionally specify a pipeline name')
-@click.pass_obj
-def stop_backfill_cmd(ctx, pipeline_name):
-    try:
-        ctx.backfill_service.stop(ctx.env.backfill, pipeline_name=pipeline_name)
-        click.echo("Backfill stopped successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-    click.echo("Archiving the working state of the backfill operation...")
-    
-    try:
-        archive_path = ctx.backfill_service.archive(ctx.env.backfill)
-        
-        # Note: The service should handle RfsWorkersInProgress internally
-        # and wait for workers to complete before archiving
-        
-        click.echo(f"Backfill working state archived to: {archive_path}")
-    except WorkingIndexDoesntExist:
-        click.echo("Working state index doesn't exist, skipping archive operation.")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@backfill_group.command(name="scale")
-@click.argument("units", type=int, required=True)
-@click.pass_obj
-def scale_backfill_cmd(ctx, units: int):
-    try:
-        ctx.backfill_service.scale(ctx.env.backfill, units)
-        click.echo(f"Backfill scaled to {units} units successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@backfill_group.command(name="status")
-@click.option('--deep-check', is_flag=True, help='Perform a deep status check of the backfill')
-@click.pass_obj
-def status_backfill_cmd(ctx, deep_check):
-    logger.info(f"Called `console backfill status`, with deep_check={deep_check}")
-    try:
-        result = ctx.backfill_service.status(ctx.env.backfill, deep_check=deep_check)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-# ##################### REPLAY ###################
-
-@cli.group(name="replay", help="Commands related to controlling the replayer.")
-@click.pass_obj
-def replay_group(ctx):
-    """All actions related to replaying data"""
-    if ctx.env.replay is None:
-        raise click.UsageError("Replay is not set")
-
-
-@replay_group.command(name="describe")
-@click.pass_obj
-def describe_replay_cmd(ctx):
-    try:
-        result = ctx.replay_service.describe(ctx.env.replay, as_json=ctx.json)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@replay_group.command(name="start")
-@click.pass_obj
-def start_replay_cmd(ctx):
-    try:
-        ctx.replay_service.start(ctx.env.replay)
-        click.echo("Replay started successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@replay_group.command(name="stop")
-@click.pass_obj
-def stop_replay_cmd(ctx):
-    try:
-        ctx.replay_service.stop(ctx.env.replay)
-        click.echo("Replay stopped successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@replay_group.command(name="scale")
-@click.argument("units", type=int, required=True)
-@click.pass_obj
-def scale_replay_cmd(ctx, units: int):
-    try:
-        ctx.replay_service.scale(ctx.env.replay, units)
-        click.echo(f"Replay scaled to {units} units successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@replay_group.command(name="status")
-@click.pass_obj
-def status_replay_cmd(ctx):
-    try:
-        result = ctx.replay_service.status(ctx.env.replay)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-# ##################### METADATA ###################
-
-
-@cli.group(name="metadata", help="Commands related to migrating metadata to the target cluster.")
-@click.pass_obj
-def metadata_group(ctx):
-    """All actions related to metadata migration"""
-    if ctx.env.metadata is None:
-        raise click.UsageError("Metadata is not set")
-
-
-@metadata_group.command(name="migrate", context_settings={
-    'ignore_unknown_options': True,
-    'help_option_names': []
-})
-@click.argument('extra_args', nargs=-1, type=click.UNPROCESSED)
-@click.pass_obj
-def migrate_metadata_cmd(ctx, extra_args):
-    try:
-        result = ctx.metadata_service.migrate(ctx.env.metadata, extra_args)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@metadata_group.command(name="evaluate", context_settings={
-    'ignore_unknown_options': True,
-    'help_option_names': []
-})
-@click.argument('extra_args', nargs=-1, type=click.UNPROCESSED)
-@click.pass_obj
-def evaluate_metadata_cmd(ctx, extra_args):
-    try:
-        result = ctx.metadata_service.evaluate(ctx.env.metadata, extra_args)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-# ##################### METRICS ###################
-
-
-@cli.group(name="metrics", help="Commands related to checking metrics emitted by the capture proxy and replayer.")
-@click.pass_obj
-def metrics_group(ctx):
-    if ctx.env.metrics_source is None:
-        raise click.UsageError("Metrics source is not set")
-
-
-@metrics_group.command(name="list")
-@click.pass_obj
-def list_metrics_cmd(ctx):
-    try:
-        metrics = ctx.metrics_service.list_metrics(ctx.env.metrics_source)
-        if ctx.json:
-            click.echo(json.dumps(metrics))
-        else:
-            pprint(metrics)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@metrics_group.command(name="get-data")
-@click.argument("component", type=click.Choice([c.value for c in Component]))
-@click.argument("metric_name")
-@click.option(
-    "--statistic",
-    type=click.Choice([s.name for s in MetricStatistic]),
-    default="Average",
-)
-@click.option("--lookback", type=int, default=60, help="Lookback in minutes")
-@click.pass_obj
-def get_metrics_data_cmd(ctx, component, metric_name, statistic, lookback):
-    try:
-        metric_data = ctx.metrics_service.get_metric_data(
-            ctx.env.metrics_source,
-            component,
-            metric_name,
-            statistic,
-            lookback
-        )
-        
-        if ctx.json:
-            click.echo(json.dumps(metric_data))
-        else:
-            click.echo(f"Component: {component}")
-            click.echo(f"Metric Name: {metric_name}")
-            click.echo(f"Statistic: {statistic}")
-            click.echo(f"Lookback: {lookback} minutes")
-            click.echo(f"Metrics Source Type: {type(ctx.env.metrics_source)}")
-            pprint(metric_data)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-# ##################### KAFKA ###################
-
-
-@cli.group(name="kafka")
-@click.pass_obj
-def kafka_group(ctx):
-    """All actions related to Kafka operations"""
-    if ctx.env.kafka is None:
-        raise click.UsageError("Kafka is not set")
-
-
-@kafka_group.command(name="create-topic")
-@click.option('--topic-name', default="logging-traffic-topic", help='Specify a topic name to create')
-@click.pass_obj
-def create_topic_cmd(ctx, topic_name):
-    try:
-        ctx.kafka_service.create_topic(ctx.env.kafka, topic_name=topic_name)
-        click.echo(f"Topic '{topic_name}' created successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@kafka_group.command(name="delete-topic")
-@click.option("--acknowledge-risk", is_flag=True, show_default=True, default=False,
-              help="Flag to acknowledge risk and skip confirmation")
-@click.option('--topic-name', default="logging-traffic-topic", help='Specify a topic name to delete')
-@click.pass_obj
-def delete_topic_cmd(ctx, acknowledge_risk, topic_name):
-    if not acknowledge_risk:
-        if not click.confirm('Deleting a topic will irreversibly delete all captured traffic records stored in that '
-                            'topic. Are you sure you want to continue?'):
-            click.echo("Aborting command.")
-            return
-    
-    click.echo(f"Performing delete topic operation on {topic_name} topic...")
-    try:
-        ctx.kafka_service.delete_topic(ctx.env.kafka, topic_name=topic_name)
-        click.echo(f"Topic '{topic_name}' deleted successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@kafka_group.command(name="describe-consumer-group")
-@click.option('--group-name', default="logging-group-default", help='Specify a group name to describe')
-@click.pass_obj
-def describe_group_command(ctx, group_name):
-    try:
-        result = ctx.kafka_service.describe_consumer_group(ctx.env.kafka, group_name=group_name)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-@kafka_group.command(name="describe-topic-records")
-@click.option('--topic-name', default="logging-traffic-topic", help='Specify a topic name to describe')
-@click.pass_obj
-def describe_topic_records_cmd(ctx, topic_name):
-    try:
-        result = ctx.kafka_service.describe_topic_records(ctx.env.kafka, topic_name=topic_name)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
-
-# ##################### UTILITIES ###################
-
-
-@cli.command()
-@click.option(
-    "--config-file", default="/config/migration_services.yaml", help="Path to config file"
-)
-@click.option("--json", is_flag=True)
-@click.argument('shell', type=click.Choice(['bash', 'zsh', 'fish']))
-@click.pass_obj
-def completion(ctx, config_file, json, shell):
-    """Generate shell completion script and instructions for setup.
-
-    Supported shells: bash, zsh, fish
-
-    To enable completion:
-
-    Bash:
-      console completion bash > /etc/bash_completion.d/console
-      # Then restart your shell
-
-    Zsh:
-      # If shell completion is not already enabled in your environment,
-      # you will need to enable it. You can execute the following once:
-      echo "autoload -U compinit; compinit" >> ~/.zshrc
-
-      console completion zsh > "${fpath[1]}/_console"
-      # Then restart your shell
-
-    Fish:
-      console completion fish > ~/.config/fish/completions/console.fish
-      # Then restart your shell
-    """
-    completion_class = get_completion_class(shell)
-    if completion_class is None:
-        click.echo(f"Error: {shell} shell is currently not supported", err=True)
-        ctx.exit(1)
-    else:
-        try:
-            completion_script = completion_class(cli,
-                                                 {},
-                                                 "console",
-                                                 "_CONSOLE_COMPLETE").source()
-            click.echo(completion_script)
-        except RuntimeError as exc:
-            click.echo(f"Error: {exc}", err=True)
-            ctx.exit(1)
-
-
-@cli.group(name="tuples")
-@click.pass_obj
-def tuples_group(ctx):
-    """ All commands related to tuples. """
+    # Store options in context
+    ctx.ensure_object(dict)
+    ctx.obj['as_json'] = as_json
+    ctx.obj['config_file'] = config_file
+    ctx.obj['debug'] = debug
+    ctx.obj['env'] = environment
+
+# Cluster commands
+@cli.group(name="clusters")
+def cluster_group():
+    """Cluster management commands"""
     pass
 
+@cluster_group.command(name="cat-indices")
+@click.pass_context
+@clusters_options
+def cat_indices_cmd(ctx, **kwargs):
+    """Cat indices on a cluster"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        cluster_service = service_loader_service.load_service(
+            ClusterService, environment
+        )
+        
+        cluster_name = kwargs['cluster']
+        response = cluster_service.cat_indices(cluster_name)
+        
+        if as_json:
+            click.echo(json.dumps(response))
+        else:
+            click.echo(response)
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to cat indices: {e}")
+        raise ClickException(f"Failed to cat indices: {str(e)}")
 
-@tuples_group.command()
-@click.option('--in', 'inputfile',
-              type=click.File('r'),
-              default=sys.stdin)
-@click.option('--out', 'outputfile',
-              type=click.File('a'),
-              default=sys.stdout)
-def show(inputfile, outputfile):
-    tuples_.convert(inputfile, outputfile)
-    if outputfile != sys.stdout:
-        click.echo(f"Converted tuples output to {outputfile.name}")
+# Snapshot commands
+@cli.group(name="snapshot")
+def snapshot_group():
+    """Snapshot management commands"""
+    pass
 
+@snapshot_group.command(name="create")
+@click.pass_context
+@snapshot_options
+def create_snapshot_cmd(ctx, **kwargs):
+    """Create a snapshot"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        snapshot_service = service_loader_service.load_service(
+            SnapshotService, environment
+        )
+        
+        result = snapshot_service.create_snapshot(
+            snapshot_name=kwargs.get('snapshot_name'),
+            source_cluster=kwargs.get('source_cluster'),
+            wait=kwargs.get('wait', False)
+        )
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to create snapshot: {e}")
+        raise ClickException(f"Failed to create snapshot: {str(e)}")
 
-#################################################
+@snapshot_group.command(name="status")
+@click.pass_context
+@snapshot_options
+def status_snapshot_cmd(ctx, **kwargs):
+    """Check the status of a snapshot"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        snapshot_service = service_loader_service.load_service(
+            SnapshotService, environment
+        )
+        
+        status = snapshot_service.get_snapshot_status(
+            snapshot_name=kwargs.get('snapshot_name'),
+            source_cluster=kwargs.get('source_cluster')
+        )
+        
+        if as_json:
+            click.echo(json.dumps(status))
+        else:
+            click.echo(json.dumps(status, indent=2))
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to get snapshot status: {e}")
+        raise ClickException(f"Failed to get snapshot status: {str(e)}")
+
+# Metadata commands
+@cli.group(name="metadata")
+def metadata_group():
+    """Metadata migration commands"""
+    pass
+
+@metadata_group.command(name="evaluate")
+@click.pass_context
+@metadata_options
+def evaluate_metadata_cmd(ctx, **kwargs):
+    """Evaluate metadata migration"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        metadata_service = service_loader_service.load_service(
+            MetadataService, environment
+        )
+        
+        request = metadata_service.create_migrate_request(
+            index_allowlist=kwargs.get('index_allowlist'),
+            index_template_allowlist=kwargs.get('index_template_allowlist'),
+            component_template_allowlist=kwargs.get('component_template_allowlist'),
+            dry_run=True
+        )
+        
+        status = metadata_service.evaluate(request)
+        
+        if as_json:
+            click.echo(json.dumps(status.dict()))
+        else:
+            click.echo(json.dumps(status.dict(), indent=2))
+    except (ServiceNotFoundError, ValidationError, MetadataError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to evaluate metadata: {e}")
+        raise ClickException(f"Failed to evaluate metadata: {str(e)}")
+
+@metadata_group.command(name="migrate")
+@click.pass_context
+@metadata_options
+def migrate_metadata_cmd(ctx, **kwargs):
+    """Migrate metadata to target cluster"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        metadata_service = service_loader_service.load_service(
+            MetadataService, environment
+        )
+        
+        request = metadata_service.create_migrate_request(
+            index_allowlist=kwargs.get('index_allowlist'),
+            index_template_allowlist=kwargs.get('index_template_allowlist'),
+            component_template_allowlist=kwargs.get('component_template_allowlist'),
+            dry_run=False
+        )
+        
+        status = metadata_service.migrate(request)
+        
+        if as_json:
+            click.echo(json.dumps(status.dict()))
+        else:
+            click.echo(json.dumps(status.dict(), indent=2))
+    except (ServiceNotFoundError, ValidationError, MetadataError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to migrate metadata: {e}")
+        raise ClickException(f"Failed to migrate metadata: {str(e)}")
+
+# Backfill commands
+@cli.group(name="backfill")
+def backfill_group():
+    """Backfill migration commands"""
+    pass
+
+@backfill_group.command(name="create")
+@click.pass_context
+def create_backfill_cmd(ctx):
+    """Create a backfill migration"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        backfill_service = service_loader_service.load_service(
+            BackfillService, environment
+        )
+        
+        result = backfill_service.create()
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError, BackfillError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to create backfill: {e}")
+        raise ClickException(f"Failed to create backfill: {str(e)}")
+
+@backfill_group.command(name="start")
+@click.pass_context
+@backfill_options
+def start_backfill_cmd(ctx, **kwargs):
+    """Start backfill"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        backfill_service = service_loader_service.load_service(
+            BackfillService, environment
+        )
+        
+        result = backfill_service.start()
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError, BackfillError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to start backfill: {e}")
+        raise ClickException(f"Failed to start backfill: {str(e)}")
+
+@backfill_group.command(name="stop")
+@click.pass_context
+def stop_backfill_cmd(ctx):
+    """Stop backfill"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        backfill_service = service_loader_service.load_service(
+            BackfillService, environment
+        )
+        
+        result = backfill_service.stop()
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError, BackfillError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to stop backfill: {e}")
+        raise ClickException(f"Failed to stop backfill: {str(e)}")
+
+@backfill_group.command(name="status")
+@click.pass_context
+@backfill_options
+def status_backfill_cmd(ctx, **kwargs):
+    """Get backfill status"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        backfill_service = service_loader_service.load_service(
+            BackfillService, environment
+        )
+        
+        deep_check = kwargs.get('deep_check', False)
+        status, details = backfill_service.get_status(deep_check=deep_check)
+        
+        output = {
+            "status": status.name,
+            "details": details
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(f"Status: {status.name}")
+            click.echo(f"Details: {details}")
+    except (ServiceNotFoundError, ValidationError, BackfillError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to get backfill status: {e}")
+        raise ClickException(f"Failed to get backfill status: {str(e)}")
+
+@backfill_group.command(name="scale")
+@click.argument("units", type=int)
+@click.pass_context
+def scale_backfill_cmd(ctx, units):
+    """Scale backfill workers"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        backfill_service = service_loader_service.load_service(
+            BackfillService, environment
+        )
+        
+        result = backfill_service.scale(units)
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError, BackfillError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to scale backfill: {e}")
+        raise ClickException(f"Failed to scale backfill: {str(e)}")
+
+# Replayer commands
+@cli.group(name="replay")
+def replay_group():
+    """Replay traffic commands"""
+    pass
+
+@replay_group.command(name="start")
+@click.pass_context
+@replay_options
+def start_replay_cmd(ctx, **kwargs):
+    """Start replaying traffic"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        replay_service = service_loader_service.load_service(
+            ReplayService, environment
+        )
+        
+        result = replay_service.start()
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError, ReplayError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to start replay: {e}")
+        raise ClickException(f"Failed to start replay: {str(e)}")
+
+@replay_group.command(name="stop")
+@click.pass_context
+def stop_replay_cmd(ctx):
+    """Stop replaying traffic"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        replay_service = service_loader_service.load_service(
+            ReplayService, environment
+        )
+        
+        result = replay_service.stop()
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError, ReplayError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to stop replay: {e}")
+        raise ClickException(f"Failed to stop replay: {str(e)}")
+
+@replay_group.command(name="status")
+@click.pass_context
+def status_replay_cmd(ctx):
+    """Get replayer status"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        replay_service = service_loader_service.load_service(
+            ReplayService, environment
+        )
+        
+        status, details = replay_service.get_status()
+        
+        output = {
+            "status": status.name,
+            "details": details
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(f"Status: {status.name}")
+            click.echo(f"Details: {details}")
+    except (ServiceNotFoundError, ValidationError, ReplayError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to get replay status: {e}")
+        raise ClickException(f"Failed to get replay status: {str(e)}")
+
+@replay_group.command(name="scale")
+@click.argument("units", type=int)
+@click.pass_context
+def scale_replay_cmd(ctx, units):
+    """Scale replay workers"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        replay_service = service_loader_service.load_service(
+            ReplayService, environment
+        )
+        
+        result = replay_service.scale(units)
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError, ReplayError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to scale replay: {e}")
+        raise ClickException(f"Failed to scale replay: {str(e)}")
+
+# Kafka commands
+@cli.group(name="kafka")
+def kafka_group():
+    """Kafka operations"""
+    pass
+
+@kafka_group.command(name="create-topic")
+@click.argument("topic_name")
+@click.pass_context
+def create_kafka_topic_cmd(ctx, topic_name):
+    """Create a Kafka topic"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        kafka_service = service_loader_service.load_service(
+            KafkaService, environment
+        )
+        
+        result = kafka_service.create_topic(topic_name)
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to create Kafka topic: {e}")
+        raise ClickException(f"Failed to create Kafka topic: {str(e)}")
+
+@kafka_group.command(name="delete-records")
+@click.argument("topic_name")
+@click.pass_context
+def delete_kafka_records_cmd(ctx, topic_name):
+    """Delete all records from a Kafka topic"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        kafka_service = service_loader_service.load_service(
+            KafkaService, environment
+        )
+        
+        result = kafka_service.delete_records(topic_name)
+        
+        output = {
+            "success": True,
+            "message": result
+        }
+        
+        if as_json:
+            click.echo(json.dumps(output))
+        else:
+            click.echo(result)
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to delete Kafka records: {e}")
+        raise ClickException(f"Failed to delete Kafka records: {str(e)}")
+
+@kafka_group.command(name="describe-topic")
+@click.argument("topic_name")
+@click.pass_context
+@kafka_options
+def describe_kafka_topic_cmd(ctx, topic_name, as_yaml):
+    """Describe a Kafka topic"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        kafka_service = service_loader_service.load_service(
+            KafkaService, environment
+        )
+        
+        result = kafka_service.describe_topic(topic_name, as_yaml=as_yaml)
+        
+        # Output is already formatted by the service
+        click.echo(result)
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to describe Kafka topic: {e}")
+        raise ClickException(f"Failed to describe Kafka topic: {str(e)}")
+
+@kafka_group.command(name="describe-consumer-group")
+@click.argument("group_id")
+@click.pass_context
+def describe_consumer_group_cmd(ctx, group_id):
+    """Describe a Kafka consumer group"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        kafka_service = service_loader_service.load_service(
+            KafkaService, environment
+        )
+        
+        result = kafka_service.describe_consumer_group(group_id)
+        
+        # Output is already formatted by the service
+        click.echo(result)
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to describe consumer group: {e}")
+        raise ClickException(f"Failed to describe consumer group: {str(e)}")
+
+# Metrics commands
+@cli.group(name="metrics")
+def metrics_group():
+    """Metrics operations"""
+    pass
+
+@metrics_group.command(name="list")
+@click.pass_context
+@metrics_source_options
+def list_metrics_cmd(ctx, **kwargs):
+    """List available metrics"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        metrics_service = service_loader_service.load_service(
+            MetricsService, environment
+        )
+        
+        source = kwargs.get('source', 'all')
+        metrics_list = metrics_service.list_metrics(source)
+        
+        if as_json:
+            output = {
+                "metrics": metrics_list,
+                "source": source
+            }
+            click.echo(json.dumps(output))
+        else:
+            if source != 'all':
+                click.echo(f"Metrics for {source}:")
+            for metric in metrics_list:
+                click.echo(f"  - {metric}")
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to list metrics: {e}")
+        raise ClickException(f"Failed to list metrics: {str(e)}")
+
+@metrics_group.command(name="get")
+@click.argument("metric_name")
+@click.pass_context
+@metrics_target_options
+def get_metric_cmd(ctx, metric_name, **kwargs):
+    """Get metric data"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        metrics_service = service_loader_service.load_service(
+            MetricsService, environment
+        )
+        
+        target = kwargs.get('target')
+        data = metrics_service.get_metric_data(metric_name, target)
+        
+        if as_json:
+            output = {
+                "metric": metric_name,
+                "target": target,
+                "data": data
+            }
+            click.echo(json.dumps(output))
+        else:
+            click.echo(f"Metric: {metric_name}")
+            if target:
+                click.echo(f"Target: {target}")
+            click.echo(json.dumps(data, indent=2))
+    except (ServiceNotFoundError, ValidationError) as e:
+        raise ClickException(str(e))
+    except Exception as e:
+        logger.error(f"Failed to get metric: {e}")
+        raise ClickException(f"Failed to get metric: {str(e)}")
+
+# Utility command for status
+@cli.command()
+@click.pass_context
+def status(ctx):
+    """Check migration status"""
+    as_json = ctx.obj.get('as_json', False)
+    config_file = ctx.obj.get('config_file')
+    
+    try:
+        environment = _create_env(config_file)
+        status_info = {}
+        
+        # Check backfill status
+        try:
+            backfill_service = service_loader_service.load_service(
+                BackfillService, environment
+            )
+            backfill_status, backfill_details = backfill_service.get_status()
+            status_info['backfill'] = {
+                'status': backfill_status.name,
+                'details': backfill_details
+            }
+        except ServiceNotFoundError:
+            status_info['backfill'] = 'Not configured'
+        except Exception as e:
+            status_info['backfill'] = f'Error: {str(e)}'
+        
+        # Check replay status
+        try:
+            replay_service = service_loader_service.load_service(
+                ReplayService, environment
+            )
+            replay_status, replay_details = replay_service.get_status()
+            status_info['replay'] = {
+                'status': replay_status.name,
+                'details': replay_details
+            }
+        except ServiceNotFoundError:
+            status_info['replay'] = 'Not configured'
+        except Exception as e:
+            status_info['replay'] = f'Error: {str(e)}'
+        
+        if as_json:
+            click.echo(json.dumps(status_info))
+        else:
+            click.echo("Migration Status:")
+            for component, info in status_info.items():
+                click.echo(f"\n{component.capitalize()}:")
+                if isinstance(info, dict):
+                    click.echo(f"  Status: {info['status']}")
+                    click.echo(f"  Details: {info['details']}")
+                else:
+                    click.echo(f"  {info}")
+    except Exception as e:
+        logger.error(f"Failed to get status: {e}")
+        raise ClickException(f"Failed to get status: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    cli()

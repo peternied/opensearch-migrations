@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 
 import requests
@@ -12,9 +12,9 @@ from console_link.models.backfill_base import Backfill, BackfillOverallStatus, B
 from console_link.models.client_options import ClientOptions
 from console_link.models.cluster import Cluster, HttpMethod
 from console_link.models.schema_tools import contains_one_of
-from console_link.models.command_result import CommandResult
 from console_link.models.kubectl_runner import DeploymentStatus, KubectlRunner
 from console_link.models.ecs_service import ECSService
+from console_link.domain.exceptions.backfill_errors import BackfillError
 
 from cerberus import Validator
 
@@ -75,19 +75,19 @@ class RFSBackfill(Backfill):
         if not v.validate(self.config):
             raise ValueError("Invalid config file for RFS backfill", v.errors)
 
-    def create(self, *args, **kwargs) -> CommandResult:
-        return CommandResult(1, "no-op")
+    def create(self, *args, **kwargs) -> str:
+        return "no-op"
 
-    def start(self, *args, **kwargs) -> CommandResult:
+    def start(self, *args, **kwargs) -> str:
         raise NotImplementedError()
 
-    def stop(self, *args, **kwargs) -> CommandResult:
+    def stop(self, *args, **kwargs) -> str:
         raise NotImplementedError()
 
-    def get_status(self, *args, **kwargs) -> CommandResult:
+    def get_status(self, *args, **kwargs) -> Tuple[BackfillStatus, str]:
         raise NotImplementedError()
 
-    def scale(self, units: int, *args, **kwargs) -> CommandResult:
+    def scale(self, units: int, *args, **kwargs) -> str:
         raise NotImplementedError()
 
 
@@ -97,16 +97,16 @@ class DockerRFSBackfill(RFSBackfill):
         self.target_cluster = target_cluster
         self.docker_config = self.config["reindex_from_snapshot"]["docker"]
 
-    def pause(self, pipeline_name=None) -> CommandResult:
+    def pause(self, pipeline_name=None) -> str:
         raise NotImplementedError()
 
-    def get_status(self, *args, **kwargs) -> CommandResult:
-        return CommandResult(True, (BackfillStatus.RUNNING, "This is my running state message"))
+    def get_status(self, *args, **kwargs) -> Tuple[BackfillStatus, str]:
+        return (BackfillStatus.RUNNING, "This is my running state message")
 
-    def scale(self, units: int, *args, **kwargs) -> CommandResult:
+    def scale(self, units: int, *args, **kwargs) -> str:
         raise NotImplementedError()
     
-    def archive(self, *args, **kwargs) -> CommandResult:
+    def archive(self, *args, **kwargs) -> str:
         raise NotImplementedError()
 
     def build_backfill_status(self, *args) -> BackfillStatus:
@@ -118,7 +118,7 @@ class RfsWorkersInProgress(Exception):
         super().__init__("RFS Workers are still in progress")
 
 
-class WorkingIndexDoesntExist(Exception):
+class WorkingIndexDoesNotExist(Exception):
     def __init__(self, index_name: str):
         super().__init__(f"The working state index '{index_name}' does not exist")
 
@@ -135,34 +135,36 @@ class K8sRFSBackfill(RFSBackfill):
         self.deployment_name = self.k8s_config["deployment_name"]
         self.kubectl_runner = KubectlRunner(namespace=self.namespace, deployment_name=self.deployment_name)
 
-    def start(self, *args, **kwargs) -> CommandResult:
+    def start(self, *args, **kwargs) -> str:
         logger.info(f"Starting RFS backfill by setting desired count to {self.default_scale} instances")
         return self.kubectl_runner.perform_scale_command(replicas=self.default_scale)
 
-    def pause(self, *args, **kwargs) -> CommandResult:
+    def pause(self, *args, **kwargs) -> str:
         logger.info("Pausing RFS backfill by setting desired count to 0 instances")
         return self.kubectl_runner.perform_scale_command(replicas=0)
 
-    def stop(self, *args, **kwargs) -> CommandResult:
+    def stop(self, *args, **kwargs) -> str:
         logger.info("Stopping RFS backfill by setting desired count to 0 instances")
         return self.kubectl_runner.perform_scale_command(replicas=0)
 
-    def scale(self, units: int, *args, **kwargs) -> CommandResult:
+    def scale(self, units: int, *args, **kwargs) -> str:
         logger.info(f"Scaling RFS backfill by setting desired count to {units} instances")
         return self.kubectl_runner.perform_scale_command(replicas=units)
 
-    def archive(self, *args, archive_dir_path: str = None, archive_file_name: str = None, **kwargs) -> CommandResult:
+    def archive(self, *args, archive_dir_path: str = None, archive_file_name: str = None, **kwargs) -> str:
         deployment_status = self.kubectl_runner.retrieve_deployment_status()
+        if not deployment_status:
+            raise BackfillError("Failed to get deployment status for archiving")
         return perform_archive(target_cluster=self.target_cluster,
                                deployment_status=deployment_status,
                                archive_dir_path=archive_dir_path,
                                archive_file_name=archive_file_name)
 
-    def get_status(self, deep_check=False, *args, **kwargs) -> CommandResult:
+    def get_status(self, deep_check=False, *args, **kwargs) -> Tuple[BackfillStatus, str]:
         logger.info("Getting status of RFS backfill")
         deployment_status = self.kubectl_runner.retrieve_deployment_status()
         if not deployment_status:
-            return CommandResult(False, "Failed to get deployment status for RFS backfill")
+            raise BackfillError("Failed to get deployment status for RFS backfill")
         status_str = str(deployment_status)
         if deep_check:
             try:
@@ -173,12 +175,12 @@ class K8sRFSBackfill(RFSBackfill):
             if shard_status:
                 status_str += f"\n{shard_status}"
         if deployment_status.terminating > 0 and deployment_status.desired == 0:
-            return CommandResult(True, (BackfillStatus.TERMINATING, status_str))
+            return (BackfillStatus.TERMINATING, status_str)
         if deployment_status.running > 0:
-            return CommandResult(True, (BackfillStatus.RUNNING, status_str))
+            return (BackfillStatus.RUNNING, status_str)
         if deployment_status.pending > 0:
-            return CommandResult(True, (BackfillStatus.STARTING, status_str))
-        return CommandResult(True, (BackfillStatus.STOPPED, status_str))
+            return (BackfillStatus.STARTING, status_str)
+        return (BackfillStatus.STOPPED, status_str)
     
     def build_backfill_status(self) -> BackfillOverallStatus:
         return get_detailed_status_obj(target_cluster=self.target_cluster)
@@ -197,34 +199,36 @@ class ECSRFSBackfill(RFSBackfill):
                                      aws_region=self.ecs_config.get("aws_region", None),
                                      client_options=self.client_options)
 
-    def start(self, *args, **kwargs) -> CommandResult:
+    def start(self, *args, **kwargs) -> str:
         logger.info(f"Starting RFS backfill by setting desired count to {self.default_scale} instances")
         return self.ecs_client.set_desired_count(self.default_scale)
     
-    def pause(self, *args, **kwargs) -> CommandResult:
+    def pause(self, *args, **kwargs) -> str:
         logger.info("Pausing RFS backfill by setting desired count to 0 instances")
         return self.ecs_client.set_desired_count(0)
 
-    def stop(self, *args, **kwargs) -> CommandResult:
+    def stop(self, *args, **kwargs) -> str:
         logger.info("Stopping RFS backfill by setting desired count to 0 instances")
         return self.ecs_client.set_desired_count(0)
 
-    def scale(self, units: int, *args, **kwargs) -> CommandResult:
+    def scale(self, units: int, *args, **kwargs) -> str:
         logger.info(f"Scaling RFS backfill by setting desired count to {units} instances")
         return self.ecs_client.set_desired_count(units)
     
-    def archive(self, *args, archive_dir_path: str = None, archive_file_name: str = None, **kwargs) -> CommandResult:
+    def archive(self, *args, archive_dir_path: str = None, archive_file_name: str = None, **kwargs) -> str:
         status = self.ecs_client.get_instance_statuses()
+        if not status:
+            raise BackfillError("Failed to get instance statuses for archiving")
         return perform_archive(target_cluster=self.target_cluster,
                                deployment_status=status,
                                archive_dir_path=archive_dir_path,
                                archive_file_name=archive_file_name)
 
-    def get_status(self, deep_check=False, *args, **kwargs) -> CommandResult:
-        logger.info(f"Getting status of RFS backfill, with {deep_check=}")
+    def get_status(self, deep_check=False, *args, **kwargs) -> Tuple[BackfillStatus, str]:
+        logger.info(f"Getting status of RFS backfill, with deep_check={deep_check}")
         instance_statuses = self.ecs_client.get_instance_statuses()
         if not instance_statuses:
-            return CommandResult(False, "Failed to get instance statuses")
+            raise BackfillError("Failed to get instance statuses")
 
         status_string = str(instance_statuses)
         if deep_check:
@@ -237,10 +241,10 @@ class ECSRFSBackfill(RFSBackfill):
                 status_string += f"\n{shard_status}"
 
         if instance_statuses.running > 0:
-            return CommandResult(True, (BackfillStatus.RUNNING, status_string))
+            return (BackfillStatus.RUNNING, status_string)
         elif instance_statuses.pending > 0:
-            return CommandResult(True, (BackfillStatus.STARTING, status_string))
-        return CommandResult(True, (BackfillStatus.STOPPED, status_string))
+            return (BackfillStatus.STARTING, status_string)
+        return (BackfillStatus.STOPPED, status_string)
     
     def build_backfill_status(self) -> BackfillOverallStatus:
         return get_detailed_status_obj(target_cluster=self.target_cluster)
@@ -447,16 +451,16 @@ def generate_status_queries():
 
 def all_shards_finished_processing(target_cluster: Cluster, session_name: str = "") -> bool:
     d = get_detailed_status_obj(target_cluster, session_name)
-    return d['total'] == d['completed'] and d['incomplete'] == 0 and d['in progress'] == 0 and d['unclaimed'] == 0
+    return d.shard_total == d.shard_complete and d.shard_in_progress == 0 and d.shard_waiting == 0
 
 
 def perform_archive(target_cluster: Cluster,
                     deployment_status: DeploymentStatus,
                     archive_dir_path: str = None,
-                    archive_file_name: str = None) -> CommandResult:
+                    archive_file_name: str = None) -> str:
     logger.info("Confirming there are no currently in-progress workers")
     if deployment_status.running > 0 or deployment_status.pending > 0 or deployment_status.desired > 0:
-        return CommandResult(False, RfsWorkersInProgress())
+        raise RfsWorkersInProgress()
 
     try:
         backup_path = get_working_state_index_backup_path(archive_dir_path, archive_file_name)
@@ -471,11 +475,11 @@ def perform_archive(target_cluster: Cluster,
             params={"ignore_unavailable": "true"}
         )
         logger.info("Working state index cleaned up successful")
-        return CommandResult(True, backup_path)
+        return backup_path
     except requests.HTTPError as e:
         if e.response.status_code == 404:
-            return CommandResult(False, WorkingIndexDoesntExist(WORKING_STATE_INDEX))
-        return CommandResult(False, e)
+            raise WorkingIndexDoesNotExist(WORKING_STATE_INDEX)
+        raise BackfillError(f"Failed to archive working state: {e}")
 
 
 def get_working_state_index_backup_path(archive_dir_path: str = None, archive_file_name: str = None) -> str:

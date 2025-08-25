@@ -1,8 +1,8 @@
 import logging
 from typing import Optional
 
-from console_link.models.command_result import CommandResult
 from console_link.models.utils import AWSAPIError, DeploymentStatus, raise_for_aws_api_error, create_boto3_client
+from console_link.domain.exceptions.common_errors import ExternalServiceError
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class ECSService:
         self.client = create_boto3_client(aws_service_name="ecs", region=self.aws_region,
                                           client_options=self.client_options)
 
-    def set_desired_count(self, desired_count: int) -> CommandResult:
+    def set_desired_count(self, desired_count: int) -> str:
         logger.info(f"Setting desired count for service {self.service_name} to {desired_count}")
         response = self.client.update_service(
             cluster=self.cluster_name,
@@ -29,14 +29,14 @@ class ECSService:
         try:
             raise_for_aws_api_error(response)
         except AWSAPIError as e:
-            return CommandResult(False, e)
+            raise ExternalServiceError(f"Failed to set desired count: {e}")
 
         logger.info(f"Service status: {response['service']['status']}")
         running_count = response["service"]["runningCount"]
         pending_count = response["service"]["pendingCount"]
         desired_count = response["service"]["desiredCount"]
-        return CommandResult(True, f"Service {self.service_name} set to {desired_count} desired count."
-                             f" Currently {running_count} running and {pending_count} pending.")
+        return (f"Service {self.service_name} set to {desired_count} desired count."
+                f" Currently {running_count} running and {pending_count} pending.")
 
     def get_instance_statuses(self) -> Optional[DeploymentStatus]:
         logger.info(f"Getting instance statuses for service {self.service_name}")

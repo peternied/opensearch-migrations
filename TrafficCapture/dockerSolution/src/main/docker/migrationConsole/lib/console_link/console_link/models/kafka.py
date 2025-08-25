@@ -4,8 +4,8 @@ from typing import List
 from cerberus import Validator
 import logging
 from abc import ABC, abstractmethod
-from console_link.models.command_result import CommandResult
 from console_link.models.schema_tools import contains_one_of
+from console_link.domain.exceptions.kafka_errors import KafkaOperationError
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ KAFKA_TOPICS_COMMAND = '/root/kafka-tools/kafka/bin/kafka-topics.sh'
 MSK_AUTH_PARAMETERS = ['--command-config', '/root/kafka-tools/aws/msk-iam-auth.properties']
 
 
-def get_result_for_command(command: List[str], operation_name: str) -> CommandResult:
+def get_result_for_command(command: List[str], operation_name: str) -> str:
     try:
         cmd_output = subprocess.run(command, capture_output=True, text=True, check=True)
         output = cmd_output.stdout
@@ -41,12 +41,11 @@ def get_result_for_command(command: List[str], operation_name: str) -> CommandRe
         logger.info(message)
         if not output:
             output = f"Command for {operation_name} completed successfully.\n"
-        return CommandResult(success=True, value=output)
+        return output
     except subprocess.CalledProcessError as e:
         message = f"Failed to perform {operation_name} command: {str(e)} Standard Error Output: {e.stderr}"
-        logger.info(message)
-        output = e.stdout
-        return CommandResult(success=False, value=output)
+        logger.error(message)
+        raise KafkaOperationError(f"Failed to perform {operation_name}: {str(e)}")
 
 
 def pretty_print_kafka_record_count(data: str) -> str:
@@ -81,19 +80,19 @@ class Kafka(ABC):
         self.brokers = config.get('broker_endpoints')
 
     @abstractmethod
-    def delete_topic(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def delete_topic(self, topic_name='logging-traffic-topic') -> str:
         pass
 
     @abstractmethod
-    def create_topic(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def create_topic(self, topic_name='logging-traffic-topic') -> str:
         pass
 
     @abstractmethod
-    def describe_consumer_group(self, group_name='logging-group-default') -> CommandResult:
+    def describe_consumer_group(self, group_name='logging-group-default') -> str:
         pass
 
     @abstractmethod
-    def describe_topic_records(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def describe_topic_records(self, topic_name='logging-traffic-topic') -> str:
         pass
 
 
@@ -105,32 +104,32 @@ class MSK(Kafka):
     def __init__(self, config):
         super().__init__(config)
 
-    def delete_topic(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def delete_topic(self, topic_name='logging-traffic-topic') -> str:
         command = [KAFKA_TOPICS_COMMAND, '--bootstrap-server', f'{self.brokers}', '--delete',
                    '--topic', f'{topic_name}'] + MSK_AUTH_PARAMETERS
         logger.info(f"Executing command: {command}")
         return get_result_for_command(command, "Delete Topic")
 
-    def create_topic(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def create_topic(self, topic_name='logging-traffic-topic') -> str:
         command = [KAFKA_TOPICS_COMMAND, '--bootstrap-server', f'{self.brokers}', '--create',
                    '--topic', f'{topic_name}'] + MSK_AUTH_PARAMETERS
         logger.info(f"Executing command: {command}")
         return get_result_for_command(command, "Create Topic")
 
-    def describe_consumer_group(self, group_name='logging-group-default') -> CommandResult:
+    def describe_consumer_group(self, group_name='logging-group-default') -> str:
         command = ['/root/kafka-tools/kafka/bin/kafka-consumer-groups.sh', '--bootstrap-server', f'{self.brokers}',
                    '--timeout', '100000', '--describe', '--group', f'{group_name}'] + MSK_AUTH_PARAMETERS
         logger.info(f"Executing command: {command}")
         return get_result_for_command(command, "Describe Consumer Group")
 
-    def describe_topic_records(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def describe_topic_records(self, topic_name='logging-traffic-topic') -> str:
         command = ['/root/kafka-tools/kafka/bin/kafka-run-class.sh', 'kafka.tools.GetOffsetShell', '--broker-list',
                    f'{self.brokers}', '--topic', f'{topic_name}', '--time', '-1'] + MSK_AUTH_PARAMETERS
         logger.info(f"Executing command: {command}")
         result = get_result_for_command(command, "Describe Topic Records")
-        if result.success and result.value:
-            pretty_value = pretty_print_kafka_record_count(result.value)
-            return CommandResult(success=result.success, value=pretty_value)
+        if result:
+            pretty_value = pretty_print_kafka_record_count(result)
+            return pretty_value
         return result
 
 
@@ -142,30 +141,30 @@ class StandardKafka(Kafka):
     def __init__(self, config):
         super().__init__(config)
 
-    def delete_topic(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def delete_topic(self, topic_name='logging-traffic-topic') -> str:
         command = [KAFKA_TOPICS_COMMAND, '--bootstrap-server', f'{self.brokers}', '--delete',
                    '--topic', f'{topic_name}']
         logger.info(f"Executing command: {command}")
         return get_result_for_command(command, "Delete Topic")
 
-    def create_topic(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def create_topic(self, topic_name='logging-traffic-topic') -> str:
         command = [KAFKA_TOPICS_COMMAND, '--bootstrap-server', f'{self.brokers}', '--create',
                    '--topic', f'{topic_name}']
         logger.info(f"Executing command: {command}")
         return get_result_for_command(command, "Create Topic")
 
-    def describe_consumer_group(self, group_name='logging-group-default') -> CommandResult:
+    def describe_consumer_group(self, group_name='logging-group-default') -> str:
         command = ['/root/kafka-tools/kafka/bin/kafka-consumer-groups.sh', '--bootstrap-server', f'{self.brokers}',
                    '--timeout', '100000', '--describe', '--group', f'{group_name}']
         logger.info(f"Executing command: {command}")
         return get_result_for_command(command, "Describe Consumer Group")
 
-    def describe_topic_records(self, topic_name='logging-traffic-topic') -> CommandResult:
+    def describe_topic_records(self, topic_name='logging-traffic-topic') -> str:
         command = ['/root/kafka-tools/kafka/bin/kafka-run-class.sh', 'kafka.tools.GetOffsetShell', '--broker-list',
                    f'{self.brokers}', '--topic', f'{topic_name}', '--time', '-1']
         logger.info(f"Executing command: {command}")
         result = get_result_for_command(command, "Describe Topic Records")
-        if result.success and result.value:
-            pretty_value = pretty_print_kafka_record_count(result.value)
-            return CommandResult(success=result.success, value=pretty_value)
+        if result:
+            pretty_value = pretty_print_kafka_record_count(result)
+            return pretty_value
         return result

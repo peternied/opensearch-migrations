@@ -6,7 +6,6 @@ from typing import Dict, Optional, Tuple
 
 from console_link.models.schema_tools import contains_one_of
 from console_link.models.step_state import StepState
-from console_link.models.command_result import CommandResult
 
 from cerberus import Validator
 
@@ -36,38 +35,38 @@ class Backfill(ABC):
             raise ValueError("Invalid config file for backfill", v.errors)
 
     @abstractmethod
-    def create(self, *args, **kwargs) -> CommandResult[str]:
+    def create(self, *args, **kwargs) -> str:
         """If necessary, create/deploy the backfill mechanism iteslf. After create succesfully completes,
         the backfill should be ready to start."""
         pass
 
     @abstractmethod
-    def start(self, *args, **kwargs) -> CommandResult[str]:
+    def start(self, *args, **kwargs) -> str:
         """Begin running the backfill. After running start, the user should be able to assume that--barring exceptions
         or failures--their data will begin moving to the target cluster."""
         pass
 
     @abstractmethod
-    def pause(self, *args, **kwargs) -> CommandResult[str]:
+    def pause(self, *args, **kwargs) -> str:
         """Pause the backfill. This backfill should be resumable afterwards by invoking `start`."""
         pass
 
     @abstractmethod
-    def stop(self, *args, **kwargs) -> CommandResult[str]:
+    def stop(self, *args, **kwargs) -> str:
         """Stop the backfill. This does not make guarantees about resumeability."""
         pass
 
     @abstractmethod
-    def get_status(self, *args, **kwargs) -> CommandResult[Tuple[BackfillStatus, str]]:
+    def get_status(self, *args, **kwargs) -> Tuple[BackfillStatus, str]:
         """Return a status"""
         pass
 
     @abstractmethod
-    def scale(self, units: int, *args, **kwargs) -> CommandResult[str]:
+    def scale(self, units: int, *args, **kwargs) -> str:
         pass
 
     @abstractmethod
-    def archive(self, *args, **kwargs) -> CommandResult[str]:
+    def archive(self, *args, **kwargs) -> str:
         """Archive the backfill operation.  Should return the information required to resume the backfill operations.
         Should fail if there are currently running operations."""
         pass

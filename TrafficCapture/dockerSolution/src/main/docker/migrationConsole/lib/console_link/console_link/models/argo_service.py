@@ -9,7 +9,6 @@ from typing import Optional, Dict, Any
 
 from console_link.models.cluster import Cluster
 from console_link.models.command_runner import CommandRunner, CommandRunnerError, FlagOnlyArgument
-from console_link.models.command_result import CommandResult
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +21,26 @@ class WorkflowEndedBeforeSuspend(Exception):
                          f"suspend state")
 
 
+class ArgoServiceError(Exception):
+    """Base exception for ArgoService errors"""
+    pass
+
+
+class WorkflowStartError(ArgoServiceError):
+    """Error when starting a workflow"""
+    pass
+
+
+class WorkflowOperationError(ArgoServiceError):
+    """Error when performing workflow operations"""
+    pass
+
+
+class WorkflowStatusError(ArgoServiceError):
+    """Error when getting workflow status"""
+    pass
+
+
 class ArgoService:
     def __init__(self, namespace: str = "ma", argo_image: str = "quay.io/argoproj/argocli:v3.6.5",
                  service_account: str = "argo-workflow-executor"):
@@ -29,7 +48,7 @@ class ArgoService:
         self.argo_image = argo_image
         self.service_account = service_account
 
-    def start_workflow(self, workflow_template_name: str, parameters: Optional[Dict[str, Any]] = None) -> CommandResult:
+    def start_workflow(self, workflow_template_name: str, parameters: Optional[Dict[str, Any]] = None) -> str:
         try:
             # Create temporary workflow file
             temp_file = self._create_workflow_yaml(workflow_template_name, parameters)
@@ -50,48 +69,39 @@ class ArgoService:
             except OSError:
                 logger.warning(f"Failed to delete temporary file: {temp_file}")
 
-            name = result.output.stdout.strip()
+            name = result.stdout.strip()
             logger.info(f"Started workflow: {name}")
             self._wait_for_workflow_exists(workflow_name=name)
-            return CommandResult(
-                success=True,
-                value=name
-            )
+            return name
             
         except Exception as e:
             logger.error(f"Failed to start workflow: {e}")
-            return CommandResult(
-                success=False,
-                value=f"Failed to start workflow: {e}"
-            )
+            raise WorkflowStartError(f"Failed to start workflow: {e}") from e
 
-    def resume_workflow(self, workflow_name: str) -> CommandResult:
+    def resume_workflow(self, workflow_name: str) -> None:
         args = {
             "resume": workflow_name
         }
-        result = self._run_argo_command(pod_action="resume-workflow", argo_args=args)
+        self._run_argo_command(pod_action="resume-workflow", argo_args=args)
         logger.info(f"Argo workflow '{workflow_name}' has been resumed")
-        return result
 
-    def stop_workflow(self, workflow_name: str) -> CommandResult:
+    def stop_workflow(self, workflow_name: str) -> None:
         args = {
             "stop": workflow_name
         }
-        result = self._run_argo_command(pod_action="stop-workflow", argo_args=args)
+        self._run_argo_command(pod_action="stop-workflow", argo_args=args)
         logger.info(f"Argo workflow '{workflow_name}' has been stopped")
-        return result
 
-    def delete_workflow(self, workflow_name: str) -> CommandResult:
+    def delete_workflow(self, workflow_name: str) -> None:
         kubectl_args = {
             "delete": FlagOnlyArgument,
             "workflow": workflow_name,
             "--namespace": self.namespace
         }
-        result = self._run_kubectl_command(kubectl_args)
+        self._run_kubectl_command(kubectl_args)
         logger.info(f"Argo workflow '{workflow_name}' has been deleted")
-        return result
 
-    def get_workflow_status(self, workflow_name: str) -> CommandResult:
+    def get_workflow_status(self, workflow_name: str) -> Dict[str, Any]:
         workflow_data = self._get_workflow_status_json(workflow_name)
         phase = workflow_data.get("status", {}).get("phase", "")
 
@@ -110,25 +120,23 @@ class ArgoService:
 
         logger.info(f"Workflow {workflow_name} status: {status_info}")
 
-        return CommandResult(
-            success=True,
-            value=status_info
-        )
+        return status_info
 
-    def wait_for_suspend(self, workflow_name: str, timeout_seconds: int = 120, interval: int = 5) -> CommandResult:
+    def wait_for_suspend(self, workflow_name: str, timeout_seconds: int = 120, interval: int = 5) -> None:
         start_time = time.time()
 
         while time.time() - start_time < timeout_seconds:
-            status_result = self.get_workflow_status(workflow_name)
-            if not status_result.success:
-                raise ValueError(f"Failed to get workflow status: {status_result}")
+            try:
+                status_info = self.get_workflow_status(workflow_name)
+            except Exception as e:
+                raise WorkflowStatusError(f"Failed to get workflow status: {e}") from e
                 
-            status_info = status_result.value
             phase = status_info.get("phase", "")
             has_suspended_nodes = status_info.get("has_suspended_nodes", False)
 
             if phase == "Running" and has_suspended_nodes:
-                return CommandResult(success=True, value=f"Workflow {workflow_name} is in a suspended state")
+                logger.info(f"Workflow {workflow_name} is in a suspended state")
+                return
             elif phase in ENDING_ARGO_PHASES:
                 raise WorkflowEndedBeforeSuspend(workflow_name=workflow_name, phase=phase)
 
@@ -136,36 +144,38 @@ class ArgoService:
 
         raise TimeoutError(f"Workflow did not reach suspended state in timeout of {timeout_seconds} seconds")
 
-    def is_workflow_completed(self, workflow_name: str) -> CommandResult:
-        status_result = self.get_workflow_status(workflow_name)
-        if not status_result.success:
-            raise ValueError(f"Failed to get workflow status: {status_result}")
+    def is_workflow_completed(self, workflow_name: str) -> bool:
+        try:
+            status_info = self.get_workflow_status(workflow_name)
+        except Exception as e:
+            raise WorkflowStatusError(f"Failed to get workflow status: {e}") from e
 
-        status_info = status_result.value
         phase = status_info.get("phase", "")
 
         if phase in ENDING_ARGO_PHASES:
-            return CommandResult(success=True, value=f"Workflow {workflow_name} has reached an ending phase of {phase}")
-        return CommandResult(success=False, value=f"Workflow {workflow_name} has not completed and is in {phase} phase")
+            logger.info(f"Workflow {workflow_name} has reached an ending phase of {phase}")
+            return True
+        logger.info(f"Workflow {workflow_name} has not completed and is in {phase} phase")
+        return False
 
-    def wait_for_ending_phase(self, workflow_name: str, timeout_seconds: int = 120, interval: int = 5) -> CommandResult:
+    def wait_for_ending_phase(self, workflow_name: str, timeout_seconds: int = 120, interval: int = 5) -> str:
         start_time = time.time()
 
         while time.time() - start_time < timeout_seconds:
-            phase_result = self.is_workflow_completed(workflow_name)
-            if phase_result.success:
-                return phase_result
+            if self.is_workflow_completed(workflow_name):
+                status_info = self.get_workflow_status(workflow_name)
+                return status_info.get("phase", "")
             time.sleep(interval)
 
         raise TimeoutError(f"Workflow did not reach ending state in timeout of {timeout_seconds} seconds")
 
-    def watch_workflow(self, workflow_name: str, stream_output: bool = True) -> CommandResult:
+    def watch_workflow(self, workflow_name: str, stream_output: bool = True) -> None:
         argo_args = {
             "logs": workflow_name,
             "--follow": FlagOnlyArgument
         }
-        return self._run_argo_command(pod_action="watch-workflow", argo_args=argo_args, print_output=stream_output,
-                                      stream_output=stream_output)
+        self._run_argo_command(pod_action="watch-workflow", argo_args=argo_args, print_output=stream_output,
+                              stream_output=stream_output)
 
     def get_source_cluster_from_workflow(self, workflow_name: str) -> Cluster:
         return self._get_cluster_config_from_workflow(workflow_name, "source")
@@ -174,7 +184,7 @@ class ArgoService:
         return self._get_cluster_config_from_workflow(workflow_name, "target")
 
     def _run_argo_command(self, pod_action: str, argo_args: Dict, print_output: bool = False,
-                          stream_output: bool = False) -> CommandResult:
+                          stream_output: bool = False):
         pod_name = f"argo-{pod_action}-{uuid.uuid4().hex[:6]}"
         command_args = {
             "run": pod_name,
@@ -193,15 +203,15 @@ class ArgoService:
             return runner.run(print_to_console=print_output, stream_output=stream_output)
         except CommandRunnerError as e:
             logger.error(f"Argo command failed: {e}")
-            raise
+            raise WorkflowOperationError(f"Argo command failed: {e}") from e
 
-    def _run_kubectl_command(self, kubectl_args: Dict[str, Any], print_output: bool = False) -> CommandResult:
+    def _run_kubectl_command(self, kubectl_args: Dict[str, Any], print_output: bool = False):
         runner = CommandRunner("kubectl", kubectl_args)
         try:
             return runner.run(print_to_console=print_output)
         except CommandRunnerError as e:
             logger.error(f"Kubectl command failed: {e}")
-            raise
+            raise WorkflowOperationError(f"Kubectl command failed: {e}") from e
 
     def _create_workflow_yaml(self, workflow_template_name: str, parameters: Optional[Dict[str, Any]] = None) -> str:
         """Create a temporary workflow YAML file based on the template structure."""
@@ -250,7 +260,7 @@ class ArgoService:
         return temp_file_path
 
     def _wait_for_workflow_exists(self, workflow_name: str, timeout_seconds: int = 15,
-                                  interval: int = 1) -> CommandResult:
+                                  interval: int = 1) -> None:
         start_time = time.time()
 
         while time.time() - start_time < timeout_seconds:
@@ -263,21 +273,15 @@ class ArgoService:
 
             try:
                 result = self._run_kubectl_command(kubectl_args)
-                if result.success and result.output and result.output.stdout.strip():
+                if result.stdout.strip():
                     logger.info(f"Workflow {workflow_name} exists")
-                    return CommandResult(
-                        success=True,
-                        value=f"Workflow {workflow_name} exists"
-                    )
-            except CommandRunnerError:
+                    return
+            except Exception:
                 pass
 
             time.sleep(interval)
 
-        return CommandResult(
-            success=False,
-            value=f"Timeout waiting for workflow {workflow_name} to exist"
-        )
+        raise TimeoutError(f"Timeout waiting for workflow {workflow_name} to exist")
 
     def _get_workflow_status_json(self, workflow_name: str) -> Dict[str, Any]:
         kubectl_args = {
@@ -288,7 +292,7 @@ class ArgoService:
         }
         result = self._run_kubectl_command(kubectl_args)
         try:
-            data = json.loads(result.output.stdout.strip())
+            data = json.loads(result.stdout.strip())
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse 'kubectl get workflow <name> -o json' output: {e}")
             raise

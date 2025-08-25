@@ -2,7 +2,12 @@ import logging
 from abc import ABC, abstractmethod
 from cerberus import Validator
 from datetime import datetime
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field
+try:
+    from pydantic import field_serializer
+except ImportError:
+    # For older pydantic versions
+    field_serializer = None
 from requests.exceptions import HTTPError
 from typing import Any, Dict, Optional
 
@@ -296,9 +301,10 @@ class SnapshotStatus(BaseModel):
         'from_attributes': True,
     }
 
-    @field_serializer("started", "finished")
-    def serialize_completed(self, dt: datetime | None) -> str | None:
-        return dt.isoformat() if dt else None
+    if field_serializer:
+        @field_serializer("started", "finished")
+        def serialize_completed(self, dt: datetime) -> str:
+            return dt.isoformat() if dt else None
 
     @classmethod
     def from_snapshot_info(cls, snapshot_info: dict) -> "SnapshotStatus":
@@ -306,7 +312,8 @@ class SnapshotStatus(BaseModel):
         total_bytes = processed_bytes = throughput_bytes = None
         total_shards = completed_shards = failed_shards = None
         total_units = processed_units = 0
-        if shards_stats := snapshot_info.get("shards_stats"):
+        shards_stats = snapshot_info.get("shards_stats")
+        if shards_stats:
             # ES ≥7.8 / OS: shard-level stats
             total_units = total_shards = shards_stats.get("total", 0)
             completed_shards = shards_stats.get("done", 0)
@@ -325,7 +332,8 @@ class SnapshotStatus(BaseModel):
             start_ms = snapshot_info.get("start_time_in_millis", 0)
             elapsed_ms = snapshot_info.get("time_in_millis", 0)
 
-        if stats := snapshot_info.get("stats"):
+        stats = snapshot_info.get("stats")
+        if stats:
             # OpenSearch: byte-level stats
             total_units = total_bytes = stats.get("total", {}).get("size_in_bytes", 0)
             processed_units = processed_bytes = (
@@ -383,7 +391,8 @@ def convert_snapshot_state_to_step_state(snapshot_state: str) -> StepState:
         "SUCCESS": StepState.COMPLETED,
     }
 
-    if (mapped := state_mapping.get(snapshot_state)) is None:
+    mapped = state_mapping.get(snapshot_state)
+    if mapped is None:
         logging.warning("Unknown snapshot_state %r; defaulting to 'FAILED'", snapshot_state)
         return StepState.FAILED
     return mapped
@@ -422,63 +431,53 @@ def get_latest_snapshot_status_raw(cluster: Cluster,
     snapshot_data = response.json()
     snapshots = snapshot_data.get('snapshots', [])
     if not snapshots or not snapshots[0]:
-    snapshot_data = response.json()
-    snapshots = snapshot_data.get('snapshots', [])
-    if not snapshots or not snapshots[0]:
-        raise SnapshotStatusUnavailable()
+        raise SnapshotStatusUnavailableError()
     
     return SnapshotStateAndDetails(state, snapshots[0])
 
 
-def get_snapshot_status(cluster: Cluster, snapshot: str, repository: str, deep_check: bool) -> CommandResult:
-    try:
-        # Get raw snapshot status data
-        latest_snapshot_status_raw = get_latest_snapshot_status_raw(cluster, snapshot, repository, deep_check)
+def get_snapshot_status(cluster: Cluster, snapshot: str, repository: str, deep_check: bool) -> str:
+    # Get raw snapshot status data
+    latest_snapshot_status_raw = get_latest_snapshot_status_raw(cluster, snapshot, repository, deep_check)
 
-        if not deep_check:
-            return CommandResult(success=True, value=latest_snapshot_status_raw.state)
+    if not deep_check:
+        return latest_snapshot_status_raw.state
 
-        snapshot_status = SnapshotStatus.from_snapshot_info(latest_snapshot_status_raw.details)
-        
-        # Format datetime values for display
-        start_time = snapshot_status.started.strftime('%Y-%m-%d %H:%M:%S') if snapshot_status.started else ''
-        finish_time = snapshot_status.finished.strftime('%Y-%m-%d %H:%M:%S') if snapshot_status.finished else ''
-        
-        # Format the ETA string
-        eta_ms = snapshot_status.eta_ms or 0
-        eta_str = format_duration(int(eta_ms)) if eta_ms else "0h 0m 0s"
+    snapshot_status = SnapshotStatus.from_snapshot_info(latest_snapshot_status_raw.details)
+    
+    # Format datetime values for display
+    start_time = snapshot_status.started.strftime('%Y-%m-%d %H:%M:%S') if snapshot_status.started else ''
+    finish_time = snapshot_status.finished.strftime('%Y-%m-%d %H:%M:%S') if snapshot_status.finished else ''
+    
+    # Format the ETA string
+    eta_ms = snapshot_status.eta_ms or 0
+    eta_str = format_duration(int(eta_ms)) if eta_ms else "0h 0m 0s"
 
-        # Format byte data
-        def mb_or_blank(n: int | float | None) -> str | float:
-            bytes_to_megabytes = (1024 ** 2)
-            return "" if n is None else n / bytes_to_megabytes
+    # Format byte data
+    def mb_or_blank(n) -> str:
+        bytes_to_megabytes = (1024 ** 2)
+        return "" if n is None else n / bytes_to_megabytes
 
-        total_mb = mb_or_blank(snapshot_status.data_total_bytes)
-        processed_mb = mb_or_blank(snapshot_status.data_processed_bytes)
-        throughput_mb = mb_or_blank(snapshot_status.data_throughput_bytes_avg_sec)
-        message = (
-            f"Snapshot status: {latest_snapshot_status_raw.state}\n"
-            f"Start time: {start_time}\n"
-            f"Finished time: {finish_time}\n"
-            f"Percent completed: {snapshot_status.percentage_completed:.2f}%\n"
-            f"Estimated time to completion: {eta_str}\n"
-            f"Data processed: {processed_mb:.3f}/{total_mb:.3f} MiB\n"
-            f"Throughput: {throughput_mb:.3f} MiB/sec\n"
-            f"Total shards: {snapshot_status.shard_total}\n"
-            f"Successful shards: {snapshot_status.shard_complete}\n"
-            f"Failed shards: {snapshot_status.shard_failed}\n"
-        )
-        
-        return CommandResult(success=True, value=message)
-    except SnapshotNotStarted:
-        return CommandResult(success=False, value="Snapshot not started")
-    except SnapshotStatusUnavailable:
-        return CommandResult(success=False, value="Snapshot status not available")
-    except Exception as e:
-        return CommandResult(success=False, value=f"Failed to get full snapshot status: {str(e)}")
+    total_mb = mb_or_blank(snapshot_status.data_total_bytes)
+    processed_mb = mb_or_blank(snapshot_status.data_processed_bytes)
+    throughput_mb = mb_or_blank(snapshot_status.data_throughput_bytes_avg_sec)
+    message = (
+        f"Snapshot status: {latest_snapshot_status_raw.state}\n"
+        f"Start time: {start_time}\n"
+        f"Finished time: {finish_time}\n"
+        f"Percent completed: {snapshot_status.percentage_completed:.2f}%\n"
+        f"Estimated time to completion: {eta_str}\n"
+        f"Data processed: {processed_mb:.3f}/{total_mb:.3f} MiB\n"
+        f"Throughput: {throughput_mb:.3f} MiB/sec\n"
+        f"Total shards: {snapshot_status.shard_total}\n"
+        f"Successful shards: {snapshot_status.shard_complete}\n"
+        f"Failed shards: {snapshot_status.shard_failed}\n"
+    )
+    
+    return message
 
 
-def delete_snapshot(cluster: Cluster, snapshot_name: str, repository: str):
+def delete_snapshot(cluster: Cluster, snapshot_name: str, repository: str) -> None:
     path = f"/_snapshot/{repository}/{snapshot_name}"
     response = cluster.call_api(path, HttpMethod.DELETE)
     logging.debug(f"Raw delete snapshot status response: {response.text}")

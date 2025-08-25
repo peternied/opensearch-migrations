@@ -11,7 +11,7 @@ from subprocess import CompletedProcess
 import console_link.middleware as middleware
 from console_link.cli import cli, main
 from console_link.environment import Environment
-from console_link.models.backfill_rfs import ECSRFSBackfill, RfsWorkersInProgress, WorkingIndexDoesntExist
+from console_link.models.backfill_rfs import ECSRFSBackfill, RfsWorkersInProgress, WorkingIndexDoesNotExist
 from console_link.models.cluster import Cluster, HttpMethod
 from console_link.models.command_result import CommandResult
 from console_link.models.ecs_service import ECSService
@@ -567,7 +567,7 @@ def test_cli_backfill_stop(runner, mocker):
 def test_cli_backfill_stop_no_index(runner, mocker):
     mock_stop = mocker.patch.object(ECSRFSBackfill, 'stop', autospec=True)
 
-    archive_result = CommandResult(success=False, value=WorkingIndexDoesntExist("index"))
+    archive_result = CommandResult(success=False, value=WorkingIndexDoesNotExist("index"))
     mock_archive = mocker.patch.object(ECSRFSBackfill, 'archive', autospec=True, return_value=archive_result)
     mocker.patch.object(time, 'sleep', autospec=True)  # make a no-op
 

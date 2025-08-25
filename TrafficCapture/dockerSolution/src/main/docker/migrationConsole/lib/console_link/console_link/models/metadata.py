@@ -7,12 +7,12 @@ from pydantic import BaseModel, Field, field_validator, field_serializer
 from typing import Optional, Any, Dict, List
 
 from console_link.db import metadata_db
-from console_link.models.command_result import CommandResult
 from console_link.models.command_runner import CommandRunner, CommandRunnerError, FlagOnlyArgument
 from console_link.models.cluster import AuthMethod, Cluster, NoTargetClusterDefinedError
 from console_link.models.schema_tools import list_schema
 from console_link.models.snapshot import S3Snapshot, Snapshot, FileSystemSnapshot
 from console_link.models.step_state import StepState
+from console_link.domain.exceptions.metadata_errors import MetadataError
 
 logger = logging.getLogger(__name__)
 MAX_FILENAME_LEN = 255
@@ -182,15 +182,15 @@ class Metadata:
                 logger.warning(f"Ignoring extra value {arg}, there was no command name before it")
                 i += 1
 
-    def evaluate(self, extra_args=None) -> CommandResult:
+    def evaluate(self, extra_args=None) -> str:
         logger.info("Starting metadata migration")
         return self.migrate_or_evaluate("evaluate", extra_args)
 
-    def migrate(self, extra_args=None) -> CommandResult:
+    def migrate(self, extra_args=None) -> str:
         logger.info("Starting metadata migration")
         return self.migrate_or_evaluate("migrate", extra_args)
 
-    def migrate_or_evaluate(self, command: str, extra_args=None) -> CommandResult:
+    def migrate_or_evaluate(self, command: str, extra_args=None) -> str:
         if not self._target_cluster:
             raise NoTargetClusterDefinedError()
 
@@ -261,7 +261,7 @@ class Metadata:
             return command_runner.run(print_on_error=True)
         except CommandRunnerError as e:
             logger.debug(f"Metadata migration failed: {e}")
-            return CommandResult(success=False, value=f"{e.output}")
+            raise MetadataError(f"Metadata migration failed: {e.output}")
 
     def _get_source_cluster_version(self, source_cluster: Optional[Cluster] = None) -> str:
         version = self._config.get("source_cluster_version", None)
@@ -373,12 +373,10 @@ class MetadataResponseUnparseable(Exception):
     pass
 
 
-def parse_metadata_result(result: CommandResult) -> Any:
+def parse_metadata_result(result_str: str) -> Any:
     """Parse the metadata operation result into a structured format."""
-    logger.info(f"Result response: {result}")
-    if result.output and result.output.stdout:
-        result_str = result.output.stdout
-    else:
+    logger.info(f"Result response: {result_str}")
+    if not result_str:
         logger.error("Unable to read standard out from the migration command")
         raise MetadataResponseUnparseable
 

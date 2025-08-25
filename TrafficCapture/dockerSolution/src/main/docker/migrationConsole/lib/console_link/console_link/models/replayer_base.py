@@ -1,9 +1,8 @@
 from enum import Enum
-from typing import Dict
+from typing import Dict, Tuple
 from abc import ABC, abstractmethod
 
 from console_link.models.schema_tools import contains_one_of
-from console_link.models.command_result import CommandResult
 
 from cerberus import Validator
 
@@ -61,23 +60,23 @@ class Replayer(ABC):
         self.default_scale = self.config.get("scale", 1)
 
     @abstractmethod
-    def start(self, *args, **kwargs) -> CommandResult:
+    def start(self, *args, **kwargs) -> str:
         """Begin running the replayer. After running start, the user should be able to assume that--barring exceptions
         or failures--their data will begin playing against the target cluster."""
         pass
 
     @abstractmethod
-    def stop(self, *args, **kwargs) -> CommandResult:
+    def stop(self, *args, **kwargs) -> str:
         """Stop or pause the replay. This does not make guarantees about resumeability."""
         pass
 
     @abstractmethod
-    def get_status(self, *args, **kwargs) -> CommandResult:
+    def get_status(self, *args, **kwargs) -> Tuple[ReplayStatus, str]:
         """Return a status"""
         pass
 
     @abstractmethod
-    def scale(self, units: int, *args, **kwargs) -> CommandResult:
+    def scale(self, units: int, *args, **kwargs) -> str:
         pass
 
     def describe(self) -> Dict:

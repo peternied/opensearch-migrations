@@ -1,5 +1,4 @@
-from typing import Dict
-from console_link.models.command_result import CommandResult
+from typing import Dict, Tuple
 from console_link.models.replayer_base import Replayer, ReplayStatus
 
 import logging
@@ -11,18 +10,18 @@ class DockerReplayer(Replayer):
     def __init__(self, config: Dict) -> None:
         super().__init__(config)
 
-    def start(self, *args, **kwargs) -> CommandResult:
+    def start(self, *args, **kwargs) -> str:
         logger.warning("Start command is not implemented for Docker Replayer")
-        return CommandResult(success=True, value="No action performed, action is unimplemented")
+        return "No action performed, action is unimplemented"
 
-    def stop(self, *args, **kwargs) -> CommandResult:
+    def stop(self, *args, **kwargs) -> str:
         logger.warning("Stop command is not implemented for Docker Replayer")
-        return CommandResult(success=True, value="No action performed, action is unimplemented")
+        return "No action performed, action is unimplemented"
 
-    def get_status(self, *args, **kwargs) -> CommandResult:
+    def get_status(self, *args, **kwargs) -> Tuple[ReplayStatus, str]:
         logger.warning("Get status command is not implemented for Docker Replayer and "
                        "always assumes service is running")
-        return CommandResult(True, (ReplayStatus.RUNNING, "Docker Replayer is assumed to be running"))
+        return (ReplayStatus.RUNNING, "Docker Replayer is assumed to be running")
 
-    def scale(self, units: int, *args, **kwargs) -> CommandResult:
+    def scale(self, units: int, *args, **kwargs) -> str:
         raise NotImplementedError()

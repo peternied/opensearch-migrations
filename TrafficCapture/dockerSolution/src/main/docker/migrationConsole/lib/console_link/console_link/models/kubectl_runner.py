@@ -3,8 +3,8 @@ import logging
 from kubernetes import client, config
 from typing import Optional
 
-from console_link.models.command_result import CommandResult
 from console_link.models.utils import DeploymentStatus
+from console_link.domain.exceptions.common_errors import InfrastructureError
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +21,15 @@ class KubectlRunner:
         self.k8s_core = client.CoreV1Api()
         self.k8s_apps = client.AppsV1Api()
 
-    def perform_scale_command(self, replicas: int) -> CommandResult:
+    def perform_scale_command(self, replicas: int) -> str:
         body = {"spec": {"replicas": replicas}}
         try:
             self.k8s_apps.patch_namespaced_deployment_scale(name=self.deployment_name, namespace=self.namespace,
                                                             body=body)
-            return CommandResult(True, f"The {self.deployment_name} deployment has been set "
-                                       f"to {replicas} desired count.")
+            return f"The {self.deployment_name} deployment has been set to {replicas} desired count."
         except Exception as e:
             logger.error(f"Error faced when performing k8s patch_namespaced_deployment_scale(): {e}")
-            return CommandResult(success=False, value=f"Kubernetes action failed: {e}")
+            raise InfrastructureError(f"Kubernetes action failed: {e}")
 
     def retrieve_deployment_status(self) -> Optional[DeploymentStatus]:
         try:

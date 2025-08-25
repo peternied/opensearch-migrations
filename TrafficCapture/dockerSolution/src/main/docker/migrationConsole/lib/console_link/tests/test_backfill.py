@@ -9,7 +9,7 @@ import requests
 from console_link.models.cluster import Cluster, HttpMethod
 from console_link.models.backfill_base import Backfill, BackfillStatus
 from console_link.models.backfill_rfs import (DockerRFSBackfill, ECSRFSBackfill, RfsWorkersInProgress,
-                                              WorkingIndexDoesntExist)
+                                              WorkingIndexDoesNotExist)
 from console_link.models.ecs_service import ECSService
 from console_link.models.factories import UnsupportedBackfillTypeError, get_backfill
 from console_link.models.utils import DeploymentStatus
@@ -290,7 +290,7 @@ def test_ecs_rfs_backfill_archive_no_index_as_expected(ecs_rfs_backfill, mocker,
     result = ecs_rfs_backfill.archive()
 
     assert not result.success
-    assert isinstance(result.value, WorkingIndexDoesntExist)
+    assert isinstance(result.value, WorkingIndexDoesNotExist)
 
 
 def test_ecs_rfs_backfill_archive_errors_if_in_progress(ecs_rfs_backfill, mocker):
