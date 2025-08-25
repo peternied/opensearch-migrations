@@ -81,7 +81,7 @@ class ClusterService:
         
         return cluster
 
-    def test_connection(self, cluster: ClusterEntity) -> Dict[str, Any]:
+    def test_cluster_connection(self, cluster: ClusterEntity) -> Dict[str, Any]:
         """Test connection to a cluster.
         
         Args:
@@ -135,6 +135,45 @@ class ClusterService:
             cluster.status = ClusterStatus.UNREACHABLE
             cluster.updated_at = datetime.utcnow()
             raise ClusterConnectionError(f"Unexpected error connecting to cluster {cluster.name}: {str(e)}")
+    
+    def get_cluster_info(self, cluster: ClusterEntity) -> Dict[str, Any]:
+        """Get cluster information.
+        
+        Args:
+            cluster: Cluster entity
+            
+        Returns:
+            Dict containing cluster information
+            
+        Raises:
+            ClusterConnectionError: If connection fails
+        """
+        # Convert to legacy cluster for API calls
+        legacy_cluster = self._to_legacy_cluster(cluster)
+        
+        try:
+            # Get cluster info
+            response = legacy_cluster.call_api("/", HttpMethod.GET)
+            response.raise_for_status()
+            
+            return response.json()
+            
+        except Exception as e:
+            raise ClusterConnectionError(f"Failed to get info for cluster {cluster.name}: {str(e)}")
+    
+    def check_cluster_health(self, cluster: ClusterEntity) -> Dict[str, Any]:
+        """Check cluster health status.
+        
+        Args:
+            cluster: Cluster entity
+            
+        Returns:
+            Dict containing health information
+            
+        Raises:
+            ClusterOperationError: If health check fails
+        """
+        return self.get_cluster_health(cluster)
 
     def get_cluster_health(self, cluster: ClusterEntity) -> Dict[str, Any]:
         """Get cluster health information.
@@ -228,6 +267,36 @@ class ClusterService:
             
         except Exception as e:
             raise ClusterOperationError(f"Failed to get indices for cluster {cluster.name}: {str(e)}")
+    
+    def list_indices(self, cluster: ClusterEntity, pattern: str = "*") -> List[Dict[str, Any]]:
+        """List indices from cluster.
+        
+        Args:
+            cluster: Cluster entity
+            pattern: Index pattern to match (default: "*")
+            
+        Returns:
+            List of index information
+            
+        Raises:
+            ClusterOperationError: If index retrieval fails
+        """
+        return self.get_indices(cluster, pattern)
+    
+    def get_index_mapping(self, cluster: ClusterEntity, index_name: str) -> Dict[str, Any]:
+        """Get mapping for a specific index.
+        
+        Args:
+            cluster: Cluster entity
+            index_name: Name of the index
+            
+        Returns:
+            Dict containing index mapping
+            
+        Raises:
+            ClusterOperationError: If mapping retrieval fails
+        """
+        return self.get_index_metadata(cluster, index_name)
 
     def get_index_metadata(self, cluster: ClusterEntity, index_name: str) -> Dict[str, Any]:
         """Get metadata for a specific index.
@@ -331,4 +400,30 @@ class ClusterService:
         
         This is temporary until we refactor the HTTP client layer.
         """
-        return LegacyCluster(cluster.to_dict())
+        # Convert to legacy format
+        config = {
+            "endpoint": cluster.endpoint,
+            "allow_insecure": cluster.allow_insecure
+        }
+        
+        # Handle authentication configuration
+        if cluster.auth_config:
+            auth_dict = cluster.auth_config.to_dict()
+            auth_method = auth_dict.get("auth_method", "no_auth")
+            
+            if auth_method == "basic_auth":
+                config["basic_auth"] = {
+                    "username": auth_dict.get("username"),
+                    "password": auth_dict.get("password")
+                }
+            elif auth_method == "sigv4":
+                config["sigv4"] = {
+                    "region": auth_dict.get("region", "us-east-1"),
+                    "service": auth_dict.get("service", "es")
+                }
+            else:
+                config["no_auth"] = True
+        else:
+            config["no_auth"] = True
+        
+        return LegacyCluster(config)

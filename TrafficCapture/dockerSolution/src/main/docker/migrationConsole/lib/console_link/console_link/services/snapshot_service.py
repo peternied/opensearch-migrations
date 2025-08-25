@@ -224,6 +224,9 @@ class SnapshotService:
                 "detailed_status": status_snapshots[0]
             }
             
+        except SnapshotNotFoundError:
+            # Re-raise without wrapping
+            raise
         except HTTPError as e:
             if e.response.status_code == 404:
                 raise SnapshotNotFoundError(f"Snapshot {snapshot_name} not found in repository {repository_name}")
@@ -407,7 +410,33 @@ class SnapshotService:
         # This is temporary until we refactor the command execution layer
         from console_link.models.cluster import Cluster as LegacyCluster
         
-        legacy_cluster = LegacyCluster(source_cluster.to_dict())
+        # Convert to legacy format
+        legacy_config = {
+            "endpoint": source_cluster.endpoint,
+            "allow_insecure": source_cluster.allow_insecure
+        }
+        
+        # Handle authentication configuration
+        if source_cluster.auth_config:
+            auth_dict = source_cluster.auth_config.to_dict()
+            auth_method = auth_dict.get("auth_method", "no_auth")
+            
+            if auth_method == "basic_auth":
+                legacy_config["basic_auth"] = {
+                    "username": auth_dict.get("username"),
+                    "password": auth_dict.get("password")
+                }
+            elif auth_method == "sigv4":
+                legacy_config["sigv4"] = {
+                    "region": auth_dict.get("region", "us-east-1"),
+                    "service": auth_dict.get("service", "es")
+                }
+            else:
+                legacy_config["no_auth"] = True
+        else:
+            legacy_config["no_auth"] = True
+        
+        legacy_cluster = LegacyCluster(legacy_config)
         
         command_args = {
             "--snapshot-name": config.snapshot_name,
@@ -431,7 +460,7 @@ class SnapshotService:
                 })
         
         if source_cluster.allow_insecure:
-            command_args["--source-insecure"] = None
+            command_args["--source-insecure"] = FlagOnlyArgument
         
         if config.otel_endpoint:
             command_args["--otel-collector-endpoint"] = config.otel_endpoint

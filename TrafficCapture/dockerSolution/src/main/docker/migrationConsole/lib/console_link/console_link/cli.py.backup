@@ -2,33 +2,17 @@ import json
 from pprint import pprint
 import sys
 import time
-from typing import Dict, Optional
+from typing import Dict
 import click
-import logging
+import console_link.middleware.clusters as clusters_
+import console_link.middleware.metrics as metrics_
+import console_link.middleware.backfill as backfill_
+import console_link.middleware.snapshot as snapshot_
+import console_link.middleware.metadata as metadata_
+import console_link.middleware.replay as replay_
+import console_link.middleware.kafka as kafka_
+import console_link.middleware.tuples as tuples_
 
-# Import services instead of middleware
-from console_link.services.cluster_service import ClusterService
-from console_link.services.snapshot_service import SnapshotService
-from console_link.services.backfill_service import BackfillService
-from console_link.services.metadata_service import MetadataService
-from console_link.services.replay_service import ReplayService
-from console_link.services.kafka_service import KafkaService
-from console_link.services.metrics_service import MetricsService
-
-# Import domain exceptions
-# Import base exception
-from console_link.domain.exceptions.common_errors import MigrationAssistantError
-
-# Import specific domain exceptions
-from console_link.domain.exceptions.cluster_errors import ClusterConnectionError
-from console_link.domain.exceptions.snapshot_errors import SnapshotCreationError, SnapshotDeletionError
-from console_link.domain.exceptions.backfill_errors import BackfillError
-from console_link.domain.exceptions.metadata_errors import MetadataMigrationError
-from console_link.domain.exceptions.replay_errors import ReplayError
-from console_link.domain.exceptions.kafka_errors import KafkaError
-from console_link.domain.exceptions.metrics_errors import MetricsError
-
-# Import other dependencies
 from console_link.models.container_utils import get_version_str
 from console_link.models.cluster import HttpMethod
 from console_link.models.backfill_rfs import RfsWorkersInProgress, WorkingIndexDoesntExist
@@ -37,8 +21,7 @@ from console_link.environment import Environment
 from console_link.models.metrics_source import Component, MetricStatistic
 from click.shell_completion import get_completion_class
 
-# TODO: Import tuples service when available
-import console_link.middleware.tuples as tuples_
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +36,6 @@ class Context(object):
         except Exception as e:
             raise click.ClickException(str(e))
         self.json = False
-        
-        # Initialize services (will pass model objects when needed)
-        self.cluster_service = ClusterService()
-        self.snapshot_service = SnapshotService()
-        self.backfill_service = BackfillService()
-        self.metadata_service = MetadataService(self.env.metadata) if self.env.metadata else None
-        self.replay_service = ReplayService(self.env.replay) if self.env.replay else None
-        self.kafka_service = KafkaService(self.env.kafka) if self.env.kafka else None
-        self.metrics_service = MetricsService()
 
 
 @click.group(invoke_without_command=True)
@@ -121,67 +95,49 @@ def cluster_group(ctx):
 @click.pass_obj
 def cat_indices_cmd(ctx, refresh):
     """Simple program that calls `_cat/indices` on both a source and target cluster."""
-    try:
-        if ctx.json:
-            source_indices = None
-            target_indices = None
-            
-            if ctx.env.source_cluster:
-                source_indices = ctx.cluster_service.cat_indices(
-                    ctx.env.source_cluster, as_json=True, refresh=refresh
-                )
-            
-            if ctx.env.target_cluster:
-                target_indices = ctx.cluster_service.cat_indices(
-                    ctx.env.target_cluster, as_json=True, refresh=refresh
-                )
-            
-            click.echo(json.dumps({
-                "source_cluster": source_indices,
-                "target_cluster": target_indices
-            }))
-            return
-        
-        if not refresh:
-            click.echo("\nWARNING: Cluster information may be stale. Use --refresh to update.\n")
-        
-        click.echo("SOURCE CLUSTER")
-        if ctx.env.source_cluster:
-            result = ctx.cluster_service.cat_indices(ctx.env.source_cluster, refresh=refresh)
-            click.echo(result)
-        else:
-            click.echo("No source cluster defined.")
-        
-        click.echo("TARGET CLUSTER")
-        if ctx.env.target_cluster:
-            result = ctx.cluster_service.cat_indices(ctx.env.target_cluster, refresh=refresh)
-            click.echo(result)
-        else:
-            click.echo("No target cluster defined.")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    if ctx.json:
+        click.echo(
+            json.dumps(
+                {
+                    "source_cluster": clusters_.cat_indices(
+                        ctx.env.source_cluster, as_json=True, refresh=refresh
+                    ) if ctx.env.source_cluster else None,
+                    "target_cluster": clusters_.cat_indices(
+                        ctx.env.target_cluster, as_json=True, refresh=refresh
+                    ) if ctx.env.target_cluster else None,
+                }
+            )
+        )
+        return
+    
+    if not refresh:
+        click.echo("\nWARNING: Cluster information may be stale. Use --refresh to update.\n")
+    click.echo("SOURCE CLUSTER")
+    if ctx.env.source_cluster:
+        click.echo(clusters_.cat_indices(ctx.env.source_cluster, refresh=refresh))
+    else:
+        click.echo("No source cluster defined.")
+    click.echo("TARGET CLUSTER")
+    if ctx.env.target_cluster:
+        click.echo(clusters_.cat_indices(ctx.env.target_cluster, refresh=refresh))
+    else:
+        click.echo("No target cluster defined.")
 
 
 @cluster_group.command(name="connection-check")
 @click.pass_obj
 def connection_check_cmd(ctx):
     """Checks if a connection can be established to source and target clusters"""
-    try:
-        click.echo("SOURCE CLUSTER")
-        if ctx.env.source_cluster:
-            is_connected = ctx.cluster_service.connection_check(ctx.env.source_cluster)
-            click.echo("Connection successful" if is_connected else "Connection failed")
-        else:
-            click.echo("No source cluster defined.")
-        
-        click.echo("TARGET CLUSTER")
-        if ctx.env.target_cluster:
-            is_connected = ctx.cluster_service.connection_check(ctx.env.target_cluster)
-            click.echo("Connection successful" if is_connected else "Connection failed")
-        else:
-            click.echo("No target cluster defined.")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    click.echo("SOURCE CLUSTER")
+    if ctx.env.source_cluster:
+        click.echo(clusters_.connection_check(ctx.env.source_cluster))
+    else:
+        click.echo("No source cluster defined.")
+    click.echo("TARGET CLUSTER")
+    if ctx.env.target_cluster:
+        click.echo(clusters_.connection_check(ctx.env.target_cluster))
+    else:
+        click.echo("No target cluster defined.")
 
 
 @cluster_group.command(name="run-test-benchmarks")
@@ -190,12 +146,7 @@ def run_test_benchmarks_cmd(ctx):
     """Run a series of OpenSearch Benchmark workloads against the source cluster"""
     if not ctx.env.source_cluster:
         raise click.UsageError("Cannot run test benchmarks because no source cluster is defined.")
-    
-    try:
-        result = ctx.cluster_service.run_test_benchmarks(ctx.env.source_cluster)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    click.echo(clusters_.run_test_benchmarks(ctx.env.source_cluster))
 
 
 @cluster_group.command(name="clear-indices")
@@ -211,21 +162,16 @@ def clear_indices_cmd(ctx, acknowledge_risk, cluster):
     cluster_focus = ctx.env.source_cluster if cluster.lower() == 'source' else ctx.env.target_cluster
     if not cluster_focus:
         raise click.UsageError(f"No {cluster.lower()} cluster defined.")
-    
     if acknowledge_risk:
         click.echo("Performing clear indices operation...")
+        click.echo(clusters_.clear_indices(cluster_focus))
     else:
-        if not click.confirm(f'Clearing indices WILL result in the loss of all data on the {cluster.lower()} cluster. '
-                            f'Are you sure you want to continue?'):
+        if click.confirm(f'Clearing indices WILL result in the loss of all data on the {cluster.lower()} cluster. '
+                         f'Are you sure you want to continue?'):
+            click.echo(f"Performing clear indices operation on {cluster.lower()} cluster...")
+            click.echo(clusters_.clear_indices(cluster_focus))
+        else:
             click.echo("Aborting command.")
-            return
-        click.echo(f"Performing clear indices operation on {cluster.lower()} cluster...")
-    
-    try:
-        ctx.cluster_service.clear_indices(cluster_focus)
-        click.echo("Indices cleared successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
 
 
 def parse_headers(header: str) -> Dict:
@@ -267,8 +213,8 @@ def cluster_curl_cmd(ctx, cluster, path, request, header, data, json_data):
             raise click.BadParameter("Invalid JSON format.")
 
     try:
-        cluster_obj = ctx.env.__getattribute__(cluster)
-        if cluster_obj is None:
+        cluster = ctx.env.__getattribute__(cluster)
+        if cluster is None:
             raise AttributeError
     except AttributeError:
         raise click.BadArgumentUsage(f"Unknown cluster {cluster}. Currently only `source_cluster` and `target_cluster`"
@@ -277,14 +223,15 @@ def cluster_curl_cmd(ctx, cluster, path, request, header, data, json_data):
     if path[0] != '/':
         path = '/' + path
 
-    try:
-        response_text = ctx.cluster_service.call_api(
-            cluster_obj, path, method=HttpMethod[request],
-            headers=headers, data=data
-        )
-        click.echo(response_text)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    result: clusters_.CallAPIResult = clusters_.call_api(cluster, path, method=HttpMethod[request],
+                                                         headers=headers, data=data)
+    if result.error_message:
+        click.echo(result.error_message)
+    else:
+        response = result.http_response
+        if not response.ok:
+            click.echo(f"Error: {response.status_code}")
+        click.echo(response.text)
 
 
 # ##################### SNAPSHOT ###################
@@ -315,16 +262,11 @@ def snapshot_group(ctx):
 @click.pass_obj
 def create_snapshot_cmd(ctx, wait, max_snapshot_rate_mb_per_node, extra_args):
     """Create a snapshot of the source cluster"""
-    try:
-        result = ctx.snapshot_service.create(
-            ctx.env.snapshot, 
-            wait=wait,
-            max_snapshot_rate_mb_per_node=max_snapshot_rate_mb_per_node,
-            extra_args=extra_args
-        )
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    snapshot = ctx.env.snapshot
+    result = snapshot_.create(snapshot, wait=wait,
+                              max_snapshot_rate_mb_per_node=max_snapshot_rate_mb_per_node,
+                              extra_args=extra_args)
+    click.echo(result.value)
 
 
 @snapshot_group.command(name="status")
@@ -332,11 +274,8 @@ def create_snapshot_cmd(ctx, wait, max_snapshot_rate_mb_per_node, extra_args):
 @click.pass_obj
 def status_snapshot_cmd(ctx, deep_check):
     """Check the status of the snapshot"""
-    try:
-        result = ctx.snapshot_service.status(ctx.env.snapshot, deep_check=deep_check)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    result = snapshot_.status(ctx.env.snapshot, deep_check=deep_check)
+    click.echo(result.value)
 
 
 @snapshot_group.command(name="delete")
@@ -351,13 +290,9 @@ def delete_snapshot_cmd(ctx, acknowledge_risk: bool):
         if not confirmed:
             click.echo("Aborting the command to delete snapshot.")
             return
-    
     logger.info("Deleting snapshot")
-    try:
-        ctx.snapshot_service.delete(ctx.env.snapshot)
-        click.echo("Snapshot deleted successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    result = snapshot_.delete(ctx.env.snapshot)
+    click.echo(result.value)
 
 
 @snapshot_group.command(name="unregister-repo")
@@ -375,14 +310,9 @@ def unregister_snapshot_repo_cmd(ctx, acknowledge_risk: bool):
         if not confirmed:
             click.echo("Aborting the command to remove snapshot repository.")
             return
-    
     logger.info("Removing snapshot repository")
-    try:
-        ctx.snapshot_service.delete_snapshot_repo(ctx.env.snapshot)
-        click.echo("Snapshot repository removed successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
+    result = snapshot_.delete_snapshot_repo(ctx.env.snapshot)
+    click.echo(result.value)
 
 # ##################### BACKFILL ###################
 
@@ -401,81 +331,74 @@ def backfill_group(ctx):
 @backfill_group.command(name="describe")
 @click.pass_obj
 def describe_backfill_cmd(ctx):
-    try:
-        result = ctx.backfill_service.describe(ctx.env.backfill, as_json=ctx.json)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    click.echo(backfill_.describe(ctx.env.backfill, as_json=ctx.json))
 
 
 @backfill_group.command(name="start")
 @click.option('--pipeline-name', default=None, help='Optionally specify a pipeline name')
 @click.pass_obj
 def start_backfill_cmd(ctx, pipeline_name):
-    try:
-        ctx.backfill_service.start(ctx.env.backfill, pipeline_name=pipeline_name)
-        click.echo("Backfill started successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = backfill_.start(ctx.env.backfill, pipeline_name=pipeline_name)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 @backfill_group.command(name="pause")
 @click.option('--pipeline-name', default=None, help='Optionally specify a pipeline name')
 @click.pass_obj
 def pause_backfill_cmd(ctx, pipeline_name):
-    try:
-        ctx.backfill_service.pause(ctx.env.backfill, pipeline_name=pipeline_name)
-        click.echo("Backfill paused successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = backfill_.pause(ctx.env.backfill, pipeline_name=pipeline_name)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 @backfill_group.command(name="stop")
 @click.option('--pipeline-name', default=None, help='Optionally specify a pipeline name')
 @click.pass_obj
 def stop_backfill_cmd(ctx, pipeline_name):
-    try:
-        ctx.backfill_service.stop(ctx.env.backfill, pipeline_name=pipeline_name)
-        click.echo("Backfill stopped successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = backfill_.stop(ctx.env.backfill, pipeline_name=pipeline_name)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
     click.echo("Archiving the working state of the backfill operation...")
-    
-    try:
-        archive_path = ctx.backfill_service.archive(ctx.env.backfill)
-        
-        # Note: The service should handle RfsWorkersInProgress internally
-        # and wait for workers to complete before archiving
-        
-        click.echo(f"Backfill working state archived to: {archive_path}")
-    except WorkingIndexDoesntExist:
+    exitcode, message = backfill_.archive(ctx.env.backfill)
+
+    if isinstance(message, WorkingIndexDoesntExist):
         click.echo("Working state index doesn't exist, skipping archive operation.")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+        return
+
+    while isinstance(message, RfsWorkersInProgress):
+        click.echo("RFS Workers are still running, waiting for them to complete...")
+        time.sleep(5)
+        exitcode, message = backfill_.archive(ctx.env.backfill)
+
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(f"Backfill working state archived to: {message}")
 
 
 @backfill_group.command(name="scale")
 @click.argument("units", type=int, required=True)
 @click.pass_obj
 def scale_backfill_cmd(ctx, units: int):
-    try:
-        ctx.backfill_service.scale(ctx.env.backfill, units)
-        click.echo(f"Backfill scaled to {units} units successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = backfill_.scale(ctx.env.backfill, units)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 @backfill_group.command(name="status")
 @click.option('--deep-check', is_flag=True, help='Perform a deep status check of the backfill')
 @click.pass_obj
 def status_backfill_cmd(ctx, deep_check):
-    logger.info(f"Called `console backfill status`, with deep_check={deep_check}")
-    try:
-        result = ctx.backfill_service.status(ctx.env.backfill, deep_check=deep_check)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    logger.info(f"Called `console backfill status`, with {deep_check=}")
+    exitcode, message = backfill_.status(ctx.env.backfill, deep_check=deep_check)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 # ##################### REPLAY ###################
@@ -491,52 +414,44 @@ def replay_group(ctx):
 @replay_group.command(name="describe")
 @click.pass_obj
 def describe_replay_cmd(ctx):
-    try:
-        result = ctx.replay_service.describe(ctx.env.replay, as_json=ctx.json)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    click.echo(replay_.describe(ctx.env.replay, as_json=ctx.json))
 
 
 @replay_group.command(name="start")
 @click.pass_obj
 def start_replay_cmd(ctx):
-    try:
-        ctx.replay_service.start(ctx.env.replay)
-        click.echo("Replay started successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = replay_.start(ctx.env.replay)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 @replay_group.command(name="stop")
 @click.pass_obj
 def stop_replay_cmd(ctx):
-    try:
-        ctx.replay_service.stop(ctx.env.replay)
-        click.echo("Replay stopped successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = replay_.stop(ctx.env.replay)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 @replay_group.command(name="scale")
 @click.argument("units", type=int, required=True)
 @click.pass_obj
 def scale_replay_cmd(ctx, units: int):
-    try:
-        ctx.replay_service.scale(ctx.env.replay, units)
-        click.echo(f"Replay scaled to {units} units successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = replay_.scale(ctx.env.replay, units)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 @replay_group.command(name="status")
 @click.pass_obj
 def status_replay_cmd(ctx):
-    try:
-        result = ctx.replay_service.status(ctx.env.replay)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = replay_.status(ctx.env.replay)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 # ##################### METADATA ###################
@@ -557,11 +472,10 @@ def metadata_group(ctx):
 @click.argument('extra_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
 def migrate_metadata_cmd(ctx, extra_args):
-    try:
-        result = ctx.metadata_service.migrate(ctx.env.metadata, extra_args)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    exitcode, message = metadata_.migrate(ctx.env.metadata, extra_args)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 
 @metadata_group.command(name="evaluate", context_settings={
@@ -571,12 +485,10 @@ def migrate_metadata_cmd(ctx, extra_args):
 @click.argument('extra_args', nargs=-1, type=click.UNPROCESSED)
 @click.pass_obj
 def evaluate_metadata_cmd(ctx, extra_args):
-    try:
-        result = ctx.metadata_service.evaluate(ctx.env.metadata, extra_args)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
+    exitcode, message = metadata_.evaluate(ctx.env.metadata, extra_args)
+    if exitcode != ExitCode.SUCCESS:
+        raise click.ClickException(message)
+    click.echo(message)
 
 # ##################### METRICS ###################
 
@@ -591,14 +503,10 @@ def metrics_group(ctx):
 @metrics_group.command(name="list")
 @click.pass_obj
 def list_metrics_cmd(ctx):
-    try:
-        metrics = ctx.metrics_service.list_metrics(ctx.env.metrics_source)
-        if ctx.json:
-            click.echo(json.dumps(metrics))
-        else:
-            pprint(metrics)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    if ctx.json:
+        click.echo(json.dumps(ctx.env.metrics_source.get_metrics()))
+        return
+    pprint(ctx.env.metrics_source.get_metrics())
 
 
 @metrics_group.command(name="get-data")
@@ -612,27 +520,25 @@ def list_metrics_cmd(ctx):
 @click.option("--lookback", type=int, default=60, help="Lookback in minutes")
 @click.pass_obj
 def get_metrics_data_cmd(ctx, component, metric_name, statistic, lookback):
-    try:
-        metric_data = ctx.metrics_service.get_metric_data(
-            ctx.env.metrics_source,
-            component,
-            metric_name,
-            statistic,
-            lookback
-        )
-        
-        if ctx.json:
-            click.echo(json.dumps(metric_data))
-        else:
-            click.echo(f"Component: {component}")
-            click.echo(f"Metric Name: {metric_name}")
-            click.echo(f"Statistic: {statistic}")
-            click.echo(f"Lookback: {lookback} minutes")
-            click.echo(f"Metrics Source Type: {type(ctx.env.metrics_source)}")
-            pprint(metric_data)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    metric_data = metrics_.get_metric_data(
+        ctx.env.metrics_source,
+        component,
+        metric_name,
+        statistic,
+        lookback
+    )
+    if ctx.json:
+        click.echo(json.dumps(metric_data))
+        return
 
+    click.echo(f"Component: {component}")
+    click.echo(f"Metric Name: {metric_name}")
+    click.echo(f"Statistic: {statistic}")
+    click.echo(f"Lookback: {lookback} minutes")
+    click.echo(f"Metrics Source Type: {type(ctx.env.metrics_source)}")
+    pprint(
+        metric_data
+    )
 
 # ##################### KAFKA ###################
 
@@ -649,11 +555,8 @@ def kafka_group(ctx):
 @click.option('--topic-name', default="logging-traffic-topic", help='Specify a topic name to create')
 @click.pass_obj
 def create_topic_cmd(ctx, topic_name):
-    try:
-        ctx.kafka_service.create_topic(ctx.env.kafka, topic_name=topic_name)
-        click.echo(f"Topic '{topic_name}' created successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    result = kafka_.create_topic(ctx.env.kafka, topic_name=topic_name)
+    click.echo(result.value)
 
 
 @kafka_group.command(name="delete-topic")
@@ -662,41 +565,33 @@ def create_topic_cmd(ctx, topic_name):
 @click.option('--topic-name', default="logging-traffic-topic", help='Specify a topic name to delete')
 @click.pass_obj
 def delete_topic_cmd(ctx, acknowledge_risk, topic_name):
-    if not acknowledge_risk:
-        if not click.confirm('Deleting a topic will irreversibly delete all captured traffic records stored in that '
-                            'topic. Are you sure you want to continue?'):
+    if acknowledge_risk:
+        result = kafka_.delete_topic(ctx.env.kafka, topic_name=topic_name)
+        click.echo(result.value)
+    else:
+        if click.confirm('Deleting a topic will irreversibly delete all captured traffic records stored in that '
+                         'topic. Are you sure you want to continue?'):
+            click.echo(f"Performing delete topic operation on {topic_name} topic...")
+            result = kafka_.delete_topic(ctx.env.kafka, topic_name=topic_name)
+            click.echo(result.value)
+        else:
             click.echo("Aborting command.")
-            return
-    
-    click.echo(f"Performing delete topic operation on {topic_name} topic...")
-    try:
-        ctx.kafka_service.delete_topic(ctx.env.kafka, topic_name=topic_name)
-        click.echo(f"Topic '{topic_name}' deleted successfully")
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
 
 
 @kafka_group.command(name="describe-consumer-group")
 @click.option('--group-name', default="logging-group-default", help='Specify a group name to describe')
 @click.pass_obj
 def describe_group_command(ctx, group_name):
-    try:
-        result = ctx.kafka_service.describe_consumer_group(ctx.env.kafka, group_name=group_name)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
+    result = kafka_.describe_consumer_group(ctx.env.kafka, group_name=group_name)
+    click.echo(result.value)
 
 
 @kafka_group.command(name="describe-topic-records")
 @click.option('--topic-name', default="logging-traffic-topic", help='Specify a topic name to describe')
 @click.pass_obj
 def describe_topic_records_cmd(ctx, topic_name):
-    try:
-        result = ctx.kafka_service.describe_topic_records(ctx.env.kafka, topic_name=topic_name)
-        click.echo(result)
-    except MigrationAssistantError as e:
-        raise click.ClickException(str(e))
-
+    result = kafka_.describe_topic_records(ctx.env.kafka, topic_name=topic_name)
+    click.echo(result.value)
 
 # ##################### UTILITIES ###################
 
@@ -735,16 +630,16 @@ def completion(ctx, config_file, json, shell):
     if completion_class is None:
         click.echo(f"Error: {shell} shell is currently not supported", err=True)
         ctx.exit(1)
-    else:
-        try:
-            completion_script = completion_class(cli,
-                                                 {},
-                                                 "console",
-                                                 "_CONSOLE_COMPLETE").source()
-            click.echo(completion_script)
-        except RuntimeError as exc:
-            click.echo(f"Error: {exc}", err=True)
-            ctx.exit(1)
+
+    try:
+        completion_script = completion_class(lambda: cli(ctx, config_file, json),
+                                             {},
+                                             "console",
+                                             "_CONSOLE_COMPLETE").source()
+        click.echo(completion_script)
+    except RuntimeError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        ctx.exit(1)
 
 
 @cli.group(name="tuples")

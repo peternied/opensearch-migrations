@@ -7,11 +7,16 @@ from requests.exceptions import HTTPError
 from typing import Any, Dict, Optional
 
 from console_link.models.cluster import AuthMethod, Cluster, HttpMethod, NoSourceClusterDefinedError
-from console_link.models.command_result import CommandResult
 from console_link.models.command_runner import CommandRunner, CommandRunnerError, FlagOnlyArgument
 from console_link.models.schema_tools import contains_one_of
 from console_link.models.step_state import StepState
 from console_link.models.utils import DEFAULT_SNAPSHOT_REPO_NAME
+from console_link.domain.exceptions.snapshot_errors import (
+    SnapshotCreationError,
+    SnapshotNotStartedError,
+    SnapshotStatusUnavailableError,
+    SourceClusterNotDefinedError
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,27 +63,27 @@ class Snapshot(ABC):
         self.otel_endpoint = config.get("otel_endpoint", None)
 
     @abstractmethod
-    def create(self, *args, **kwargs) -> CommandResult:
+    def create(self, *args, **kwargs) -> str:
         """Create a snapshot."""
         pass
 
     @abstractmethod
-    def status(self, *args, **kwargs) -> CommandResult:
+    def status(self, *args, **kwargs) -> str:
         """Get the status of the snapshot."""
         pass
 
     @abstractmethod
-    def delete(self, *args, **kwargs) -> CommandResult:
+    def delete(self, *args, **kwargs) -> None:
         """Delete a snapshot."""
         pass
 
     @abstractmethod
-    def delete_all_snapshots(self, *args, **kwargs) -> CommandResult:
+    def delete_all_snapshots(self, *args, **kwargs) -> None:
         """Delete all snapshots in the snapshot repository."""
         pass
 
     @abstractmethod
-    def delete_snapshot_repo(self, *args, **kwargs) -> CommandResult:
+    def delete_snapshot_repo(self, *args, **kwargs) -> None:
         """Delete a snapshot repository."""
         pass
 
@@ -127,9 +132,9 @@ class S3Snapshot(Snapshot):
         self.s3_region = config['s3']['aws_region']
         self.s3_endpoint = config['s3'].get('endpoint')
 
-    def create(self, *args, **kwargs) -> CommandResult:
+    def create(self, *args, **kwargs) -> str:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError
+            raise SourceClusterNotDefinedError()
         base_command = "/root/createSnapshot/bin/CreateSnapshot"
 
         s3_command_args = {
@@ -160,35 +165,34 @@ class S3Snapshot(Snapshot):
         try:
             command_runner.run()
             logger.info(f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
-            return CommandResult(success=True,
-                                 value=f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
+            return f"Snapshot {self.config['snapshot_name']} creation initiated successfully"
         except CommandRunnerError as e:
             logger.debug(f"Failed to create snapshot: {str(e)}")
-            return CommandResult(success=False, value=f"Failed to create snapshot: {str(e)}")
+            raise SnapshotCreationError(f"Failed to create snapshot: {str(e)}")
 
-    def status(self, *args, deep_check=False, **kwargs) -> CommandResult:
+    def status(self, *args, deep_check=False, **kwargs) -> str:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError()
+            raise SourceClusterNotDefinedError()
 
         return get_snapshot_status(self.source_cluster, self.snapshot_name, self.snapshot_repo_name, deep_check)
 
-    def delete(self, *args, **kwargs) -> CommandResult:
+    def delete(self, *args, **kwargs) -> None:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError()
+            raise SourceClusterNotDefinedError()
 
-        return delete_snapshot(self.source_cluster, self.snapshot_name, self.snapshot_repo_name)
+        delete_snapshot(self.source_cluster, self.snapshot_name, self.snapshot_repo_name)
 
-    def delete_all_snapshots(self, *args, **kwargs) -> CommandResult:
+    def delete_all_snapshots(self, *args, **kwargs) -> None:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError()
+            raise SourceClusterNotDefinedError()
 
-        return delete_all_snapshots(self.source_cluster, self.snapshot_repo_name)
+        delete_all_snapshots(self.source_cluster, self.snapshot_repo_name)
 
-    def delete_snapshot_repo(self, *args, **kwargs) -> CommandResult:
+    def delete_snapshot_repo(self, *args, **kwargs) -> None:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError()
+            raise SourceClusterNotDefinedError()
 
-        return delete_snapshot_repo(self.source_cluster, self.snapshot_repo_name)
+        delete_snapshot_repo(self.source_cluster, self.snapshot_repo_name)
 
 
 class FileSystemSnapshot(Snapshot):
@@ -196,9 +200,9 @@ class FileSystemSnapshot(Snapshot):
         super().__init__(config, source_cluster)
         self.repo_path = config['fs']['repo_path']
 
-    def create(self, *args, **kwargs) -> CommandResult:
+    def create(self, *args, **kwargs) -> str:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError
+            raise SourceClusterNotDefinedError()
         base_command = "/root/createSnapshot/bin/CreateSnapshot"
 
         command_args = self._collect_universal_command_args()
@@ -217,35 +221,34 @@ class FileSystemSnapshot(Snapshot):
         try:
             command_runner.run()
             logger.info(f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
-            return CommandResult(success=True,
-                                 value=f"Snapshot {self.config['snapshot_name']} creation initiated successfully")
+            return f"Snapshot {self.config['snapshot_name']} creation initiated successfully"
         except CommandRunnerError as e:
             logger.debug(f"Failed to create snapshot: {str(e)}")
-            return CommandResult(success=False, value=f"Failed to create snapshot: {str(e)}")
+            raise SnapshotCreationError(f"Failed to create snapshot: {str(e)}")
 
-    def status(self, *args, deep_check=False, **kwargs) -> CommandResult:
+    def status(self, *args, deep_check=False, **kwargs) -> str:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError()
+            raise SourceClusterNotDefinedError()
 
         return get_snapshot_status(self.source_cluster, self.snapshot_name, self.snapshot_repo_name, deep_check)
 
-    def delete(self, *args, **kwargs) -> CommandResult:
+    def delete(self, *args, **kwargs) -> None:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError()
+            raise SourceClusterNotDefinedError()
 
-        return delete_snapshot(self.source_cluster, self.snapshot_name, self.snapshot_repo_name)
+        delete_snapshot(self.source_cluster, self.snapshot_name, self.snapshot_repo_name)
 
-    def delete_all_snapshots(self, *args, **kwargs) -> CommandResult:
+    def delete_all_snapshots(self, *args, **kwargs) -> None:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError()
+            raise SourceClusterNotDefinedError()
 
-        return delete_all_snapshots(self.source_cluster, self.snapshot_repo_name)
+        delete_all_snapshots(self.source_cluster, self.snapshot_repo_name)
 
-    def delete_snapshot_repo(self, *args, **kwargs) -> CommandResult:
+    def delete_snapshot_repo(self, *args, **kwargs) -> None:
         if not self.source_cluster:
-            raise NoSourceClusterDefinedError()
+            raise SourceClusterNotDefinedError()
 
-        return delete_snapshot_repo(self.source_cluster, self.snapshot_repo_name)
+        delete_snapshot_repo(self.source_cluster, self.snapshot_repo_name)
 
 
 def format_date(millis: int) -> str:
@@ -267,12 +270,6 @@ class SnapshotStateAndDetails:
         self.details = details
 
 
-class SnapshotNotStarted(Exception):
-    pass
-
-
-class SnapshotStatusUnavailable(Exception):
-    pass
 
 
 class SnapshotStatus(BaseModel):
@@ -402,12 +399,12 @@ def get_latest_snapshot_status_raw(cluster: Cluster,
         logging.debug(f"Raw get snapshot status response: {response.text}")
         response.raise_for_status()
     except HTTPError:
-        raise SnapshotNotStarted()
+        raise SnapshotNotStartedError()
 
     snapshot_data = response.json()
     snapshots = snapshot_data.get('snapshots', [])
     if not snapshots:
-        raise SnapshotNotStarted()
+        raise SnapshotNotStartedError()
     
     snapshot_info = snapshots[0]
     state = snapshot_info.get("state")
@@ -420,8 +417,11 @@ def get_latest_snapshot_status_raw(cluster: Cluster,
         logging.debug(f"Raw get snapshot status full response: {response.text}")
         response.raise_for_status()
     except HTTPError:
-        raise SnapshotStatusUnavailable()
+        raise SnapshotStatusUnavailableError()
 
+    snapshot_data = response.json()
+    snapshots = snapshot_data.get('snapshots', [])
+    if not snapshots or not snapshots[0]:
     snapshot_data = response.json()
     snapshots = snapshot_data.get('snapshots', [])
     if not snapshots or not snapshots[0]:

@@ -4,8 +4,6 @@ import logging
 import sys
 from typing import Any, Dict, List, Optional
 
-from console_link.models.command_result import CommandResult
-
 logger = logging.getLogger(__name__)
 
 FlagOnlyArgument = None
@@ -27,7 +25,7 @@ class CommandRunner:
         self.run_as_detached = run_as_detatched
         self.log_file = log_file
 
-    def run(self, print_to_console=True, print_on_error=False, stream_output=False) -> CommandResult:
+    def run(self, print_to_console=True, print_on_error=False, stream_output=False) -> str:
         if self.run_as_detached:
             if self.log_file is None:
                 raise ValueError("log_file must be provided for detached mode")
@@ -66,7 +64,7 @@ class CommandRunner:
             else:
                 logger.debug(log_message_err)
 
-    def _run_as_synchronous_process(self, print_to_console: bool, print_on_error: bool) -> CommandResult:
+    def _run_as_synchronous_process(self, print_to_console: bool, print_on_error: bool) -> str:
         try:
             cmd_output = subprocess.run(self.command,
                                         stdout=subprocess.PIPE,
@@ -74,12 +72,12 @@ class CommandRunner:
                                         text=True,
                                         check=True)
             self.print_output_if_enabled(holder=cmd_output, should_print=print_to_console, is_error=False)
-            return CommandResult(success=True, value="Command executed successfully", output=cmd_output)
+            return "Command executed successfully"
         except subprocess.CalledProcessError as e:
             self.print_output_if_enabled(holder=e, should_print=print_on_error, is_error=True)
             raise CommandRunnerError(e.returncode, self.sanitized_command(), e.stdout, e.stderr)
 
-    def _run_as_streaming_process(self, print_to_console: bool = True) -> CommandResult:
+    def _run_as_streaming_process(self, print_to_console: bool = True) -> str:
         try:
             # Start process with pipes for real-time output
             process = subprocess.Popen(
@@ -104,7 +102,7 @@ class CommandRunner:
             return_code = process.wait()
             
             if return_code == 0:
-                return CommandResult(success=True, value="Command executed successfully")
+                return "Command executed successfully"
             else:
                 raise CommandRunnerError(return_code, self.sanitized_command())
                 
@@ -112,15 +110,14 @@ class CommandRunner:
             logger.error(f"Streaming command failed: {e}")
             raise CommandRunnerError(-1, self.sanitized_command(), None, str(e))
 
-    def _run_as_detached_process(self, log_file: str) -> CommandResult:
+    def _run_as_detached_process(self, log_file: str) -> str:
         try:
             with open(log_file, "w") as f:
                 # Start the process in detached mode
                 process = subprocess.Popen(self.command, stdout=f, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
                 logger.info(f"Process started with PID {process.pid}")
                 logger.info(f"Process logs available at {log_file}")
-                return CommandResult(success=True, value=f"Process started with PID {process.pid}\n"
-                                     f"Logs are being written to {log_file}")
+                return f"Process started with PID {process.pid}\nLogs are being written to {log_file}"
         except subprocess.CalledProcessError as e:
             raise CommandRunnerError(e.returncode, self.sanitized_command(), e.stdout, e.stderr)
 
