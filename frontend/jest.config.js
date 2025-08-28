@@ -19,5 +19,21 @@ module.exports = createJestConfig({
         "reportTitle": "jest-test-results"
       }
     ]
-  ]
+  ],
+  collectCoverageFrom: [
+    'src/**/*.{js,jsx,ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/mocks/**',
+    '!src/**/index.{js,ts}',
+    '!src/**/types.{js,ts}'
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70,
+      statements: 70
+    }
+  },
+  coverageReporters: ['text', 'lcov', 'json', 'html']
 });

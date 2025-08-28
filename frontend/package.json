@@ -10,6 +10,7 @@
     "lint:fix": "next lint --fix",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "openapi-ts": "openapi-ts"
   },
   "dependencies": {
