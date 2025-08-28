@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Alert, Box } from "@cloudscape-design/components";
+import MetadataMigrateView from "@/components/metadata/MetadataMigrateView"
 import WorkflowWizard, {
   WorkflowWizardStep,
 } from "@/components/common/WorkflowWizard";
@@ -30,13 +31,13 @@ function MetadataPageInner() {
   const steps: WorkflowWizardStep[] = [
     {
       title: "Metadata Evaluation",
-      description: "Review snapshot settings",
-      content: <Box>Placeholder</Box>,
+      description: "Review metadata actions",
+      content: <MetadataMigrateView dryRun={true} sessionName={sessionName}></MetadataMigrateView>,
     },
     {
       title: "Metadata Migration",
-      description: "Review snapshot settings",
-      content: <Box>Placeholder</Box>,
+      description: "Migrate metadata settings",
+      content: <MetadataMigrateView dryRun={false} sessionName={sessionName}></MetadataMigrateView>,
     },
   ];
 
