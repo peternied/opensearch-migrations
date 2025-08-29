@@ -1,4 +1,4 @@
-import { metadataMigrate } from "@/generated/api";
+import { metadataMigrate, snapshotCreate, snapshotDelete } from "@/generated/api";
 import { useCallback, useRef, useState } from "react";
 import { SessionPromise } from "./apiFetch";
 
@@ -54,4 +54,16 @@ export function useMetadataMigrateAction(dryRun: boolean) {
     },
     `metadata ${dryRun ? "evaluate" : "migrate"}`,
   );
+}
+
+export function useSnapshotCreateAction() {
+  return useAsyncAction(async (sessionName: string) => {
+    return await snapshotCreate({ path: { session_name: sessionName } });
+  }, "snapshot create");
+}
+
+export function useSnapshotDeleteAction() {
+  return useAsyncAction(async (sessionName: string) => {
+    return await snapshotDelete({ path: { session_name: sessionName } });
+  }, "snapshot delete");
 }
