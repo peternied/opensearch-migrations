@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Alert } from "@cloudscape-design/components";
 import MetadataMigrateView from "@/components/metadata/MetadataMigrateView";
 import WorkflowWizard, {
   WorkflowWizardStep,
 } from "@/components/common/WorkflowWizard";
+import { useRouter } from "next/navigation";
 
 export default function MetadataPage() {
   return (
@@ -17,6 +18,7 @@ export default function MetadataPage() {
 }
 
 function MetadataPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const sessionName = searchParams?.get("sessionName") ?? "";
 
@@ -27,6 +29,8 @@ function MetadataPageInner() {
       </Alert>
     );
   }
+
+  const onSubmit = () => useCallback(() => router.push(`/backfill?sessionName=${sessionName}`), [router]);
 
   const steps: WorkflowWizardStep[] = [
     {
@@ -56,6 +60,7 @@ function MetadataPageInner() {
       steps={steps}
       sessionName={sessionName}
       submitButtonText="Complete Metadata Migration"
+      onSubmit={onSubmit}
     />
   );
 }

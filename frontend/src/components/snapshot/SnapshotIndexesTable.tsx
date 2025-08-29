@@ -51,21 +51,9 @@ export default function SnapshotIndexesTable({
   const columnDefinitions: TableProps.ColumnDefinition<SnapshotIndex>[] = [
     {
       id: 'name', 
-      header: 'Index name', 
+      header: 'Index Name', 
       cell: (item) => item.name, 
       sortingField: "name"
-    },
-    {
-      id: 'documents',
-      header: 'Documents',
-      cell: (item) => item.document_count?.toLocaleString() ?? '-',
-      sortingField: "document_count"
-    },
-    {
-      id: 'size',
-      header: 'Size',
-      cell: (item) => formatBytes(item.size_bytes) ?? '-',
-      sortingField: "size_bytes"
     },
     {
       id: 'shards',
@@ -81,6 +69,19 @@ export default function SnapshotIndexesTable({
       header: 'Status',
       cell: (item) => renderStatus(item.name),
       sortingField: "status"
+    });
+  } else {
+    columnDefinitions.push({
+      id: 'documents',
+      header: 'Documents',
+      cell: (item) => item.document_count?.toLocaleString() ?? '-',
+      sortingField: "document_count"
+    });
+    columnDefinitions.push({
+      id: 'size',
+      header: 'Size',
+      cell: (item) => formatBytes(item.size_bytes) ?? '-',
+      sortingField: "size_bytes"
     });
   }
   

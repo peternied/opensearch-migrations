@@ -63,7 +63,9 @@ export default function SnapshotCreator({ sessionName }: SnapshotControllerProps
     <SpaceBetween size="l">
       {/* Prefer passing the already-polled data down to avoid double-polling */}
       <SnapshotStatusView
-        sessionName={sessionName}
+        isLoading={isStatusLoading}
+        data={snapshotStatus}
+        error={statusError}
       />
 
       {error && (
@@ -117,7 +119,7 @@ export default function SnapshotCreator({ sessionName }: SnapshotControllerProps
         <SnapshotIndexesTable
           indexes={indexes}
           maxHeight="300px"
-          showTotalsFooter={true}
+          showTotalsFooter={false}
           emptyText="No indexes were found in this snapshot."
           snapshotStatus={snapshotStatus}
         />

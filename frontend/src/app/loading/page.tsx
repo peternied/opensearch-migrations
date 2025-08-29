@@ -16,10 +16,11 @@ import { getSiteReadiness, setSiteReadiness } from "@/lib/site-readiness";
 import DebugCommands from "@/components/debug/DebugCommands";
 import Image from "next/image";
 import { usePollingSystemHealth } from "@/hooks/apiPoll";
-import router from "next/router";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 
 export default function LoadingPage() {
+  const router = useRouter();
   const [debugError, setDebugError] = useState<string | null>(null);
   const [debugIsReady, setDebugIsReady] = useState<boolean | null>(null);
 
@@ -38,7 +39,7 @@ export default function LoadingPage() {
       : debugIsReady;
   const errorMessage = debugError == null ? (error ?? null) : debugError;
 
-  const startMigration = () => router.push("/migration");
+  const startMigration = useCallback(() => router.push("/snapshot?sessionName=abc"), [router]);
 
   return (
     <SpaceBetween size="l">

@@ -1,13 +1,11 @@
 "use client";
 
 import { SessionStatusProps } from "../session/types";
-import StatusContainer from "../session/StatusContainer";
-import { MetadataDebugControls } from "./debug/MetadataDebugControls";
 import { useMetadataMigrateAction } from "@/hooks/apiAction";
 import { Alert, Box, Button, SpaceBetween, Table, TableProps, TextFilter } from "@cloudscape-design/components";
-import { ItemResult, MetadataClusterInfo } from "@/generated/api";
+import { ItemResult } from "@/generated/api";
 import { useCollection } from '@cloudscape-design/collection-hooks';
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 interface MetadataMigrateViewProps extends SessionStatusProps {
     readonly dryRun: boolean;
@@ -46,10 +44,10 @@ export default function MetadataMigrateView({
       ];
     }, [data]);
 
-    const columnDefinitions: TableProps.ColumnDefinition<ItemResultWithType>[] = [
+    const itemColumnDefinitions: TableProps.ColumnDefinition<ItemResultWithType>[] = [
     {
       id: 'name', 
-      header: 'Index name', 
+      header: 'Index Name', 
       cell: (item) => item.name, 
       sortingField: "name"
     },
@@ -65,12 +63,12 @@ export default function MetadataMigrateView({
       cell: (item) => item.successful,
       sortingField: "successful"
     },
-    {
-      id: 'error-type',
-      header: 'Error Type',
-      cell: (item) => item.failure?.type ?? "",
-      sortingField: "failure?.type"
-    },
+    // {
+    //   id: 'error-type',
+    //   header: 'Error Type',
+    //   cell: (item) => item.failure?.type ?? "",
+    //   sortingField: "failure?.type"
+    // },
     {
       id: 'error-details',
       header: 'Error Type',
@@ -79,15 +77,14 @@ export default function MetadataMigrateView({
     }
   ];
 
-
-  const metadataItemCollection = useCollection(metadataItems, {
+  const itemCollection = useCollection(metadataItems, {
     filtering: {
       empty: (
         <Box textAlign="center" color="inherit">
           <b>No items</b>
         </Box>
       ),
-      noMatch: <Box>No items match the filter criteria.</Box>
+      noMatch: <Box>No transformations match the filter criteria.</Box>
     },
     sorting: {
       defaultState: {
@@ -97,6 +94,54 @@ export default function MetadataMigrateView({
       } 
     }
   });
+
+  type Transformation = {
+    name: string,
+    description: string,
+  }
+    const transformations = useMemo(() => {
+      const list = data?.transformations?.transformers ?? [];
+        return list
+          .map(({ name, description }) => ({ name, description } as Transformation));
+      },
+      [data]
+    );
+
+    const transformationsColumnDefinitions: TableProps.ColumnDefinition<Transformation>[] = [
+    {
+      id: 'name', 
+      header: 'Name', 
+      cell: (item) => item.name, 
+      sortingField: "name"
+    },
+    {
+      id: 'description',
+      header: 'Description',
+      cell: (item) => item.description,
+      sortingField: "description"
+    }
+  ];
+
+
+  const transformationsCollection = useCollection(transformations, {
+    filtering: {
+      empty: (
+        <Box textAlign="center" color="inherit">
+          <b>No items</b>
+        </Box>
+      ),
+      noMatch: <Box>No transformations match the filter criteria.</Box>
+    },
+    sorting: {
+      defaultState: {
+        sortingColumn: {
+          sortingField: "name"
+        }
+      } 
+    }
+  });
+
+
 
   const maxHeight = "300px";
   return (
@@ -116,9 +161,9 @@ export default function MetadataMigrateView({
 
       <div style={{ maxHeight, overflow: 'auto' }}>
         <Table<ItemResultWithType>
-          {...metadataItemCollection.collectionProps}
-          columnDefinitions={columnDefinitions}
-          items={metadataItemCollection.items}
+          {...itemCollection.collectionProps}
+          columnDefinitions={itemColumnDefinitions}
+          items={itemCollection.items}
           empty={
             <Box textAlign="center" color="inherit">
               <b>No items</b>
@@ -127,8 +172,29 @@ export default function MetadataMigrateView({
           loading={isLoading}
           filter={
             <TextFilter
-              {...metadataItemCollection.filterProps}
+              {...itemCollection.filterProps}
               filteringPlaceholder="Find an item"
+            />
+          }
+          variant="borderless"
+          stickyHeader
+        />
+      </div>
+      <div style={{ maxHeight, overflow: 'auto' }}>
+        <Table<Transformation>
+          {...transformationsCollection.collectionProps}
+          columnDefinitions={transformationsColumnDefinitions}
+          items={transformationsCollection.items}
+          empty={
+            <Box textAlign="center" color="inherit">
+              <b>No items</b>
+            </Box>
+          }
+          loading={isLoading}
+          filter={
+            <TextFilter
+              {...transformationsCollection.filterProps}
+              filteringPlaceholder="Find a transformation"
             />
           }
           variant="borderless"

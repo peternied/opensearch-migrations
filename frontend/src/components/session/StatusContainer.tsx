@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import Header from '@cloudscape-design/components/header';
 import Container from '@cloudscape-design/components/container';
 import Alert from '@cloudscape-design/components/alert';
 import ExpandableSection from '@cloudscape-design/components/expandable-section';
-import { KeyValuePairs } from '@cloudscape-design/components';
+import { Button, KeyValuePairs } from '@cloudscape-design/components';
 import { StatusFieldDefinition, generateLoadingItems, generateDataItems } from './statusUtils';
+import { useRouter } from "next/navigation";
 
 interface StatusContainerProps<T> {
   readonly title: string;
@@ -15,6 +16,7 @@ interface StatusContainerProps<T> {
   readonly data: T | null;
   readonly fields: StatusFieldDefinition[];
   readonly columns?: number;
+  readonly goToLocation: string;
 }
 
 export default function StatusContainer<T>({
@@ -24,7 +26,9 @@ export default function StatusContainer<T>({
   data,
   fields,
   columns = 2,
+  goToLocation,
 }: StatusContainerProps<T>) {
+  const router = useRouter();
   const renderLoadingState = () => {
     return (
       <KeyValuePairs columns={columns} items={generateLoadingItems(fields)} />
@@ -49,8 +53,15 @@ export default function StatusContainer<T>({
     return null;
   };
 
+  const onClick = useCallback(() => router.push(goToLocation), [router])
   return (
-    <Container header={<Header variant="h2">{title}</Header>}>
+    <Container
+    header={<Header
+      variant="h2"
+      actions={(!!goToLocation && <Button variant='primary' onClick={onClick}>Go to {title}</Button>)}
+      >
+    {title}</Header>
+    }>
       {isLoading
         ? renderLoadingState()
         : data
