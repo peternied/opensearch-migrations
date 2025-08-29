@@ -1,12 +1,13 @@
 from enum import Enum
 from typing import Dict, Optional
 
+from console_link.models.snapshot import Snapshot
 from console_link.models.client_options import ClientOptions
 from console_link.models.replayer_docker import DockerReplayer
 from console_link.models.replayer_k8s import K8sReplayer
 from console_link.models.metrics_source import CloudwatchMetricsSource, PrometheusMetricsSource
 from console_link.models.backfill_base import Backfill
-from console_link.models.backfill_rfs import DockerRFSBackfill, ECSRFSBackfill, K8sRFSBackfill
+from console_link.models.backfill_rfs import ArgoRFSBackfill, DockerRFSBackfill, ECSRFSBackfill, K8sRFSBackfill
 from console_link.models.cluster import Cluster
 from console_link.models.kafka import MSK, StandardKafka
 from console_link.models.replayer_ecs import ECSReplayer
@@ -77,7 +78,7 @@ def get_kafka(config: Dict):
     raise UnsupportedKafkaError(', '.join(config.keys()))
 
 
-def get_backfill(config: Dict, target_cluster: Cluster,
+def get_backfill(config: Dict, target_cluster: Cluster, snapshot: Optional[Snapshot],
                  client_options: Optional[ClientOptions] = None) -> Backfill:
     if BackfillType.reindex_from_snapshot.name in config:
         if 'docker' in config[BackfillType.reindex_from_snapshot.name]:
@@ -89,6 +90,11 @@ def get_backfill(config: Dict, target_cluster: Cluster,
             return ECSRFSBackfill(config=config,
                                   target_cluster=target_cluster,
                                   client_options=client_options)
+        elif 'argo' in config[BackfillType.reindex_from_snapshot.name]:
+            return ArgoRFSBackfill(config=config,
+                                   snapshot=snapshot,
+                                   target_cluster=target_cluster,
+                                   client_options=client_options)
         elif 'k8s' in config[BackfillType.reindex_from_snapshot.name]:
             logger.debug("Creating K8s RFS backfill instance")
             return K8sRFSBackfill(config=config,

@@ -29,10 +29,11 @@ class ArgoService:
         self.argo_image = argo_image
         self.service_account = service_account
 
-    def start_workflow(self, workflow_template_name: str, parameters: Optional[Dict[str, Any]] = None) -> CommandResult:
+    def start_workflow(self, workflow_template_name: str, parameters: Optional[Dict[str, Any]] = None, 
+                       workflow_options: Optional[Dict[str, Any]] = None) -> CommandResult:
         try:
             # Create temporary workflow file
-            temp_file = self._create_workflow_yaml(workflow_template_name, parameters)
+            temp_file = self._create_workflow_yaml(workflow_template_name, parameters, workflow_options)
 
             # Use kubectl create to start the workflow
             kubectl_args = {
@@ -264,7 +265,8 @@ class ArgoService:
             logger.error(f"Kubectl command failed: {e}")
             raise
 
-    def _create_workflow_yaml(self, workflow_template_name: str, parameters: Optional[Dict[str, Any]] = None) -> str:
+    def _create_workflow_yaml(self, workflow_template_name: str, parameters: Optional[Dict[str, Any]] = None,
+                             workflow_options: Optional[Dict[str, Any]] = None) -> str:
         """Create a temporary workflow YAML file based on the template structure."""
         workflow_data = {
             "apiVersion": "argoproj.io/v1alpha1",
@@ -276,9 +278,15 @@ class ArgoService:
                 "workflowTemplateRef": {
                     "name": workflow_template_name
                 },
-                "entrypoint": "main"
+                "entrypoint": workflow_options.get("entrypoint", "main") if workflow_options else "main"
             }
         }
+        
+        # Apply any additional workflow options
+        if workflow_options:
+            for key, value in workflow_options.items():
+                if key != "entrypoint":  # We already handled entrypoint above
+                    workflow_data["spec"][key] = value
         
         # Add parameters if provided
         if parameters:

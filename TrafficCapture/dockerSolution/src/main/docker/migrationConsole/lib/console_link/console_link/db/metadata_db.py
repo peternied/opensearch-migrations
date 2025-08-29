@@ -44,5 +44,9 @@ def create_entry(entry: MetadataEntry):
     _metadata_results_table.insert(entry.model_dump())
 
 
+def clear_all():
+    _metadata_results_table.truncate()
+
+
 class MetadataNotAvailable(Exception):
     pass
