@@ -45,7 +45,13 @@ export function useAsyncAction<T>(
 }
 
 export function useMetadataMigrateAction(dryRun: boolean) {
-  return useAsyncAction(async (sessionName: string) => {
-    return await metadataMigrate({ path: { session_name: sessionName }, body: { dryRun } });
-  }, `metadata ${dryRun ? "evaluate" : "migrate" }}`);
+  return useAsyncAction(
+    async (sessionName: string) => {
+      return await metadataMigrate({
+        path: { session_name: sessionName },
+        body: { dryRun },
+      });
+    },
+    `metadata ${dryRun ? "evaluate" : "migrate"}`,
+  );
 }
