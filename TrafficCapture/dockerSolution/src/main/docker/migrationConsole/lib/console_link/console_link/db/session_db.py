@@ -1,42 +1,30 @@
 import re
 from datetime import datetime, UTC
-from typing import Any, List, Optional
-from functools import wraps
 from threading import RLock
 from tinydb import TinyDB, Query
+from typing import Any, List, Optional
 
+from console_link.db.utils import with_lock
 from console_link.models.session import Session
 
-DB_PATH = "sessions_db.json"
-db = TinyDB(DB_PATH)
-_sessions_table = db.table("sessions")
+_DB = TinyDB("sessions_db.json")
+_TABLE = _DB.table("sessions")
 _LOCK = RLock()
+_QUERY = Query()
 
 
-# Helper decorator to keep code tidy
-def with_lock(fn):
-    @wraps(fn)
-    def _wrapped(*args, **kwargs):
-        with _LOCK:
-            return fn(*args, **kwargs)
-    return _wrapped
-
-
-session_query = Query()
-
-
-@with_lock
+@with_lock(_LOCK)
 def all_sessions() -> List[Session]:
-    sessions = _sessions_table.all()
+    sessions = _TABLE.all()
     return [Session.model_validate(session) for session in sessions]
 
 
-@with_lock
+@with_lock(_LOCK)
 def find_session(session_name: str) -> Optional[dict]:
-    return _sessions_table.get(session_query.name == session_name)
+    return _TABLE.get(_QUERY.name == session_name)
 
 
-@with_lock
+@with_lock(_LOCK)
 def create_session(session: Session):
     def is_url_safe(name: str) -> bool:
         return re.match(r'^[a-zA-Z0-9_\-]+$', name) is not None
@@ -51,26 +39,26 @@ def create_session(session: Session):
         raise SessionNameContainsInvalidCharacters()
 
     # Existence check and insert protected by the same lock for atomicity
-    if _sessions_table.get(session_query.name == session.name):
+    if _TABLE.get(_QUERY.name == session.name):
         raise SessionAlreadyExists()
 
-    _sessions_table.insert(session.model_dump())
+    _TABLE.insert(session.model_dump())
 
 
-@with_lock
+@with_lock(_LOCK)
 def update_session(session: Session):
     session.updated = datetime.now(UTC)
-    _sessions_table.update(session.model_dump(), session_query.name == session.name)
+    _TABLE.update(session.model_dump(), _QUERY.name == session.name)
 
 
-@with_lock
+@with_lock(_LOCK)
 def delete_session(session_name: str):
-    removed = _sessions_table.remove(session_query.name == session_name)
+    removed = _TABLE.remove(_QUERY.name == session_name)
     if not removed:
         raise SessionNotFound()
 
 
-@with_lock
+@with_lock(_LOCK)
 def existence_check(session: Any) -> Session:
     if not session:
         raise SessionNotFound()
