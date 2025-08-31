@@ -8,7 +8,7 @@ from console_link.models.replayer_k8s import K8sReplayer
 from console_link.models.metrics_source import CloudwatchMetricsSource, PrometheusMetricsSource
 from console_link.models.backfill_base import Backfill
 from console_link.models.backfill_rfs import ArgoRFSBackfill, DockerRFSBackfill, ECSRFSBackfill, K8sRFSBackfill
-from console_link.models.cluster import Cluster
+from console_link.models.cluster import Cluster, NoTargetClusterDefinedError
 from console_link.models.kafka import MSK, StandardKafka
 from console_link.models.replayer_ecs import ECSReplayer
 from console_link.models.snapshot import FileSystemSnapshot, S3Snapshot
@@ -78,28 +78,34 @@ def get_kafka(config: Dict):
     raise UnsupportedKafkaError(', '.join(config.keys()))
 
 
-def get_backfill(config: Dict, target_cluster: Cluster, snapshot: Optional[Snapshot],
+def get_backfill(config: Dict, target_cluster: Optional[Cluster] = None, snapshot: Optional[Snapshot] = None,
                  client_options: Optional[ClientOptions] = None) -> Backfill:
-    if BackfillType.reindex_from_snapshot.name in config:
-        if 'docker' in config[BackfillType.reindex_from_snapshot.name]:
-            logger.debug("Creating Docker RFS backfill instance")
-            return DockerRFSBackfill(config=config,
-                                     target_cluster=target_cluster)
-        elif 'ecs' in config[BackfillType.reindex_from_snapshot.name]:
-            logger.debug("Creating ECS RFS backfill instance")
-            return ECSRFSBackfill(config=config,
-                                  target_cluster=target_cluster,
-                                  client_options=client_options)
-        elif 'argo' in config[BackfillType.reindex_from_snapshot.name]:
-            return ArgoRFSBackfill(config=config,
-                                   snapshot=snapshot,
-                                   target_cluster=target_cluster,
-                                   client_options=client_options)
-        elif 'k8s' in config[BackfillType.reindex_from_snapshot.name]:
-            logger.debug("Creating K8s RFS backfill instance")
-            return K8sRFSBackfill(config=config,
-                                  target_cluster=target_cluster,
-                                  client_options=client_options)
+    if BackfillType.reindex_from_snapshot.name not in config:
+        logger.error(f"An unsupported backfill source type was provided: {config.keys()}")
+        raise UnsupportedBackfillTypeError(', '.join(config.keys()))
+        
+    if not target_cluster:
+        raise NoTargetClusterDefinedError()
+
+    if 'docker' in config[BackfillType.reindex_from_snapshot.name]:
+        logger.debug("Creating Docker RFS backfill instance")
+        return DockerRFSBackfill(config=config,
+                                 target_cluster=target_cluster)
+    elif 'ecs' in config[BackfillType.reindex_from_snapshot.name]:
+        logger.debug("Creating ECS RFS backfill instance")
+        return ECSRFSBackfill(config=config,
+                              target_cluster=target_cluster,
+                              client_options=client_options)
+    elif 'argo' in config[BackfillType.reindex_from_snapshot.name]:
+        return ArgoRFSBackfill(config=config,
+                               snapshot=snapshot,
+                               target_cluster=target_cluster,
+                               client_options=client_options)
+    elif 'k8s' in config[BackfillType.reindex_from_snapshot.name]:
+        logger.debug("Creating K8s RFS backfill instance")
+        return K8sRFSBackfill(config=config,
+                              target_cluster=target_cluster,
+                              client_options=client_options)
 
     logger.error(f"An unsupported backfill source type was provided: {config.keys()}")
     raise UnsupportedBackfillTypeError(', '.join(config.keys()))

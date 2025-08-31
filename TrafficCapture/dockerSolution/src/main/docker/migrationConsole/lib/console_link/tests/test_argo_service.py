@@ -107,7 +107,7 @@ def test_start_workflow_success(mock_unlink, mock_wait, mock_create_yaml, mock_k
     # Verify
     assert result.success is True
     assert result.value == "test-workflow-123"
-    mock_create_yaml.assert_called_once_with("test-template", {"param1": "value1"})
+    mock_create_yaml.assert_called_once_with("test-template", {"param1": "value1"}, None)
     mock_kubectl.assert_called_once()
     mock_wait.assert_called_once_with(workflow_name="test-workflow-123")
     mock_unlink.assert_called_once_with("/tmp/test-workflow.yaml")
