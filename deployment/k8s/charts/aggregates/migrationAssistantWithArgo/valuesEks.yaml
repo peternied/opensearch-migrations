@@ -1,0 +1,63 @@
+conditionalPackageInstalls:
+  localstack: false
+
+aws:
+  configureAwsEksResources: true
+  region: ""
+  account: ""
+
+defaultBucketConfiguration:
+  useLocalStack: false
+  deleteOnUninstall: true
+  emptyBeforeDelete: true
+  endpoint: ""
+
+# Useful for updating images while developing
+#images:
+#  captureProxy:
+#    pullPolicy: Always
+#  trafficReplayer:
+#    pullPolicy: Always
+#  reindexFromSnapshot:
+#    pullPolicy: Always
+#  migrationConsole:
+#    pullPolicy: Always
+#  installer:
+#    pullPolicy: Always
+
+charts:
+  fluent-bit:
+    values:
+      env:
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: aws-metadata
+              key: AWS_REGION
+        - name: STAGE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: aws-metadata
+              key: STAGE_NAME
+
+      config:
+        # Change output destination to be CloudWatch
+        outputs: |
+          [OUTPUT]
+              Name                cloudwatch_logs
+              Match               fluentbit-*
+              region              ${AWS_REGION}
+              log_group_name      /migration-assistant-${STAGE_NAME}-${AWS_REGION}/logs
+              log_stream_prefix   from-
+              auto_create_group   true
+
+      # Remove logs PVC mount for EKS deployment
+      extraVolumes:
+        - name: lua-scripts
+          configMap:
+            name: fluentbit-lua-scripts
+
+      extraVolumeMounts:
+        - name: lua-scripts
+          mountPath: /fluentbit/scripts
+          readOnly: true

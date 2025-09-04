@@ -26,6 +26,18 @@ conditionalPackageInstalls:
   jaeger: true
 
 images:
+  captureProxy:
+    repository: migrations/capture_proxy
+    tag: latest
+    pullPolicy: IfNotPresent
+  trafficReplayer:
+    repository: migrations/traffic_replayer
+    tag: latest
+    pullPolicy: IfNotPresent
+  reindexFromSnapshot:
+    repository: migrations/reindex_from_snapshot
+    tag: latest
+    pullPolicy: IfNotPresent
   migrationConsole:
     repository: migrations/migration_console
     tag: latest
@@ -35,15 +47,24 @@ images:
     tag: latest
     pullPolicy: IfNotPresent
 
+# Default AWS values are dummy values for LocalStack usage
 aws:
-  eksEnabled: false
-
-snapshotBucketConfiguration:
-  create: true
-  bucketName: snapshot
+  configureAwsEksResources: false
   region: us-east-2
+  account: "123456789012"
+
+stageName: dev
+developerModeEnabled: false
+
+defaultBucketConfiguration:
+  create: true
+  deleteOnUninstall: true
+  emptyBeforeDelete: true
   useLocalStack: true
   endpoint: localstack
+  serviceAccountName: "migrations-service-account"
+  bucketOperationImage: "amazon/aws-cli:2.25.11"
+  bucketOperationImagePullPolicy: "IfNotPresent"
 
 logs:
   sharedLogsVolume:
@@ -57,7 +78,7 @@ logs:
 installer:
   serviceAccount:
     create: true
-    name: "helm-installer"
+    name: "migrations-service-account"
   rbac:
     create: true
 
@@ -75,7 +96,7 @@ extraOtelConfiguration:
 charts:
 
   # Coordinate workflows, maybe RFS, maybe more
-  - name: etcd
+  etcd:
     version: "11.2.1"
     repository: "https://charts.bitnami.com/bitnami"
     values:
@@ -119,14 +140,14 @@ charts:
         fsGroup: 1001
         runAsUser: 1001
 
-  - name: cert-manager
+  cert-manager:
     version: 1.17.2
     repository: https://charts.jetstack.io
     values:
       crds:
         enabled: true
 
-  - name: opentelemetry-operator
+  opentelemetry-operator:
     version: "0.86.4"
     repository: "https://open-telemetry.github.io/opentelemetry-helm-charts"
     timeout: 300
@@ -145,7 +166,7 @@ charts:
           tag: "0.43.2"
 
 
-  - name: strimzi-kafka-operator
+  strimzi-kafka-operator:
     version: 0.45.0
     repository: "https://strimzi.io/charts/"
     values:
@@ -188,7 +209,7 @@ charts:
           timeoutSeconds: 3
           failureThreshold: 1
 
-  - name: argo-workflows
+  argo-workflows:
     version: "0.45.11"
     repository: "https://argoproj.github.io/argo-helm"
     values:
@@ -225,7 +246,7 @@ charts:
           create: false
           name: argo-workflow-executor
 
-  - name: fluent-bit
+  fluent-bit:
     version: "0.49.0"
     repository: "https://fluent.github.io/helm-charts"
     values:
@@ -252,52 +273,114 @@ charts:
           readOnly: true
 
       config:
+        customParsers: |
+          [PARSER]
+              Name               logfmt_parser
+              Format             logfmt
+          
+          [PARSER]
+              Name               java_log_parser
+              Format             regex
+              Regex              ^(?<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) (?<level>[A-Z]+)\s+(?<source>[\w\d]+:\d+) - (?<msg>.*)$
+              Time_Key           time
+              Time_Format        %Y-%m-%d %H:%M:%S
+    
+
         inputs: |
           [INPUT]
-              Name             tail
-              Tag              kube.*
-              Path             /var/log/containers/*.log
-              multiline.parser docker, cri
-              Refresh_Interval 5
-              Mem_Buf_Limit    5MB
-              Skip_Long_Lines  Off
-              Skip_Empty_Lines On
+              Name               tail
+              Tag                kube.*
+              Path               /var/log/containers/*.log
+              multiline.parser   docker, cri
+              Refresh_Interval   5
+              Mem_Buf_Limit      5MB
+              Skip_Long_Lines    Off
+              Skip_Empty_Lines   On
 
         filters: |
           [FILTER]
-              Name             kubernetes
-              Match            kube.*
-              Kube_URL         https://kubernetes.default.svc:443
-              Kube_CA_File     /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-              Kube_Token_File  /var/run/secrets/kubernetes.io/serviceaccount/token
-              Kube_Tag_Prefix  kube.var.log.containers.
-              Merge_Log        On
-              Merge_Log_Key    log_processed
+              Name               kubernetes
+              Match              kube.*
+              Kube_URL           https://kubernetes.default.svc:443
+              Kube_CA_File       /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+              Kube_Token_File    /var/run/secrets/kubernetes.io/serviceaccount/token
+              Kube_Tag_Prefix    kube.var.log.containers.
+              Merge_Log          On
+              Merge_Log_Key      log_processed
+              Annotations        Off
           
           [FILTER]
-              Name          rewrite_tag
-              Match         kube.*
-              Rule          $kubernetes['pod_name'] ^(.*)$ $kubernetes['pod_name'] false
-              Emitter_Name  re_emitted
+              Name               rewrite_tag
+              Match              kube.*
+              Rule               $kubernetes['pod_name'] ^(.*)$ fluentbit-$1 false
+              Emitter_Name       re_emitted
           
           [FILTER]
-              Name          lua
-              Match         *
-              script        /fluentbit/scripts/trim.lua
-              call          trim_log
+              Name               parser
+              Match_Regex        ^fluentbit-argo-.*$|^fluentbit-.*-(etcd|run-console|latch|create-rs|delete-rs)-.*$
+              Key_Name           log
+              Parser             logfmt_parser
+              Preserve_Key       On
+              Reserve_Data       On
+      
+          [FILTER]
+              Name               parser
+              Match              fluentbit-*-reindex-from-snapshot-*
+              Key_Name           log
+              Parser             java_log_parser
+              Preserve_Key       On
+              Reserve_Data       On
+          
+          [FILTER]
+              Name               lua
+              Match              fluentbit-*
+              script             /fluentbit/scripts/trim.lua
+              call               trim_log
+    
+          [FILTER]
+              Name               nest
+              Match              fluentbit-*
+              Operation          lift
+              Nested_under       kubernetes
+
+          [FILTER]
+              Name               nest
+              Match              fluentbit-*
+              Operation          lift
+              Nested_under       labels
+          
+          [FILTER]
+              Name               modify
+              Match              fluentbit-*
+              Rename             container_name container
+              Rename             container_image image
+              Rename             pod_name pod
+              Rename             namespace_name namespace
+              Rename             workflows.argoproj.io/workflow workflow
+              Remove             _p
+              Remove             docker_id
+              Remove             container_hash
+              Remove             pod-template-hash
+              Remove             workflows.argoproj.io/completed
+              Remove_regex       ^app\.kubernetes\.io
+              Remove_regex       ^batch\.kubernetes\.io
+              Move_to_start      log
 
         outputs: |
           [OUTPUT]
-              Name          file
-              Match         *
-              Path          /shared_logs
-              Format        ${OUTPUT_FORMAT}
-              Template      {log}
+              Name               file
+              Match              fluentbit-*
+              Path               /shared_logs
+              Format             ${OUTPUT_FORMAT}
+              Template           {log}
 
+      serviceAccount:
+        create: false
+        name: migrations-service-account
 
   # Will likely be required for auto-scaling.
   # Notice that we don't install otel-collector yet, so we can't take advantage of this anyway.
-  - name: kube-prometheus-stack
+  kube-prometheus-stack:
     version: "72.0.0"
     repository: "https://prometheus-community.github.io/helm-charts"
     values:
@@ -373,7 +456,7 @@ charts:
 #      constraintViolationsLimit: 20
 #      enableExternalData: true
 
-  - name: localstack
+  localstack:
     version: "0.6.23"  # Or whichever version you want to use
     repository: "https://localstack.github.io/helm-charts"
     values:
@@ -381,7 +464,7 @@ charts:
         repository: "localstack/localstack"
         tag: "4.3.0"
 
-  - name: grafana
+  grafana:
     version: "8.15.0"
     repository: "https://grafana.github.io/helm-charts"
     values:
@@ -410,7 +493,7 @@ charts:
 #          enabled: true
 #          label: grafana_dashboard
 
-  - name: jaeger
+  jaeger:
     version: "3.2.0"
     repository: "https://jaegertracing.github.io/helm-charts"
     values:

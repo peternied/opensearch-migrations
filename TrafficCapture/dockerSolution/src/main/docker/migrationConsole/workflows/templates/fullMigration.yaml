@@ -17,12 +17,12 @@ spec:
         value: "root"
       - name: etcd-password
         value: "password"
-      - name: etcd-image
-        value: "migrations/migration_console:latest"
       - name: demo-max-sleep-time
         value: "60"
       - name: s3-snapshot-configmap
-        value: "s3-snapshot-config"
+        value: "migrations-default-s3-config"
+      - name: migration-image-configmap
+        value: "migration-image-config"
 
   templates:
     # Main workflow template
@@ -44,6 +44,61 @@ spec:
                {"endpoint":"https://opensearch-cluster-master-headless:9200","allow_insecure":true,"basic_auth":{"username":"admin","password":"admin"}}
               ]
       steps:
+        - - name: get-image-map
+            template: get-image-map-from-args
+            arguments:
+              parameters:
+                - name: capture-proxy-image
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: captureProxyImage
+                - name: capture-proxy-pull-policy
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: captureProxyPullPolicy
+                - name: traffic-replayer-image
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: trafficReplayerImage
+                - name: traffic-replayer-pull-policy
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: trafficReplayerPullPolicy
+                - name: reindex-from-snapshot-image
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: reindexFromSnapshotImage
+                - name: reindex-from-snapshot-pull-policy
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: reindexFromSnapshotPullPolicy
+                - name: migration-console-image
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: migrationConsoleImage
+                - name: migration-console-pull-policy
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: migrationConsolePullPolicy
+                - name: etcd-utils-image
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: migrationConsoleImage
+                - name: etcd-utils-pull-policy
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: migrationConsolePullPolicy
+
         - - name: get-configs-from-maps
             template: get-configs-from-args
             arguments:
@@ -58,11 +113,22 @@ spec:
                     configMapKeyRef:
                       name: "{{workflow.parameters.s3-snapshot-configmap}}"
                       key: ENDPOINT
-                - name: repo-uri
+                - name: bucket-name
                   valueFrom:
                     configMapKeyRef:
                       name: "{{workflow.parameters.s3-snapshot-configmap}}"
-                      key: repo_uri
+                      key: BUCKET_NAME
+                - name: migration-console-image
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: migrationConsoleImage
+                - name: migration-console-pull-policy
+                  valueFrom:
+                    configMapKeyRef:
+                      name: "{{workflow.parameters.migration-image-configmap}}"
+                      key: migrationConsolePullPolicy
+
         - - name: main-direct
             template: main-direct
             arguments:
@@ -73,25 +139,90 @@ spec:
                   value: "{{inputs.parameters.targets}}"
                 - name: s3-config
                   value: "{{steps.get-configs-from-maps.outputs.parameters.s3-config}}"
+                - name: image-config
+                  value: "{{steps.get-image-map.outputs.parameters.image-config}}"
+                - name: localstack-enabled
+                  value: "{{steps.get-configs-from-maps.outputs.parameters.is-localstack-endpoint}}"
+
 
     - name: get-configs-from-args
-      steps: [[]]
       inputs:
         parameters:
           - name: aws-region
           - name: s3-endpoint
-          - name: repo-uri
+          - name: bucket-name
+          - name: migration-console-image
+          - name: migration-console-pull-policy
+      steps:
+        - - name: resolve-s3-endpoint
+            templateRef:
+              name: localstack-helper
+              template: resolve-s3-endpoint
+            arguments:
+              parameters:
+                - name: s3-endpoint
+                  value: "{{inputs.parameters.s3-endpoint}}"
+                - name: migration-console-image
+                  value: "{{inputs.parameters.migration-console-image}}"
+                - name: migration-console-pull-policy
+                  value: "{{inputs.parameters.migration-console-pull-policy}}"
       outputs:
         parameters:
           - name: s3-config
             valueFrom:
-              # add this too... '"endpoint": "' + inputs.parameters['s3-endpoint'] + '", ' +
               expression: >- 
                 '{' + 
                   '"aws_region": "' + inputs.parameters['aws-region'] + '", ' + 
-                  '"endpoint": "' + inputs.parameters['s3-endpoint'] + '", ' + 
-                  '"repo_uri": "s3://' + inputs.parameters['repo-uri'] + '"' +
+                  '"endpoint": "' + steps['resolve-s3-endpoint'].outputs.parameters['resolved-s3-endpoint'] + '", ' + 
+                  '"repo_uri": "s3://' + inputs.parameters['bucket-name'] + '"' +
                 '}'
+          - name: is-localstack-endpoint
+            valueFrom:
+              expression: >-
+                steps['resolve-s3-endpoint'].outputs.parameters['is-localstack-endpoint']
+
+    - name: get-image-map-from-args
+      inputs:
+        parameters:
+          - name: capture-proxy-image
+          - name: capture-proxy-pull-policy
+          - name: traffic-replayer-image
+          - name: traffic-replayer-pull-policy
+          - name: reindex-from-snapshot-image
+          - name: reindex-from-snapshot-pull-policy
+          - name: migration-console-image
+          - name: migration-console-pull-policy
+          - name: etcd-utils-image
+          - name: etcd-utils-pull-policy
+      outputs:
+        parameters:
+          - name: image-config
+            valueFrom:
+              expression: >-
+                '{' +
+                  '"capture-proxy": {' +
+                    '"image": "' + inputs.parameters['capture-proxy-image'] + '", ' +
+                    '"pull-policy": "' + inputs.parameters['capture-proxy-pull-policy'] + '"' +
+                  '}, ' +
+                  '"traffic-replayer": {' +
+                    '"image": "' + inputs.parameters['traffic-replayer-image'] + '", ' +
+                    '"pull-policy": "' + inputs.parameters['traffic-replayer-pull-policy'] + '"' +
+                  '}, ' +
+                  '"reindex-from-snapshot": {' +
+                    '"image": "' + inputs.parameters['reindex-from-snapshot-image'] + '", ' +
+                    '"pull-policy": "' + inputs.parameters['reindex-from-snapshot-pull-policy'] + '"' +
+                  '}, ' +
+                  '"migration-console": {' +
+                    '"image": "' + inputs.parameters['migration-console-image'] + '", ' +
+                    '"pull-policy": "' + inputs.parameters['migration-console-pull-policy'] + '"' +
+                  '}, ' +
+                  '"etcd-utils": {' +
+                    '"image": "' + inputs.parameters['etcd-utils-image'] + '", ' +
+                    '"pull-policy": "' + inputs.parameters['etcd-utils-pull-policy'] + '"' +
+                  '}' +
+                '}'
+      steps: [[]]  # no-op
+
 
     # All configmaps from main have been resolved.  Use this version to bypass those global configurations.
     - name: main-direct
@@ -102,7 +233,8 @@ spec:
           - name: targets
             value: "[{\"endpoint\":\"https://t1.example.com\"}, {\"endpoint\":\"https://t2.example.com\"}]"
           - name: s3-config
-            #value: '{}'
+          - name: image-config
+          - name: localstack-enabled
       steps:
         - - name: init
             templateRef:
@@ -116,6 +248,10 @@ spec:
                   value: "{{inputs.parameters.targets}}"
                 - name: prefix
                   value: "workflow-{{workflow.uid}}"
+                - name: etcd-utils-image
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['etcd-utils']['image']}}"
+                - name: etcd-utils-pull-policy
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['etcd-utils']['pull-policy']}}"
 
         - - name: pipeline-source-migration
             template: pipeline-source-migration
@@ -130,6 +266,10 @@ spec:
                   value: "{{inputs.parameters.s3-config}}"
                 - name: latch-coordination-prefix
                   value: "{{steps.init.outputs.parameters.prefix}}"
+                - name: image-config
+                  value: "{{inputs.parameters.image-config}}"
+                - name: localstack-enabled
+                  value: "{{inputs.parameters.localstack-enabled}}"
 
         - - name: cleanup
             templateRef:
@@ -139,6 +279,10 @@ spec:
               parameters:
                 - name: prefix
                   value: "{{steps.init.outputs.parameters.prefix}}"
+                - name: etcd-utils-image
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['etcd-utils']['image']}}"
+                - name: etcd-utils-pull-policy
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['etcd-utils']['pull-policy']}}"
 
 
     # Unroll snapshotting and their dependent steps ('source-migration-configs')
@@ -149,6 +293,8 @@ spec:
           - name: targets
           - name: s3-config
           - name: latch-coordination-prefix
+          - name: image-config
+          - name: localstack-enabled
       steps:
         - - name: pipeline-snapshot
             template: pipeline-snapshot
@@ -167,6 +313,10 @@ spec:
                   value: "{{inputs.parameters.s3-config}}"
                 - name: latch-coordination-prefix
                   value: "{{inputs.parameters.latch-coordination-prefix}}"
+                - name: image-config
+                  value: "{{inputs.parameters.image-config}}"
+                - name: localstack-enabled
+                  value: "{{inputs.parameters.localstack-enabled}}"
 
     - name: pipeline-snapshot
       inputs:
@@ -177,6 +327,8 @@ spec:
           - name: source-pipeline-name
           - name: s3-config
           - name: latch-coordination-prefix
+          - name: image-config
+          - name: localstack-enabled
       steps:
         - - name: create-or-get-snapshot
             templateRef:
@@ -192,6 +344,8 @@ spec:
                   value: "{{inputs.parameters.snapshot-and-migration-config}}"
                 - name: s3-config
                   value: "{{inputs.parameters.s3-config}}"
+                - name: image-config
+                  value: "{{inputs.parameters.image-config}}"
         - - name: pipeline-snapshot-to-target
             template: pipeline-snapshot-to-target
             withParam: "{{inputs.parameters.targets}}"
@@ -207,6 +361,10 @@ spec:
                   value: "{{item}}"
                 - name: latch-coordination-prefix
                   value: "{{inputs.parameters.latch-coordination-prefix}}"
+                - name: image-config
+                  value: "{{inputs.parameters.image-config}}"
+                - name: localstack-enabled
+                  value: "{{inputs.parameters.localstack-enabled}}"
 
     - name: pipeline-snapshot-to-target
       inputs:
@@ -216,6 +374,8 @@ spec:
           - name: migration-configs
           - name: target-config
           - name: latch-coordination-prefix
+          - name: image-config
+          - name: localstack-enabled
       steps:
         - - name: pipeline-migrate-from-snapshot
             template: pipeline-migrate-from-snapshot
@@ -232,6 +392,10 @@ spec:
                   value: "{{inputs.parameters.target-config}}"
                 - name: latch-coordination-prefix
                   value: "{{inputs.parameters.latch-coordination-prefix}}"
+                - name: image-config
+                  value: "{{inputs.parameters.image-config}}"
+                - name: localstack-enabled
+                  value: "{{inputs.parameters.localstack-enabled}}"
 
     - name: pipeline-migrate-from-snapshot
       inputs:
@@ -241,22 +405,32 @@ spec:
           - name: migration-config
           - name: target-config
           - name: latch-coordination-prefix
+          - name: image-config
+          - name: localstack-enabled
       steps:
         - - name: id-generator
             template: do-nothing
         - - name: migrate-metadata
-            template: migrate-metadata
-#            when: "{{=fromJSON(inputs.parameters['migration-config'])['metadata'] != nil}}"
+            templateRef:
+              name: metadata-migration
+              template: migrate-metadata-from-config
+            #when: "{{fromJSON(inputs.parameters['migration-config']).metadata != null}}"
             arguments:
               parameters:
-                - name: source-config
-                  value: "{{inputs.parameters.source-config}}"
                 - name: snapshot-config
                   value: "{{inputs.parameters.snapshot-config}}"
-                - name: migration-config
-                  value: "{{fromJSON(inputs.parameters['migration-config'])['metadata']}}"
+                - name: source-config
+                  value: "{{inputs.parameters.source-config}}"
                 - name: target-config
                   value: "{{inputs.parameters.target-config}}"
+                - name: metadata-migration-config
+                  value: "{{=fromJSON(inputs.parameters['migration-config'])['metadata']}}"
+                - name: migration-console-image
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['migration-console']['image']}}"
+                - name: migration-console-pull-policy
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['migration-console']['pull-policy']}}"
+                - name: localstack-enabled
+                  value: "{{inputs.parameters.localstack-enabled}}"
         - - name: bulk-load-documents
             templateRef:
               name: bulk-load
@@ -272,6 +446,12 @@ spec:
                   value: "{{inputs.parameters.target-config}}"
                 - name: session-name
                   value: "{{steps.id-generator.id}}"
+                - name: source-version
+                  value: "{{=fromJSON(inputs.parameters['source-config'])['version']}}"
+                - name: image-config
+                  value: "{{inputs.parameters.image-config}}"
+                - name: localstack-enabled
+                  value: "{{inputs.parameters.localstack-enabled}}"
         # Check target readiness after processing and bump it to the next phase if ready
         - - name: target-backfill-complete-check
             templateRef:
@@ -285,32 +465,29 @@ spec:
                   value: "{{=fromJSON(inputs.parameters['target-config'])['endpoint']}}"
                 - name: prefix
                   value: "{{inputs.parameters.latch-coordination-prefix}}"
-        - - name: run-replayer-for-target
-            template: run-replayer-for-target
-            when: "{{steps.target-backfill-complete-check.outputs.parameters.should-finalize}} == true"
-            arguments:
-              parameters:
-                - name: target-config
-                  value: "{{inputs.parameters.target-config}}"
+                - name: etcd-utils-image
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['etcd-utils']['image']}}"
+                - name: etcd-utils-pull-policy
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['etcd-utils']['pull-policy']}}"
+        # Enable once Capture and Replay support has been added: https://opensearch.atlassian.net/browse/MIGRATIONS-2607
+        # - - name: run-replayer-for-target
+        #     template: run-replayer-for-target
+        #     when: "{{steps.target-backfill-complete-check.outputs.parameters.should-finalize}} == true"
+        #     arguments:
+        #       parameters:
+        #         - name: target-config
+        #           value: "{{inputs.parameters.target-config}}"
+        #         - name: image-config
+        #           value: "{{inputs.parameters.image-config}}"
 
-
-    - name: migrate-metadata
-      inputs:
-        parameters:
-          - name: source-config
-          - name: snapshot-config
-          - name: migration-config
-          - name: target-config
-      steps: [[]]
-
-    # This is where we'd start running live-replay
     - name: run-replayer-for-target
       inputs:
         parameters:
           - name: target-config
+          - name: image-config
       container:
-        image: "{{workflow.parameters.etcd-image}}"
-        imagePullPolicy: Never
+        image: "{{=fromJSON(inputs.parameters['image-config'])['etcd-utils']['image']}}"
+        imagePullPolicy: "{{=fromJSON(inputs.parameters['image-config'])['etcd-utils']['pull-policy']}}"
         command: [sh, -c] # dummy implementation that preserves some stats about the work that was done
         args:
           - |

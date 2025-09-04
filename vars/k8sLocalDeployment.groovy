@@ -1,26 +1,26 @@
 def call(Map config = [:]) {
-    ['jobName', 'sourceVersion', 'targetVersion', 'gitUrl', 'gitBranch'].each { key ->
+    ['jobName', 'sourceVersion', 'targetVersion'].each { key ->
         if (!config[key]) {
             throw new RuntimeException("The ${key} argument must be provided to k8sLocalDeployment()")
         }
     }
-    def gitDefaultUrl = config.gitUrl
-    def gitDefaultBranch = config.gitBranch
     def jobName = config.jobName
     def sourceVersion = config.sourceVersion
     def targetVersion = config.targetVersion
+    def testIdsArg = config.testIdsArg ?: ""
 
     pipeline {
         agent { label config.workerAgent ?: 'Jenkins-Default-Agent-X64-C5xlarge-Single-Host' }
 
         parameters {
-            string(name: 'GIT_REPO_URL', defaultValue: "${gitDefaultUrl}", description: 'Git repository url')
-            string(name: 'GIT_BRANCH', defaultValue: "${gitDefaultBranch}", description: 'Git branch to use for repository')
+            string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/opensearch-project/opensearch-migrations.git', description: 'Git repository url')
+            string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch to use for repository')
         }
 
         options {
             timeout(time: 1, unit: 'HOURS')
             buildDiscarder(logRotator(daysToKeepStr: '30'))
+            skipDefaultCheckout(true)
         }
 
         triggers {
@@ -41,6 +41,16 @@ def call(Map config = [:]) {
             stage('Checkout') {
                 steps {
                     script {
+                        sh 'sudo chown -R $(whoami) .'
+                        sh 'sudo chmod -R u+w .'
+                        // If in an existing git repository, remove any additional files in git tree that are not listed in .gitignore
+                        if (sh(script: 'git rev-parse --git-dir > /dev/null 2>&1', returnStatus: true) == 0) {
+                            echo 'Cleaning any existing git files in workspace'
+                            sh 'git reset --hard'
+                            sh 'git clean -fd'
+                        } else {
+                            echo 'No git project detected, this is likely an initial run of this pipeline on the worker'
+                        }
                         git branch: "${params.GIT_BRANCH}", url: "${params.GIT_REPO_URL}"
                     }
                 }
@@ -74,7 +84,7 @@ def call(Map config = [:]) {
                     timeout(time: 30, unit: 'MINUTES') {
                         dir('deployment/k8s') {
                             script {
-                                sh "sudo -u ec2-user ./buildDockerImagesMini.sh"
+                                sh "./buildDockerImagesMini.sh"
                             }
                         }
                     }
@@ -86,8 +96,8 @@ def call(Map config = [:]) {
                     timeout(time: 15, unit: 'MINUTES') {
                         dir('libraries/testAutomation') {
                             script {
-                                sh "sudo -u ec2-user pipenv install --deploy"
-                                sh "sudo -u ec2-user pipenv run app --source-version=$sourceVersion --target-version=$targetVersion --skip-delete"
+                                sh "pipenv install --deploy"
+                                sh "pipenv run app --source-version=$sourceVersion --target-version=$targetVersion $testIdsArg --skip-delete"
                             }
                         }
                     }
@@ -99,8 +109,10 @@ def call(Map config = [:]) {
                 timeout(time: 15, unit: 'MINUTES') {
                     dir('libraries/testAutomation') {
                         script {
-                            sh "sudo -u ec2-user pipenv install --deploy"
-                            sh "sudo -u ec2-user pipenv run app --delete-only"
+                            sh "pipenv install --deploy"
+                            sh "pipenv run app --copy-logs-only"
+                            archiveArtifacts artifacts: 'logs/**', fingerprint: true, onlyIfSuccessful: false
+                            sh "pipenv run app --delete-only"
                         }
                     }
                 }

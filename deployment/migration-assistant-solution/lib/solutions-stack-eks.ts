@@ -36,10 +36,7 @@ export interface SolutionsInfrastructureStackEKSProps extends StackProps {
     readonly stackNameSuffix?: string;
 }
 
-function importVPC(stack: Stack, vpdIdParameter: CfnParameter, privateSubnetIdsParameter: CfnParameter): IVpc {
-    // TODO add support for import VPC scenario with VPC validations
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const privateSubnetIds = privateSubnetIdsParameter.valueAsList
+function importVPC(stack: Stack, vpdIdParameter: CfnParameter): IVpc {
     return Vpc.fromLookup(stack, 'ImportedVPC', {
         vpcId: vpdIdParameter.valueAsString,
     });
@@ -134,7 +131,7 @@ export class SolutionsInfrastructureEKSStack extends Stack {
             });
             addParameterLabel(parameterLabels, privateSubnetIdsParameter, "Private Subnets")
             importedVPCParameters.push(vpcIdParameter.logicalId, privateSubnetIdsParameter.logicalId)
-            vpc = importVPC(this, vpcIdParameter, privateSubnetIdsParameter);
+            vpc = importVPC(this, vpcIdParameter);
         }
 
         const eksClusterName = `migration-eks-cluster-${stackMarker}`
@@ -150,6 +147,7 @@ export class SolutionsInfrastructureEKSStack extends Stack {
             "MIGRATIONS_USER_AGENT": solutionsUserAgent,
             "MIGRATIONS_EKS_CLUSTER_NAME": eksClusterName,
             "MIGRATIONS_ECR_REGISTRY": `${eksInfra.ecrRepo.registryUri}/${eksInfra.ecrRepo.repositoryName}`,
+            "AWS_ACCOUNT": this.account,
             "AWS_CFN_REGION": this.region,
             "VPC_ID": vpc.vpcId,
             "STAGE": stageParameter.valueAsString

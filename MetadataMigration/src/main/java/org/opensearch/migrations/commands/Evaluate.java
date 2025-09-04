@@ -1,6 +1,5 @@
 package org.opensearch.migrations.commands;
 
-import java.util.Optional;
 
 import org.opensearch.migrations.MigrateOrEvaluateArgs;
 import org.opensearch.migrations.MigrationMode;
@@ -27,8 +26,9 @@ public class Evaluate extends MigratorEvaluatorBase {
             evaluateResult.clusters(clusters);
 
             var transformer = selectTransformer(clusters);
+            evaluateResult.transformations(transformer);
 
-            var items = migrateAllItems(migrationMode, clusters, transformer, context);
+            var items = migrateAllItems(migrationMode, clusters, transformer.getTransformer(), context);
             evaluateResult.items(items);
         } catch (ParameterException pe) {
             log.atError().setCause(pe).setMessage("Invalid parameter").log();
@@ -36,12 +36,11 @@ public class Evaluate extends MigratorEvaluatorBase {
                 .exitCode(INVALID_PARAMETER_CODE)
                 .errorMessage("Invalid parameter: " + pe.getMessage())
                 .build();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.atError().setCause(e).setMessage("Unexpected failure").log();
-            var causeMessage = Optional.of(e).map(Throwable::getCause).map(Throwable::getMessage).orElse(null);
             evaluateResult
                 .exitCode(UNEXPECTED_FAILURE_CODE)
-                .errorMessage("Unexpected failure: " + e.getMessage() + (causeMessage == null ? "" : ", inner cause: " + causeMessage))
+                .errorMessage(createUnexpectedErrorMessage(e))
                 .build();
         }
 
