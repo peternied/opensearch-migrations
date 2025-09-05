@@ -23,9 +23,12 @@ flowchart TD
 ```mermaid
 flowchart TD
     C[Client]:::client -->|Writes| M[Traffic Mirror]:::mirror
-    C[Client]:::client -->|Reads| SC[Source Cluster]:::cluster
+    C -->|Reads| SC[Source Cluster]:::cluster
     M -->|Writes| SC
     M -->|Writes| TC[Target Cluster]:::cluster
+
+    TC --- SC
+    linkStyle 4 stroke-width:0px,fill:none
 
     classDef client fill:#d1e7ff,stroke:#0366d6,stroke-width:2px;
     classDef mirror fill:#fff3cd,stroke:#ff9900,stroke-width:2px;
@@ -57,14 +60,14 @@ flowchart TD
 ## Capture and Replay
 ```mermaid
 flowchart TD
-    C([Client]):::client --> P{{Proxy}}:::proxy
-    P --> SC[(Source Cluster)]:::cluster
-    
+    C([Client]):::client --> MA
+
     subgraph MA[Migration Assistant]
-        P --> DS[(Data Store)]:::datastore
+        P{{Capture Proxy}}:::proxy --> DS[(Data Store)]:::datastore
         DS --> R[[Replayer]]:::replayer
     end
 
+    P --> SC[(Source Cluster)]:::cluster
     R --> TC[(Target Cluster)]:::cluster
 
     classDef client fill:#d1e7ff,stroke:#0366d6,stroke-width:2px;
