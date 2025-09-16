@@ -423,6 +423,34 @@ public class ClusterOperations {
         assertThat(response.getKey(), equalTo(200));
     }
 
+    @SneakyThrows
+    public void createIndexWithVectorField(String indexName, int vectorDimension, String similarity) {
+        String body = "{\r\n" + //
+            "    \"settings\": {\r\n" + //
+            "        \"number_of_shards\": 1,\r\n" + //
+            "        \"number_of_replicas\": 0,\r\n" + //
+            "        \"refresh_interval\": -1\r\n" + //
+            "    },\r\n" + //
+            "    \"mappings\": {\r\n" + //
+            "        \"properties\": {\r\n" + //
+            "            \"vector_field\": {\r\n" + //
+            "                \"index_options\": {\"type\": \"bbq_hnsw\"},\r\n" + //
+            "                \"type\": \"dense_vector\",\r\n" + //
+            "                \"dims\": " + vectorDimension + ",\r\n" + //
+            "                \"index\": true,\r\n" + //
+            "                \"similarity\": \"" + similarity +"\"\r\n" + //
+            "            },\r\n" + //
+            "            \"title\": {\r\n" + //
+            "                \"type\": \"text\"\r\n" + //
+            "            }\r\n" + //
+            "        }\r\n" + //
+            "    }\r\n" + //
+            "}";
+
+        var response = put("/" + indexName, body);
+        assertThat(response.getKey(), equalTo(200));
+    }
+
     public String defaultDocType() {
         if (UnboundVersionMatchers.isBelowES_6_X
             .or(VersionMatchers.equalOrBetween_ES_6_0_and_6_1)
