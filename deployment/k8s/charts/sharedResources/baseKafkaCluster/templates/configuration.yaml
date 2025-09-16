@@ -61,6 +61,8 @@ spec:
         port: 9093
         type: internal
         tls: true
+        authentication:
+          type: tls
       - name: interbroker
         port: 9094
         type: internal
@@ -77,3 +79,89 @@ spec:
   entityOperator:
     topicOperator: {}
     userOperator: {}
+---
+# Create KafkaUser for capture-proxy
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: capture-proxy-user
+  labels:
+    strimzi.io/cluster: {{ .Values.clusterName }}
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      # Allow read/write on all topics for migration traffic
+      - resource:
+          type: topic
+          name: "*"
+        operations: ["Read", "Write", "Create", "Describe"]
+      # Allow consumer group operations
+      - resource:
+          type: group
+          name: "*"
+        operations: ["Read"]
+---
+# Create KafkaUser for migration-console
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: migration-console-user
+  labels:
+    strimzi.io/cluster: {{ .Values.clusterName }}
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      # Allow read/write on all topics for console operations
+      - resource:
+          type: topic
+          name: "*"
+        operations: ["Read", "Write", "Create", "Describe"]
+      # Allow consumer group operations
+      - resource:
+          type: group
+          name: "*"
+        operations: ["Read"]
+      # Allow cluster operations for admin tasks
+      - resource:
+          type: cluster
+        operations: ["Describe"]
+---
+# Create KafkaUser for replayer
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: replayer-user
+  labels:
+    strimzi.io/cluster: {{ .Values.clusterName }}
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      # Allow read operations for replaying traffic
+      - resource:
+          type: topic
+          name: "*"
+        operations: ["Read", "Describe"]
+      # Allow consumer group operations including coordination and offset commits
+      - resource:
+          type: group
+          name: "*"
+        operations: ["Read", "Write"]
+      # Allow offset topic operations for consumer offset commits
+      - resource:
+          type: topic
+          name: "__consumer_offsets"
+        operations: ["Read", "Write"]
+      # Allow transactional ID operations if needed for exactly-once semantics
+      - resource:
+          type: transactionalId
+          name: "*"
+        operations: ["Write", "Describe"]

@@ -43,6 +43,9 @@ spec:
           volumeMounts:
             - name: {{ $envMountName }}
               mountPath: /shared
+            - name: kafka-ssl-certs
+              mountPath: /etc/kafka/ssl
+              readOnly: true
             {{- if $sharedLogsVolumeEnabled }}
             - name: shared-logs
               mountPath: /shared-logs-output
@@ -50,6 +53,18 @@ spec:
       volumes:
         - name: {{ $envMountName }}
           emptyDir: {}
+        - name: kafka-ssl-certs
+          secret:
+            secretName: replayer-user
+            items:
+              - key: ca.crt
+                path: ca.crt
+              - key: user.crt
+                path: user.crt
+              - key: user.key
+                path: user.key
+              - key: user.p12
+                path: user.p12
         {{- if $sharedLogsVolumeEnabled  }}
         - name: shared-logs
           persistentVolumeClaim:

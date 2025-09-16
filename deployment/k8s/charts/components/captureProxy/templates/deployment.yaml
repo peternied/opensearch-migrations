@@ -42,6 +42,21 @@ spec:
           volumeMounts:
             - name: {{ $mountName }}
               mountPath: /shared
+            - name: kafka-ssl-certs
+              mountPath: /etc/kafka/ssl
+              readOnly: true
       volumes:
         - name: {{ $mountName }}
           emptyDir: {}
+        - name: kafka-ssl-certs
+          secret:
+            secretName: capture-proxy-user
+            items:
+              - key: ca.crt
+                path: ca.crt
+              - key: user.crt
+                path: user.crt
+              - key: user.key
+                path: user.key
+              - key: user.p12
+                path: user.p12

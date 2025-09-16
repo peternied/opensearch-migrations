@@ -36,8 +36,13 @@ shared-configs:
     kafkaBrokers:
       allowRuntimeOverride: false
       object:
-        brokers: "captured-traffic-kafka-bootstrap.ma.svc:9092"
+        brokers: "captured-traffic-kafka-bootstrap.ma.svc:9093"
         kafkaType: "standard"
+        sslEnabled: true
+        securityProtocol: "SSL"
+        sslTruststoreLocation: "/etc/kafka/ssl/ca.crt"
+        sslKeystoreLocation: "/etc/kafka/ssl/user.p12"
+        sslKeystorePassword: "password"
     snapshot:
       allowRuntimeOverride: true
       object:

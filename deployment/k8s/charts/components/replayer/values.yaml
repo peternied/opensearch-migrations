@@ -20,6 +20,33 @@ parameters:
   kafkaTrafficGroupId:
     value: logging-group-default
     allowRuntimeOverride: true
+  # Kafka SSL Configuration
+  kafkaSslEnabled:
+    source: otherConfig
+    configMapName: "kafka-brokers"
+    configMapKey: "sslEnabled"
+    parameterType: booleanFlag
+    allowRuntimeOverride: false
+  kafkaSecurityProtocol:
+    source: otherConfig
+    configMapName: "kafka-brokers"
+    configMapKey: "securityProtocol"
+    allowRuntimeOverride: false
+  kafkaSslTruststoreLocation:
+    source: otherConfig
+    configMapName: "kafka-brokers"
+    configMapKey: "sslTruststoreLocation"
+    allowRuntimeOverride: false
+  kafkaSslKeystoreLocation:
+    source: otherConfig
+    configMapName: "kafka-brokers"
+    configMapKey: "sslKeystoreLocation"
+    allowRuntimeOverride: false
+  kafkaSslKeystorePassword:
+    source: otherConfig
+    configMapName: "kafka-brokers"
+    configMapKey: "sslKeystorePassword"
+    allowRuntimeOverride: false
 # creates a collision
 #  otelCollectorEndpoint:
 #    value: http://otel-collector:4317

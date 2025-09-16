@@ -53,6 +53,9 @@ spec:
               mountPath: /config
             - name: {{ $envVarMountName }}
               mountPath: /shared
+            - name: kafka-ssl-certs
+              mountPath: /etc/kafka/ssl
+              readOnly: true
             {{- if $developerModeEnabled }}
             - name: local-console-libs
               mountPath: /root/lib
@@ -66,6 +69,18 @@ spec:
           emptyDir: { }
         - name: merged-config
           emptyDir: { }
+        - name: kafka-ssl-certs
+          secret:
+            secretName: migration-console-user
+            items:
+              - key: ca.crt
+                path: ca.crt
+              - key: user.crt
+                path: user.crt
+              - key: user.key
+                path: user.key
+              - key: user.p12
+                path: user.p12
         {{- if $developerModeEnabled  }}
         - name: local-console-libs
           hostPath:
