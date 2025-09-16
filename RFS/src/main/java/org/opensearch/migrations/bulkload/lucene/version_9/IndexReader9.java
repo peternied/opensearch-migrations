@@ -5,6 +5,7 @@ import java.nio.file.Path;
 
 import org.opensearch.migrations.bulkload.lucene.LuceneDirectoryReader;
 import org.opensearch.migrations.bulkload.lucene.LuceneIndexReader;
+import org.opensearch.migrations.bulkload.lucene.ReaderUtils;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,17 +22,19 @@ public class IndexReader9 implements LuceneIndexReader {
     protected final String softDeletesField;
 
     public LuceneDirectoryReader getReader(String segmentsFileName) throws IOException {
-        try (var directory = FSDirectory.open(indexDirectoryPath)) {
-            var commits = DirectoryReader.listCommits(directory);
-            var relevantCommit = commits.stream()
-                .filter(commit -> segmentsFileName.equals(commit.getSegmentsFileName()))
-                .findAny()
-                .orElseThrow(() -> new IOException("No such commit with segments file: " + segmentsFileName));
-            var reader = DirectoryReader.open(relevantCommit, 0, null);
+        try {
+            // Use our utility method to open the reader with fallback handling for codec errors
+            var reader = ReaderUtils.openReaderWithFallback(indexDirectoryPath, segmentsFileName);
+            
+            // Apply soft deletes wrapper if needed
             if (softDeletesPossible) {
                 reader = new SoftDeletesDirectoryReaderWrapper(reader, softDeletesField);
             }
+            
             return new DirectoryReader9(reader, indexDirectoryPath);
+        } catch (IOException e) {
+            log.error("Failed to open index with segments file {}: {}", segmentsFileName, e.getMessage());
+            throw e;
         }
     }
 }
