@@ -31,23 +31,17 @@ public class DynamicCodecProvider {
     }
     
     /**
-     * Gets a codec by name, creating a dynamic fallback if the codec is not found.
+     * Gets a codec by name, creating a dynamic fallback since the standard lookup failed.
+     * This method is called only when the standard codec lookup has already failed,
+     * so we directly create a dynamic fallback without trying the standard lookup again.
      * 
      * @param name The codec name
-     * @return The codec instance (either existing or dynamically created)
+     * @return A dynamically created fallback codec
      */
     public static Codec getCodec(String name) {
-        try {
-            // First try to get the standard codec
-            return Codec.forName(name);
-        } catch (IllegalArgumentException e) {
-            if (isCodecNotFoundError(e)) {
-                // If not found, check our dynamic registry or create a new one
-                return dynamicCodecs.computeIfAbsent(name, DynamicCodecProvider::createDynamicCodec);
-            }
-            // For other types of exceptions, just propagate
-            throw e;
-        }
+        // Don't call Codec.forName() here as that would cause infinite recursion
+        // with our registry proxy. We're only called when standard lookup failed.
+        return dynamicCodecs.computeIfAbsent(name, DynamicCodecProvider::createDynamicCodec);
     }
     
     /**

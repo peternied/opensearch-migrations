@@ -423,6 +423,130 @@ public class ClusterOperations {
         assertThat(response.getKey(), equalTo(200));
     }
 
+    /**
+     * Creates an index with vector fields to test vector format migration and codec handling
+     */
+    @SneakyThrows
+    public void createIndexWithVectorField(String indexName, int numberOfShards, int vectorDimension, String similarity) {
+        boolean useTypedMappings = UnboundVersionMatchers.isBelowES_8_X.test(clusterVersion);
+        boolean needsTypeNameParam = (VersionMatchers.equalOrGreaterThanES_6_7
+                .or(VersionMatchers.isES_7_X))
+                .test(clusterVersion);
+        boolean supportsSoftDeletes = VersionMatchers.equalOrGreaterThanES_6_5.test(clusterVersion);
+        
+        // dense_vector was introduced in ES 7.3+, so we need to be more precise
+        // For ES 7.0-7.2 and older versions, fall back to text field
+        boolean supportsVectors = VersionMatchers.isES_8_X.or(VersionMatchers.anyOS).test(clusterVersion);
+        
+        // For ES 7.x, we need to check if it's 7.3+ (but we don't have exact matchers, so let's be conservative)
+        // Since we don't have a precise ES 7.3+ matcher, let's try dense_vector and fall back gracefully if it fails
+        boolean attemptVectors = supportsVectors || VersionMatchers.isES_7_X.test(clusterVersion);
+
+        String typeName = defaultDocType();
+        
+        // For older versions that don't support vectors, fall back to a regular text field
+        String vectorFieldMapping = attemptVectors 
+            ? String.format(
+                "\"vector_field\": {\n" +
+                "  \"type\": \"dense_vector\",\n" +
+                "  \"dims\": %d,\n" +
+                "  \"index\": true,\n" +
+                "  \"similarity\": \"%s\"\n" +
+                "}", vectorDimension, similarity)
+            : "\"vector_field\": {\n" +
+                "  \"type\": \"text\"\n" +
+                "}";
+
+        String mappingsSection = useTypedMappings
+            ? String.format(
+                "{\n" +
+                "  \"%s\": {\n" +
+                "    \"properties\": {\n" +
+                "      %s,\n" +
+                "      \"title\": {\n" +
+                "        \"type\": \"text\"\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}", typeName, vectorFieldMapping)
+            : String.format(
+                "{\n" +
+                "  \"properties\": {\n" +
+                "    %s,\n" +
+                "    \"title\": {\n" +
+                "      \"type\": \"text\"\n" +
+                "    }\n" +
+                "  }\n" +
+                "}", vectorFieldMapping);
+
+        String body = String.format(
+            "{\n" +
+            "  \"settings\": {\n" +
+            "    \"number_of_shards\": %d,\n" +
+            "    \"number_of_replicas\": 0,%s\n" +
+            "    \"refresh_interval\": -1\n" +
+            "  },\n" +
+            "  \"mappings\": %s\n" +
+            "}",
+            numberOfShards,
+            supportsSoftDeletes ? "\n    \"index.soft_deletes.enabled\": true," : "",
+            mappingsSection
+        );
+
+        String path = "/" + indexName + (needsTypeNameParam ? "?include_type_name=true" : "");
+        var response = put(path, body);
+
+        // If dense_vector fails (likely due to unsupported version), fall back to text field
+        if (response.getKey() == 400 && attemptVectors && !supportsVectors) {
+            log.info("dense_vector field failed, falling back to text field for version: {}", clusterVersion);
+            
+            // Recreate the mapping with text field instead
+            String fallbackVectorFieldMapping = "\"vector_field\": {\n" +
+                "  \"type\": \"text\"\n" +
+                "}";
+            
+            String fallbackMappingsSection = useTypedMappings
+                ? String.format(
+                    "{\n" +
+                    "  \"%s\": {\n" +
+                    "    \"properties\": {\n" +
+                    "      %s,\n" +
+                    "      \"title\": {\n" +
+                    "        \"type\": \"text\"\n" +
+                    "      }\n" +
+                    "    }\n" +
+                    "  }\n" +
+                    "}", typeName, fallbackVectorFieldMapping)
+                : String.format(
+                    "{\n" +
+                    "  \"properties\": {\n" +
+                    "    %s,\n" +
+                    "    \"title\": {\n" +
+                    "      \"type\": \"text\"\n" +
+                    "    }\n" +
+                    "  }\n" +
+                    "}", fallbackVectorFieldMapping);
+
+            String fallbackBody = String.format(
+                "{\n" +
+                "  \"settings\": {\n" +
+                "    \"number_of_shards\": %d,\n" +
+                "    \"number_of_replicas\": 0,%s\n" +
+                "    \"refresh_interval\": -1\n" +
+                "  },\n" +
+                "  \"mappings\": %s\n" +
+                "}",
+                numberOfShards,
+                supportsSoftDeletes ? "\n    \"index.soft_deletes.enabled\": true," : "",
+                fallbackMappingsSection
+            );
+            
+            response = put(path, fallbackBody);
+        }
+
+        assertThat("Failed to create index with vector field", response.getKey(), equalTo(200));
+    }
+
     public String defaultDocType() {
         if (UnboundVersionMatchers.isBelowES_6_X
             .or(VersionMatchers.equalOrBetween_ES_6_0_and_6_1)

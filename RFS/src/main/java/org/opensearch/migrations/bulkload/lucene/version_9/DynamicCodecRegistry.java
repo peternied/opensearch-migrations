@@ -4,9 +4,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 import lombok.extern.slf4j.Slf4j;
 import shadow.lucene9.org.apache.lucene.codecs.Codec;
@@ -24,7 +21,8 @@ public class DynamicCodecRegistry {
     
     private static boolean initialized = false;
     private static final Object LOCK = new Object();
-    private static final String LOADER_FIELD_NAME = "loader";
+    private static final String HOLDER_CLASS_NAME = "Holder";
+    private static final String LOADER_FIELD_NAME = "LOADER";
     private static final String LOOKUP_METHOD_NAME = "lookup";
     
     /**
@@ -40,8 +38,22 @@ public class DynamicCodecRegistry {
             }
             
             try {
-                // Access the private static 'loader' field in Codec class
-                Field loaderField = Codec.class.getDeclaredField(LOADER_FIELD_NAME);
+                // Access the static inner Holder class
+                Class<?>[] innerClasses = Codec.class.getDeclaredClasses();
+                Class<?> holderClass = null;
+                for (Class<?> innerClass : innerClasses) {
+                    if (HOLDER_CLASS_NAME.equals(innerClass.getSimpleName())) {
+                        holderClass = innerClass;
+                        break;
+                    }
+                }
+                
+                if (holderClass == null) {
+                    throw new NoSuchFieldException("Could not find Holder inner class in Codec");
+                }
+                
+                // Access the private static 'LOADER' field in the Holder class
+                Field loaderField = holderClass.getDeclaredField(LOADER_FIELD_NAME);
                 loaderField.setAccessible(true);
                 
                 // Get the current loader instance
@@ -50,13 +62,29 @@ public class DynamicCodecRegistry {
                 // Create our custom loader wrapping the original one
                 Object dynamicLoader = createDynamicLoaderProxy(originalLoader);
                 
-                // Replace the original loader with our custom one
-                loaderField.set(null, dynamicLoader);
-                
-                // Initialize the lookup method to ensure our loader is used
-                Method reloadMethod = Codec.class.getDeclaredMethod("reloadCodecs");
-                reloadMethod.setAccessible(true);
-                reloadMethod.invoke(null);
+                // Use Unsafe to modify the final field
+                try {
+                    Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
+                    Field unsafeField = unsafeClass.getDeclaredField("theUnsafe");
+                    unsafeField.setAccessible(true);
+                    Object unsafe = unsafeField.get(null);
+                    
+                    Method putObjectMethod = unsafeClass.getMethod("putObject", Object.class, long.class, Object.class);
+                    Method staticFieldOffsetMethod = unsafeClass.getMethod("staticFieldOffset", Field.class);
+                    long offset = (Long) staticFieldOffsetMethod.invoke(unsafe, loaderField);
+                    putObjectMethod.invoke(unsafe, holderClass, offset, dynamicLoader);
+                } catch (ClassNotFoundException e) {
+                    // Try jdk.internal.misc.Unsafe for newer JDK versions
+                    Class<?> unsafeClass = Class.forName("jdk.internal.misc.Unsafe");
+                    Field unsafeField = unsafeClass.getDeclaredField("theUnsafe");
+                    unsafeField.setAccessible(true);
+                    Object unsafe = unsafeField.get(null);
+                    
+                    Method putObjectMethod = unsafeClass.getMethod("putObject", Object.class, long.class, Object.class);
+                    Method staticFieldOffsetMethod = unsafeClass.getMethod("staticFieldOffset", Field.class);
+                    long offset = (Long) staticFieldOffsetMethod.invoke(unsafe, loaderField);
+                    putObjectMethod.invoke(unsafe, holderClass, offset, dynamicLoader);
+                }
                 
                 log.info("Successfully initialized dynamic codec registry");
                 initialized = true;
@@ -72,19 +100,18 @@ public class DynamicCodecRegistry {
     /**
      * Creates a dynamic codec loader that wraps the original loader using a dynamic proxy.
      * 
-     * @param originalLoader The original Lucene codec loader
+     * @param originalLoader The original Lucene codec loader (NamedSPILoader)
      * @return A custom loader proxy that provides dynamic fallbacks
      */
     private static Object createDynamicLoaderProxy(final Object originalLoader) {
-        // Get all interfaces implemented by the original loader
-        Class<?>[] interfaces = originalLoader.getClass().getInterfaces();
-        
         // Create an invocation handler that intercepts method calls
         InvocationHandler handler = new InvocationHandler() {
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                // If the method being called is "lookup", handle it specially
-                if (LOOKUP_METHOD_NAME.equals(method.getName()) && args != null && args.length == 1 
+                String methodName = method.getName();
+                
+                // Handle lookup method specially (NamedSPILoader specific)
+                if (LOOKUP_METHOD_NAME.equals(methodName) && args != null && args.length == 1 
                         && args[0] instanceof String) {
                     String codecName = (String) args[0];
                     try {
@@ -97,10 +124,27 @@ public class DynamicCodecRegistry {
                     }
                 }
                 
+                // Handle Map.get method specially (Map interface) - this is likely used by Codec.forName()
+                if ("get".equals(methodName) && args != null && args.length == 1 
+                        && args[0] instanceof String) {
+                    String codecName = (String) args[0];
+                    try {
+                        // First try the standard get from the original loader
+                        return method.invoke(originalLoader, args);
+                    } catch (Exception e) {
+                        // If get fails, try our dynamic provider
+                        log.debug("Standard codec get failed for '{}', trying dynamic fallback", codecName);
+                        return DynamicCodecProvider.getCodec(codecName);
+                    }
+                }
+                
                 // For all other methods, just pass through to the original loader
                 return method.invoke(originalLoader, args);
             }
         };
+        
+        // Get all interfaces implemented by the original loader
+        Class<?>[] interfaces = originalLoader.getClass().getInterfaces();
         
         // Create and return a proxy that implements all the interfaces of the original loader
         return Proxy.newProxyInstance(
@@ -108,32 +152,6 @@ public class DynamicCodecRegistry {
             interfaces,
             handler
         );
-    }
-    
-    /**
-     * Pre-registers any special codecs that need custom handling.
-     * This is useful for codecs that are known to require special handling.
-     * 
-     * @param name The codec name
-     * @param codec The codec instance
-     */
-    public static void registerSpecialCodec(String name, Codec codec) {
-        try {
-            // First make sure we're initialized
-            if (!initialized && !initialize()) {
-                log.warn("Cannot register special codec '{}' - registry initialization failed", name);
-                return;
-            }
-            
-            // Force Codec class to recognize our codec
-            Method registerMethod = Codec.class.getDeclaredMethod("register", Codec.class);
-            registerMethod.setAccessible(true);
-            registerMethod.invoke(null, codec);
-            
-            log.info("Successfully registered special codec: {}", name);
-        } catch (Exception e) {
-            log.error("Failed to register special codec '{}'", name, e);
-        }
     }
     
     /**
