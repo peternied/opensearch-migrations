@@ -1,0 +1,104 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: "{{ .Release.Name }}-controller"
+  labels:
+    strimzi.io/cluster: {{ .Values.kafka.clusterName }}
+spec:
+  replicas: {{ .Values.kafka.replicas }}
+  roles:
+    - controller
+    {{- if not (hasKey .Values.kafka "dedicatedController") }}
+    - broker
+    {{ end }}
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: {{ .Values.kafka.storageType }}
+        size: {{ .Values.kafka.storageSize }}
+        kraftMetadata: shared
+        deleteClaim: {{ .Values.kafka.storageDeleteClaim }}
+---
+{{- if hasKey .Values.kafka "dedicatedController" }}
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: "{{ .Release.Name }}-broker"
+  labels:
+    strimzi.io/cluster: {{ .Values.kafka.clusterName }}
+spec:
+  replicas: {{ .Values.kafka.dedicatedController.replicas }}
+  roles:
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: {{ .Values.kafka.storageType }}
+        size: {{ .Values.kafka.dedicatedController.storageSize }}
+        kraftMetadata: shared
+        deleteClaim: {{ .Values.kafka.storageDeleteClaim }}
+---
+{{- end }}
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: {{ .Values.kafka.clusterName }}
+  annotations:
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+spec:
+  kafka:
+    version: 3.8.0
+    metadataVersion: 3.8-IV0
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+        authentication:
+          type: tls
+    config:
+      offsets.topic.replication.factor: 1
+      transaction.state.log.replication.factor: 1
+      transaction.state.log.min.isr: 1
+      default.replication.factor: 1
+      min.insync.replicas: 1
+      inter.broker.listener.name: PLAINTEXT
+      listener.security.protocol.map: PLAINTEXT:PLAIN,SSL:SSL
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+---
+# Create KafkaUser for admin-pod
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  name: "{{ .Release.Name }}-admin-user"
+  labels:
+    strimzi.io/cluster: {{ .Values.kafka.clusterName }}
+spec:
+  authentication:
+    type: tls
+  authorization:
+    type: simple
+    acls:
+      # Allow full control of all topics for admin operations
+      - resource:
+          type: topic
+          name: "*"
+        operations: ["Read", "Write", "Create", "Delete", "Alter", "Describe"]
+      # Allow consumer group operations
+      - resource:
+          type: group
+          name: "*"
+        operations: ["Read", "Write", "Delete", "Describe"]
+      # Allow cluster operations for admin tasks
+      - resource:
+          type: cluster
+        operations: ["Alter", "Describe", "Create", "ClusterAction"]

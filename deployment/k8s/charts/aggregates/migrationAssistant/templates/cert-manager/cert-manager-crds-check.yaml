@@ -1,0 +1,91 @@
+{{- if .Values.conditionalPackageInstalls.certManager }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-cert-manager-crds-check"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+  annotations:
+    # This is what defines this resource as a hook.
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: "{{ .Release.Name }}-cert-manager-crds-check"
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: cert-manager-crds-check
+        image: bitnami/kubectl:latest
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            echo "Checking for cert-manager CRDs..."
+            if kubectl get crd | grep -q "cert-manager.io"; then
+              echo "cert-manager CRDs found, proceeding with deployment."
+              exit 0
+            else
+              echo "ERROR: cert-manager CRDs not found."
+              echo "Please install cert-manager with CRDs enabled before proceeding."
+              echo "You can install cert-manager using:"
+              echo "kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.3/cert-manager.yaml"
+              exit 1
+            fi
+      serviceAccountName: "{{ .Release.Name }}-cert-manager-check"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: "{{ .Release.Name }}-cert-manager-check"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-6"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: "{{ .Release.Name }}-cert-manager-check"
+  labels:
+    app: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-6"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+rules:
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list"]
+- apiGroups: ["cert-manager.io"]
+  resources: ["clusterissuers"]
+  verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: "{{ .Release.Name }}-cert-manager-check"
+  labels:
+    app: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-6"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "{{ .Release.Name }}-cert-manager-check"
+subjects:
+  - kind: ServiceAccount
+    name: "{{ .Release.Name }}-cert-manager-check"
+    namespace: {{ .Release.Namespace }}
+{{- end }}

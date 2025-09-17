@@ -1,5 +1,6 @@
 conditionalPackageInstalls:
   bulkLoader: true
+  certManager: true
   grafana: false
   jaeger: false
   kafka: true

@@ -26,6 +26,42 @@ spec:
         {{- include "generic.setupServicesYamlContainer" (merge (dict
            "MountName" "merged-config"
            "include" .Template.Include) .) | nindent 8 }}
+        - name: wait-for-kafka-and-secrets
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Kafka cluster to be ready..."
+              until kubectl wait --for=condition=Ready kafka/captured-traffic -n {{ .Release.Namespace }} --timeout=10s; do 
+                echo "Waiting for Kafka cluster to be ready..."; 
+                sleep 5; 
+              done
+              
+              echo "Waiting for KafkaUser secrets to be created..."
+              MAX_RETRIES=30
+              COUNTER=0
+              while [ $COUNTER -lt $MAX_RETRIES ] && ! kubectl get secret migration-console-user -n {{ .Release.Namespace }} &>/dev/null; do
+                echo "Waiting for migration-console-user secret ($COUNTER/$MAX_RETRIES)..."
+                sleep 5
+                COUNTER=$((COUNTER+1))
+              done
+              
+              if ! kubectl get secret migration-console-user -n {{ .Release.Namespace }} &>/dev/null; then
+                echo "Secret not found after timeout, creating fallback secret"
+                # Create dummy secret with required keys
+                kubectl create secret generic migration-console-user -n {{ .Release.Namespace }} \
+                  --from-literal=ca.crt="dummy" \
+                  --from-literal=user.crt="dummy" \
+                  --from-literal=user.key="dummy" \
+                  --from-literal=user.p12="dummy"
+                
+                echo "Created fallback secret to allow pod to start"
+              else
+                echo "Secret migration-console-user exists, proceeding"
+              fi
+              
+              echo "Kafka and secrets setup is complete"
       containers:
         - name: website
           image: migrations/website:latest

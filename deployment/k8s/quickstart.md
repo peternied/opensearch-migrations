@@ -120,6 +120,7 @@ kubectl -n ma get pods
 Next to simulate an actual migration environment we should create both a source cluster and target cluster that we will migrate data between . The below chart will create an Elasticsearch 7.10 source cluster and an OpenSearch 2.16 target cluster, but could be supplied different values to customize the source and target versions or settings by modifying the /charts/aggregates/testClusters/values.yaml . We don’t need to wait for the Migration Assistant pods to finish initializing before deploying our test clusters with the below command.
 
 ```shell
+
 helm install tc -n ma charts/aggregates/testClusters
 ```
 

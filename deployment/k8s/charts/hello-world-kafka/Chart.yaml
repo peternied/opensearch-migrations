@@ -1,0 +1,13 @@
+apiVersion: v2
+name: hello-world-kafka
+description: A Helm chart for deploying a hello-world application with Kafka using the Strimzi operator
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+# Comment out the dependency by default to avoid conflicts with existing Strimzi installations
+# Uncomment this section if you don't already have Strimzi installed
+# dependencies:
+#   - name: strimzi-kafka-operator
+#     version: 0.43.0
+#     repository: "https://strimzi.io/charts/"

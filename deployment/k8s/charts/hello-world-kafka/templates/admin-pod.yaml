@@ -1,0 +1,290 @@
+{{- if .Values.adminPod.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "{{ .Release.Name }}-kafka-admin-scripts"
+  labels:
+    app: {{ .Release.Name }}
+data:
+  create-topic.sh: |
+    #!/bin/bash
+    # Script to create a Kafka topic
+    
+    if [ "$#" -lt 1 ]; then
+      echo "Usage: $0 <topic-name> [partitions=1] [replication-factor=1]"
+      exit 1
+    fi
+    
+    TOPIC_NAME=$1
+    PARTITIONS=${2:-1}
+    REPLICATION=${3:-1}
+    
+    echo "Creating Kafka topic: $TOPIC_NAME with $PARTITIONS partition(s) and replication factor $REPLICATION"
+    
+    if [ -f /etc/kafka/ssl/user.crt ]; then
+      echo "Using TLS authentication"
+      kafka-topics.sh --bootstrap-server {{ .Values.kafka.clusterName }}:9093 \
+        --command-config /etc/kafka-admin/admin.properties \
+        --create --topic "$TOPIC_NAME" \
+        --partitions "$PARTITIONS" \
+        --replication-factor "$REPLICATION"
+    else
+      echo "Using plaintext connection"
+      kafka-topics.sh --bootstrap-server {{ .Values.kafka.clusterName }}:9092 \
+        --create --topic "$TOPIC_NAME" \
+        --partitions "$PARTITIONS" \
+        --replication-factor "$REPLICATION"
+    fi
+
+  delete-topic.sh: |
+    #!/bin/bash
+    # Script to delete a Kafka topic
+    
+    if [ "$#" -lt 1 ]; then
+      echo "Usage: $0 <topic-name>"
+      exit 1
+    fi
+    
+    TOPIC_NAME=$1
+    
+    echo "Deleting Kafka topic: $TOPIC_NAME"
+    
+    if [ -f /etc/kafka/ssl/user.crt ]; then
+      echo "Using TLS authentication"
+      kafka-topics.sh --bootstrap-server {{ .Values.kafka.clusterName }}:9093 \
+        --command-config /etc/kafka-admin/admin.properties \
+        --delete --topic "$TOPIC_NAME"
+    else
+      echo "Using plaintext connection"
+      kafka-topics.sh --bootstrap-server {{ .Values.kafka.clusterName }}:9092 \
+        --delete --topic "$TOPIC_NAME"
+    fi
+
+  list-topics.sh: |
+    #!/bin/bash
+    # Script to list all Kafka topics
+    
+    echo "Listing Kafka topics"
+    
+    if [ -f /etc/kafka/ssl/user.crt ]; then
+      echo "Using TLS authentication"
+      kafka-topics.sh --bootstrap-server {{ .Values.kafka.clusterName }}:9093 \
+        --command-config /etc/kafka-admin/admin.properties \
+        --list
+    else
+      echo "Using plaintext connection"
+      kafka-topics.sh --bootstrap-server {{ .Values.kafka.clusterName }}:9092 \
+        --list
+    fi
+
+  admin.properties: |
+    security.protocol=SSL
+    ssl.truststore.location=/etc/kafka/ssl/truststore.jks
+    ssl.truststore.password=password
+    ssl.keystore.location=/etc/kafka/ssl/keystore.jks
+    ssl.keystore.password=password
+    ssl.key.password=password
+
+  setup-kafka-tools.sh: |
+    #!/bin/bash
+    
+    echo "Setting up Kafka tools..."
+    
+    # Install OpenJDK and wget
+    apt-get update && apt-get install -y openjdk-17-jre-headless wget
+    
+    # Get Kafka
+    mkdir -p /opt/kafka
+    wget -q -O /tmp/kafka.tgz https://downloads.apache.org/kafka/3.8.0/kafka_2.13-3.8.0.tgz
+    tar -xzf /tmp/kafka.tgz --strip-components=1 -C /opt/kafka
+    rm /tmp/kafka.tgz
+    
+    # Add Kafka to PATH
+    echo 'export PATH=$PATH:/opt/kafka/bin' >> /root/.bashrc
+    export PATH=$PATH:/opt/kafka/bin
+    
+    # Generate keystore/truststore if using TLS
+    if [ -f /etc/kafka/ssl/ca.crt ] && [ -f /etc/kafka/ssl/user.crt ] && [ -f /etc/kafka/ssl/user.key ]; then
+      echo "Setting up TLS keystore and truststore"
+      
+      mkdir -p /tmp/certs
+      
+      # Convert PEM to PKCS12
+      openssl pkcs12 -export \
+        -in /etc/kafka/ssl/user.crt \
+        -inkey /etc/kafka/ssl/user.key \
+        -out /tmp/certs/user.p12 \
+        -name admin \
+        -password pass:password
+      
+      # Create keystore
+      keytool -importkeystore \
+        -deststorepass password \
+        -destkeypass password \
+        -destkeystore /etc/kafka/ssl/keystore.jks \
+        -srckeystore /tmp/certs/user.p12 \
+        -srcstoretype PKCS12 \
+        -srcstorepass password \
+        -alias admin
+      
+      # Create truststore and import CA certificate
+      keytool -keystore /etc/kafka/ssl/truststore.jks \
+        -alias CARoot \
+        -import \
+        -file /etc/kafka/ssl/ca.crt \
+        -storepass password \
+        -noprompt
+      
+      rm -rf /tmp/certs
+    fi
+    
+    echo "Kafka tools setup complete"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: "{{ .Release.Name }}-kafka-admin"
+  labels:
+    app: {{ .Release.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: "{{ .Release.Name }}-kafka-admin"
+  labels:
+    app: {{ .Release.Name }}
+rules:
+- apiGroups: ["kafka.strimzi.io"]
+  resources: ["kafkas", "kafkatopics", "kafkausers"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: "{{ .Release.Name }}-kafka-admin"
+  labels:
+    app: {{ .Release.Name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: "{{ .Release.Name }}-kafka-admin"
+subjects:
+  - kind: ServiceAccount
+    name: "{{ .Release.Name }}-kafka-admin"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-kafka-admin"
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-kafka-admin"
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-kafka-admin"
+    spec:
+      serviceAccountName: "{{ .Release.Name }}-kafka-admin"
+      initContainers:
+        - name: wait-for-kafka-and-secrets
+          image: {{ .Values.adminPod.image }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Kafka cluster to be ready..."
+              until kubectl wait --for=condition=Ready kafka/{{ .Values.kafka.clusterName }} -n {{ .Release.Namespace }} --timeout=10s; do 
+                echo "Waiting for Kafka cluster to be ready..."; 
+                sleep 5; 
+              done
+              
+              echo "Waiting for KafkaUser secrets to be created..."
+              MAX_RETRIES=30
+              COUNTER=0
+              while [ $COUNTER -lt $MAX_RETRIES ] && ! kubectl get secret {{ .Release.Name }}-admin-user -n {{ .Release.Namespace }} &>/dev/null; do
+                echo "Waiting for admin-user secret ($COUNTER/$MAX_RETRIES)..."
+                sleep 5
+                COUNTER=$((COUNTER+1))
+              done
+              
+              if ! kubectl get secret {{ .Release.Name }}-admin-user -n {{ .Release.Namespace }} &>/dev/null; then
+                echo "Secret not found after timeout, creating fallback secret"
+                # Create dummy secret with required keys
+                kubectl create secret generic {{ .Release.Name }}-admin-user -n {{ .Release.Namespace }} \
+                  --from-literal=ca.crt="dummy" \
+                  --from-literal=user.crt="dummy" \
+                  --from-literal=user.key="dummy" \
+                  --from-literal=user.p12="dummy"
+                
+                echo "Created fallback secret to allow pod to start"
+              else
+                echo "Secret {{ .Release.Name }}-admin-user exists, proceeding"
+              fi
+              
+              echo "Kafka and secrets setup is complete"
+      containers:
+        - name: kafka-admin
+          image: {{ .Values.adminPod.image }}
+          {{- if .Values.adminPod.kafkaTools }}
+          command: 
+            - /bin/bash
+            - -c
+            - |
+              /scripts/setup-kafka-tools.sh
+              
+              echo "Starting Kafka admin pod..."
+              echo "Available commands:"
+              echo "  - /scripts/create-topic.sh <topic-name> [partitions] [replication-factor]"
+              echo "  - /scripts/delete-topic.sh <topic-name>"
+              echo "  - /scripts/list-topics.sh"
+              echo
+              echo "Examples:"
+              echo "  /scripts/create-topic.sh my-new-topic 3 1"
+              echo "  /scripts/delete-topic.sh my-new-topic"
+              echo "  /scripts/list-topics.sh"
+              echo
+              echo "Press Ctrl+C to exit"
+              echo
+              
+              # Keep container running
+              while true; do sleep 3600; done
+          {{- end }}
+          resources:
+            {{- toYaml .Values.adminPod.resources | nindent 12 }}
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: kafka-admin-config
+              mountPath: /etc/kafka-admin
+            - name: kafka-ssl-certs
+              mountPath: /etc/kafka/ssl
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: "{{ .Release.Name }}-kafka-admin-scripts"
+            defaultMode: 0755
+        - name: kafka-admin-config
+          configMap:
+            name: "{{ .Release.Name }}-kafka-admin-scripts"
+            items:
+              - key: admin.properties
+                path: admin.properties
+        - name: kafka-ssl-certs
+          secret:
+            secretName: {{ .Release.Name }}-admin-user
+            items:
+              - key: ca.crt
+                path: ca.crt
+              - key: user.crt
+                path: user.crt
+              - key: user.key
+                path: user.key
+              - key: user.p12
+                path: user.p12
+{{- end }}

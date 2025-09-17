@@ -1,0 +1,12 @@
+{{- if .Values.conditionalPackageInstalls.certManager }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: migration-ca-issuer-namespaced
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  ca:
+    secretName: migration-ca-key-pair
+{{- end }}

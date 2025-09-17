@@ -1,0 +1,21 @@
+{{- if .Values.conditionalPackageInstalls.certManager }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: migration-ca
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  isCA: true
+  commonName: "Migration CA"
+  duration: 87600h  # 10 years
+  secretName: migration-ca-key-pair
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+{{- end }}

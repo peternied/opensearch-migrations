@@ -1,0 +1,33 @@
+# Kafka Cluster Configuration
+kafka:
+  clusterName: "hello-kafka"
+  replicas: 1
+  storageType: "ephemeral"  # Use 'persistent-claim' for production
+  storageSize: "10Gi"
+  storageDeleteClaim: true
+  # Enable this if you want to separate Kafka controller and broker roles
+  # dedicatedController:
+  #   replicas: 1
+  #   storageSize: "5Gi"
+
+# Kafka Topic Configuration
+topic:
+  name: "hello-topic"
+  partitions: 1
+  replicationFactor: 1
+  configs:
+    retention.ms: 604800000  # 7 days in milliseconds
+
+# Admin Container Configuration
+adminPod:
+  enabled: true
+  image: "bitnami/kubectl:latest"
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+  # Additional Kafka tools will be installed in the container
+  kafkaTools: true

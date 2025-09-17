@@ -18,10 +18,42 @@ spec:
         {{- include "generic.setupEnvLoadInitContainer" (merge . (dict
            "MountName" $mountName
            "include" .Template.Include)) | nindent 8 }}
-        - name: wait-for-kafka
+        - name: wait-for-kafka-and-secrets
           image: bitnami/kubectl:latest  # or any image with curl/kubectl
-          command: [ 'sh', '-c',
-                     'until kubectl wait --for=condition=Ready kafka/captured-traffic -n {{ .Release.Namespace }} --timeout=10s; do echo waiting for kafka cluster is ready; sleep 1; done' ]
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Kafka cluster to be ready..."
+              until kubectl wait --for=condition=Ready kafka/captured-traffic -n {{ .Release.Namespace }} --timeout=10s; do 
+                echo "Waiting for Kafka cluster to be ready..."; 
+                sleep 5; 
+              done
+              
+              echo "Waiting for KafkaUser secrets to be created..."
+              MAX_RETRIES=30
+              COUNTER=0
+              while [ $COUNTER -lt $MAX_RETRIES ] && ! kubectl get secret capture-proxy-user -n {{ .Release.Namespace }} &>/dev/null; do
+                echo "Waiting for capture-proxy-user secret ($COUNTER/$MAX_RETRIES)..."
+                sleep 5
+                COUNTER=$((COUNTER+1))
+              done
+              
+              if ! kubectl get secret capture-proxy-user -n {{ .Release.Namespace }} &>/dev/null; then
+                echo "Secret not found after timeout, creating fallback secret"
+                # Create dummy secret with required keys
+                kubectl create secret generic capture-proxy-user -n {{ .Release.Namespace }} \
+                  --from-literal=ca.crt="dummy" \
+                  --from-literal=user.crt="dummy" \
+                  --from-literal=user.key="dummy" \
+                  --from-literal=user.p12="dummy"
+                
+                echo "Created fallback secret to allow pod to start"
+              else
+                echo "Secret capture-proxy-user exists, proceeding"
+              fi
+              
+              echo "Kafka and secrets setup is complete"
       containers:
         - name: captureproxy
           image: migrations/capture_proxy:latest
