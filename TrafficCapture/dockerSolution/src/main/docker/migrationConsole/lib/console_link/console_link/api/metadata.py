@@ -77,18 +77,3 @@ def get_metadata_status(session_name: str):
     except Exception as e:
         logger.error(f"Failed to get metadata status: {type(e).__name__} {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get metadata status: {type(e).__name__} {str(e)}")
-
-
-@metadata_router.post("/clear_status_history", operation_id="metadataClearStatusHistory")
-def get_metadata_status(session_name: str):
-    """Get the status of the most recent metadata operation for the session."""
-    http_safe_find_session(session_name)
-    
-    try:
-        latest_result = metadata_db.get_latest(session_name)
-        return metadata.build_status_from_entry(latest_result)
-    except metadata_db.MetadataNotAvailable:
-        return metadata.MetadataStatus(session_name=session_name, status=StepState.PENDING)
-    except Exception as e:
-        logger.error(f"Failed to get metadata status: {type(e).__name__} {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to get metadata status: {type(e).__name__} {str(e)}")

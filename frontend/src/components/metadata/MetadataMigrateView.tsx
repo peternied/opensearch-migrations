@@ -2,80 +2,92 @@
 
 import { SessionStatusProps } from "../session/types";
 import { useMetadataMigrateAction } from "@/hooks/apiAction";
-import { Alert, Box, Button, SpaceBetween, Table, TableProps, TextFilter } from "@cloudscape-design/components";
+import {
+  Alert,
+  Box,
+  Button,
+  SpaceBetween,
+  Table,
+  TableProps,
+  TextFilter,
+} from "@cloudscape-design/components";
 import { ItemResult } from "@/generated/api";
-import { useCollection } from '@cloudscape-design/collection-hooks';
+import { useCollection } from "@cloudscape-design/collection-hooks";
 import { useMemo } from "react";
 
 interface MetadataMigrateViewProps extends SessionStatusProps {
-    readonly dryRun: boolean;
+  readonly dryRun: boolean;
 }
 
 export default function MetadataMigrateView({
   sessionName,
-  dryRun
+  dryRun,
 }: MetadataMigrateViewProps) {
-    const {
-        run: runMetadataAction,
-        data,
-        reset,
-        isLoading,
-        error,
-    } = useMetadataMigrateAction(dryRun);
+  const {
+    run: runMetadataAction,
+    data,
+    reset,
+    isLoading,
+    error,
+  } = useMetadataMigrateAction(dryRun);
 
-    const triggerMetadataAction = async () => {
-      reset();
-      await runMetadataAction(sessionName);
-    };
+  const triggerMetadataAction = async () => {
+    reset();
+    await runMetadataAction(sessionName);
+  };
 
-    type ItemKind = "Index" | "Alias" | "Index Template" | "Component Template";
-    type ItemResultWithType = ItemResult & { type: ItemKind };
+  type ItemKind = "Index" | "Alias" | "Index Template" | "Component Template";
+  type ItemResultWithType = ItemResult & { type: ItemKind };
 
-    function withType<T extends ItemResult>(items: T[] | undefined, type: ItemKind): ItemResultWithType[] {
-      return (items ?? []).map(item => ({ ...item, type }));
-    }
+  function withType<T extends ItemResult>(
+    items: T[] | undefined,
+    type: ItemKind,
+  ): ItemResultWithType[] {
+    return (items ?? []).map((item) => ({ ...item, type }));
+  }
 
-    const metadataItems = useMemo(() => {
-      return [
-        ...withType(data?.items?.aliases, "Alias"),
-        ...withType(data?.items?.indexes, "Index"),
-        ...withType(data?.items?.indexTemplates, "Index Template"),
-        ...withType(data?.items?.componentTemplates, "Component Template"),
-      ];
-    }, [data]);
+  const metadataItems = useMemo(() => {
+    return [
+      ...withType(data?.items?.aliases, "Alias"),
+      ...withType(data?.items?.indexes, "Index"),
+      ...withType(data?.items?.indexTemplates, "Index Template"),
+      ...withType(data?.items?.componentTemplates, "Component Template"),
+    ];
+  }, [data]);
 
-    const itemColumnDefinitions: TableProps.ColumnDefinition<ItemResultWithType>[] = [
-    {
-      id: 'name', 
-      header: 'Index Name', 
-      cell: (item) => item.name, 
-      sortingField: "name"
-    },
-    {
-      id: 'type',
-      header: 'Type',
-      cell: (item) => item.type,
-      sortingField: "type"
-    },
-    {
-      id: 'result',
-      header: 'Success',
-      cell: (item) => item.successful,
-      sortingField: "successful"
-    },
-    // {
-    //   id: 'error-type',
-    //   header: 'Error Type',
-    //   cell: (item) => item.failure?.type ?? "",
-    //   sortingField: "failure?.type"
-    // },
-    {
-      id: 'error-details',
-      header: 'Error Type',
-      cell: (item) => item.failure?.message ?? "",
-      sortingField: "failure?.message"
-    }
-  ];
+  const itemColumnDefinitions: TableProps.ColumnDefinition<ItemResultWithType>[] =
+    [
+      {
+        id: "name",
+        header: "Index Name",
+        cell: (item) => item.name,
+        sortingField: "name",
+      },
+      {
+        id: "type",
+        header: "Type",
+        cell: (item) => item.type,
+        sortingField: "type",
+      },
+      {
+        id: "result",
+        header: "Success",
+        cell: (item) => item.successful,
+        sortingField: "successful",
+      },
+      // {
+      //   id: 'error-type',
+      //   header: 'Error Type',
+      //   cell: (item) => item.failure?.type ?? "",
+      //   sortingField: "failure?.type"
+      // },
+      {
+        id: "error-details",
+        header: "Error Type",
+        cell: (item) => item.failure?.message ?? "",
+        sortingField: "failure?.message",
+      },
+    ];
 
   const itemCollection = useCollection(metadataItems, {
     filtering: {
@@ -84,44 +96,43 @@ export default function MetadataMigrateView({
           <b>No items</b>
         </Box>
       ),
-      noMatch: <Box>No transformations match the filter criteria.</Box>
+      noMatch: <Box>No transformations match the filter criteria.</Box>,
     },
     sorting: {
       defaultState: {
         sortingColumn: {
-          sortingField: "name"
-        }
-      } 
-    }
+          sortingField: "name",
+        },
+      },
+    },
   });
 
   type Transformation = {
-    name: string,
-    description: string,
-  }
-    const transformations = useMemo(() => {
-      const list = data?.transformations?.transformers ?? [];
-        return list
-          .map(({ name, description }) => ({ name, description } as Transformation));
-      },
-      [data]
+    name: string;
+    description: string;
+  };
+  const transformations = useMemo(() => {
+    const list = data?.transformations?.transformers ?? [];
+    return list.map(
+      ({ name, description }) => ({ name, description }) as Transformation,
     );
+  }, [data]);
 
-    const transformationsColumnDefinitions: TableProps.ColumnDefinition<Transformation>[] = [
-    {
-      id: 'name', 
-      header: 'Name', 
-      cell: (item) => item.name, 
-      sortingField: "name"
-    },
-    {
-      id: 'description',
-      header: 'Description',
-      cell: (item) => item.description,
-      sortingField: "description"
-    }
-  ];
-
+  const transformationsColumnDefinitions: TableProps.ColumnDefinition<Transformation>[] =
+    [
+      {
+        id: "name",
+        header: "Name",
+        cell: (item) => item.name,
+        sortingField: "name",
+      },
+      {
+        id: "description",
+        header: "Description",
+        cell: (item) => item.description,
+        sortingField: "description",
+      },
+    ];
 
   const transformationsCollection = useCollection(transformations, {
     filtering: {
@@ -130,23 +141,20 @@ export default function MetadataMigrateView({
           <b>No items</b>
         </Box>
       ),
-      noMatch: <Box>No transformations match the filter criteria.</Box>
+      noMatch: <Box>No transformations match the filter criteria.</Box>,
     },
     sorting: {
       defaultState: {
         sortingColumn: {
-          sortingField: "name"
-        }
-      } 
-    }
+          sortingField: "name",
+        },
+      },
+    },
   });
-
-
 
   const maxHeight = "300px";
   return (
     <SpaceBetween size="l">
-
       {error && (
         <Alert type="error" header="Error">
           {String(error)}
@@ -157,9 +165,11 @@ export default function MetadataMigrateView({
         onClick={triggerMetadataAction}
         loading={isLoading}
         disabled={isLoading}
-      >Run Metadata {dryRun ? "Evaluation" : "Migration"}</Button>
+      >
+        Run Metadata {dryRun ? "Evaluation" : "Migration"}
+      </Button>
 
-      <div style={{ maxHeight, overflow: 'auto' }}>
+      <div style={{ maxHeight, overflow: "auto" }}>
         <Table<ItemResultWithType>
           {...itemCollection.collectionProps}
           columnDefinitions={itemColumnDefinitions}
@@ -180,7 +190,7 @@ export default function MetadataMigrateView({
           stickyHeader
         />
       </div>
-      <div style={{ maxHeight, overflow: 'auto' }}>
+      <div style={{ maxHeight, overflow: "auto" }}>
         <Table<Transformation>
           {...transformationsCollection.collectionProps}
           columnDefinitions={transformationsColumnDefinitions}

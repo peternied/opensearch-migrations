@@ -50,10 +50,5 @@ def create_entry(entry: MetadataEntry):
     _TABLE.insert(entry.model_dump())
 
 
-@with_lock(_LOCK)
-def clear_all():
-    _TABLE.truncate()
-
-
 class MetadataNotAvailable(Exception):
     pass

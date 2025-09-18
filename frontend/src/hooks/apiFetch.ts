@@ -56,7 +56,7 @@ function useFetchData<T>(
 }
 
 const defaultArgs = (name: string) => {
- return { path: { session_name: name } };
+  return { path: { session_name: name } };
 };
 
 export function useSourceCluster(sessionName: string) {

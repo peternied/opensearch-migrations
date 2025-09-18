@@ -49,7 +49,7 @@ export function useAsyncAction<T>(
 }
 
 const defaultArgs = (name: string) => {
- return { path: { session_name: name } };
+  return { path: { session_name: name } };
 };
 
 export function useMetadataMigrateAction(dryRun: boolean) {

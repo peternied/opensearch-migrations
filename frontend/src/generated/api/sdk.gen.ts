@@ -41,9 +41,6 @@ import type {
   MetadataStatusData,
   MetadataStatusResponses,
   MetadataStatusErrors,
-  MetadataClearStatusHistoryData,
-  MetadataClearStatusHistoryResponses,
-  MetadataClearStatusHistoryErrors,
   BackfillStatusData,
   BackfillStatusResponses,
   BackfillStatusErrors,
@@ -334,25 +331,6 @@ export const metadataStatus = <ThrowOnError extends boolean = false>(
   >({
     responseTransformer: metadataStatusResponseTransformer,
     url: "/sessions/{session_name}/metadata/status",
-    ...options,
-  });
-};
-
-/**
- * Get Metadata Status
- * Get the status of the most recent metadata operation for the session.
- */
-export const metadataClearStatusHistory = <
-  ThrowOnError extends boolean = false,
->(
-  options: Options<MetadataClearStatusHistoryData, ThrowOnError>,
-) => {
-  return (options.client ?? _heyApiClient).post<
-    MetadataClearStatusHistoryResponses,
-    MetadataClearStatusHistoryErrors,
-    ThrowOnError
-  >({
-    url: "/sessions/{session_name}/metadata/clear_status_history",
     ...options,
   });
 };

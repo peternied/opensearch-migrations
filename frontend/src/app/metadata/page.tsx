@@ -30,7 +30,11 @@ function MetadataPageInner() {
     );
   }
 
-  const onSubmit = () => useCallback(() => router.push(`/backfill?sessionName=${sessionName}`), [router]);
+  const onSubmit = () =>
+    useCallback(
+      () => router.push(`/backfill?sessionName=${sessionName}`),
+      [router],
+    );
 
   const steps: WorkflowWizardStep[] = [
     {

@@ -21,6 +21,11 @@ function BackfillPageInner() {
   const searchParams = useSearchParams();
   const sessionName = searchParams?.get("sessionName") ?? "";
 
+  const onSubmit = useCallback(
+    () => router.push(`/viewSession?sessionName=${sessionName}`),
+    [router, sessionName],
+  );
+
   if (!sessionName) {
     return (
       <Alert type="error" header={`Unable to find an associated session`}>
@@ -28,8 +33,6 @@ function BackfillPageInner() {
       </Alert>
     );
   }
-
-  const onSubmit = useCallback(() => router.push(`/viewSession?sessionName=${sessionName}`), [router]);
 
   const steps: WorkflowWizardStep[] = [
     {

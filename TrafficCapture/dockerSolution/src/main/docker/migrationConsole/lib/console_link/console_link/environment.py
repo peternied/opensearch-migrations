@@ -95,18 +95,10 @@ class Environment:
         else:
             logger.info("No metrics source provided")
 
-        if 'snapshot' in self.config:
-            self.snapshot = get_snapshot(self.config["snapshot"],
-                                         source_cluster=self.source_cluster)
-            logger.info(f"Snapshot initialized: {self.snapshot}")
-        else:
-            logger.info("No snapshot provided")
-
         if 'backfill' in self.config:
             if self.target_cluster is None:
                 raise ValueError("target_cluster must be provided for RFS backfill")
             self.backfill = get_backfill(self.config["backfill"],
-                                         snapshot=self.snapshot,
                                          target_cluster=self.target_cluster,
                                          client_options=self.client_options)
             logger.info(f"Backfill migration initialized: {self.backfill}")
@@ -117,6 +109,12 @@ class Environment:
             self.replay = get_replayer(self.config["replay"], client_options=self.client_options)
             logger.info(f"Replay initialized: {self.replay}")
 
+        if 'snapshot' in self.config:
+            self.snapshot = get_snapshot(self.config["snapshot"],
+                                         source_cluster=self.source_cluster)
+            logger.info(f"Snapshot initialized: {self.snapshot}")
+        else:
+            logger.info("No snapshot provided")
         if 'metadata_migration' in self.config:
             self.metadata = Metadata(self.config["metadata_migration"],
                                      target_cluster=self.target_cluster,

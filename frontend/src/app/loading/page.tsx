@@ -36,7 +36,10 @@ export default function LoadingPage() {
   const isReady = debugIsReady ?? getSiteReadiness() ?? data?.status === "ok";
   const errorMessage = debugError ?? error ?? null;
 
-  const startMigration = useCallback(() => router.push("/snapshot?sessionName=abc"), [router]);
+  const startMigration = useCallback(
+    () => router.push("/snapshot?sessionName=abc"),
+    [router],
+  );
 
   return (
     <SpaceBetween size="l">

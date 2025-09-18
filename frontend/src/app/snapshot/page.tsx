@@ -33,7 +33,11 @@ function SnapshotPageInner() {
     );
   }
 
-  const onSubmit = () => useCallback(() => router.push(`/metadata?sessionName=${sessionName}`), [router]);
+  const onSubmit = () =>
+    useCallback(
+      () => router.push(`/metadata?sessionName=${sessionName}`),
+      [router],
+    );
 
   const steps: WorkflowWizardStep[] = [
     {

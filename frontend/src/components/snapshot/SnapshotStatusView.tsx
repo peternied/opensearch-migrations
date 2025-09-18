@@ -25,7 +25,11 @@ export interface SnapshotStatusViewProps {
   readonly error: string | null;
 }
 
-export default function SnapshotStatusView({ isLoading: apiLoading, data, error }: SnapshotStatusViewProps) {
+export default function SnapshotStatusView({
+  isLoading: apiLoading,
+  data,
+  error,
+}: SnapshotStatusViewProps) {
   const [debugData, setDebugData] = useState<SnapshotStatus | null>(null);
   const [isLoading, setIsLoading] = useState(apiLoading);
   const [snapshotData, setSnapshotData] = useState<SnapshotStatus | null>(null);
@@ -41,7 +45,7 @@ export default function SnapshotStatusView({ isLoading: apiLoading, data, error 
       setIsLoading(apiLoading);
     }
   }, [data, apiLoading, debugData]);
-  
+
   const applyDebugScenario = (scenario: keyof typeof SNAPSHOT_SCENARIOS) => {
     setDebugData(SNAPSHOT_SCENARIOS[scenario]);
     setSnapshotData(SNAPSHOT_SCENARIOS[scenario]);

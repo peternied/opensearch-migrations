@@ -1,7 +1,7 @@
 import json
 import os
 import pathlib
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, MagicMock
 from datetime import datetime, timezone
 
 import pytest
@@ -93,49 +93,48 @@ def test_cant_instantiate_with_multiple_rfs_deployment_types():
     assert "More than one value is present" in str(excinfo.value.args[1]['reindex_from_snapshot'][0])
 
 
-@patch.object(ECSService, 'set_desired_count', autospec=True)
-def test_ecs_rfs_backfill_start_sets_ecs_desired_count(mock, ecs_rfs_backfill):
+def test_ecs_rfs_backfill_start_sets_ecs_desired_count(ecs_rfs_backfill, mocker):
     assert ecs_rfs_backfill.default_scale == 5
+    mock = mocker.patch.object(ECSService, 'set_desired_count', autospec=True)
     ecs_rfs_backfill.start()
 
     assert isinstance(ecs_rfs_backfill, ECSRFSBackfill)
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client, 5)
 
 
-@patch.object(ECSService, 'set_desired_count', autospec=True)
-def test_ecs_rfs_backfill_pause_sets_ecs_desired_count(mock, ecs_rfs_backfill):
+def test_ecs_rfs_backfill_pause_sets_ecs_desired_count(ecs_rfs_backfill, mocker):
     assert ecs_rfs_backfill.default_scale == 5
+    mock = mocker.patch.object(ECSService, 'set_desired_count', autospec=True)
     ecs_rfs_backfill.pause()
 
     assert isinstance(ecs_rfs_backfill, ECSRFSBackfill)
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client, 0)
 
 
-@patch.object(ECSService, 'set_desired_count', autospec=True)
-def test_ecs_rfs_backfill_stop_sets_ecs_desired_count(mock, ecs_rfs_backfill):
+def test_ecs_rfs_backfill_stop_sets_ecs_desired_count(ecs_rfs_backfill, mocker):
     assert ecs_rfs_backfill.default_scale == 5
+    mock = mocker.patch.object(ECSService, 'set_desired_count', autospec=True)
     ecs_rfs_backfill.stop()
 
     assert isinstance(ecs_rfs_backfill, ECSRFSBackfill)
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client, 0)
 
 
-@patch.object(ECSService, 'set_desired_count', autospec=True)
-def test_ecs_rfs_backfill_scale_sets_ecs_desired_count(mock, ecs_rfs_backfill):
+def test_ecs_rfs_backfill_scale_sets_ecs_desired_count(ecs_rfs_backfill, mocker):
+    mock = mocker.patch.object(ECSService, 'set_desired_count', autospec=True)
     ecs_rfs_backfill.scale(3)
 
     assert isinstance(ecs_rfs_backfill, ECSRFSBackfill)
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client, 3)
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-def test_ecs_rfs_backfill_status_gets_ecs_instance_statuses(mock, ecs_rfs_backfill):
+def test_ecs_rfs_backfill_status_gets_ecs_instance_statuses(ecs_rfs_backfill, mocker):
     mocked_instance_status = DeploymentStatus(
         desired=3,
         running=1,
         pending=2
     )
-    mock.return_value = mocked_instance_status
+    mock = mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True, return_value=mocked_instance_status)
     value = ecs_rfs_backfill.get_status(deep_check=False)
 
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client)
@@ -144,14 +143,13 @@ def test_ecs_rfs_backfill_status_gets_ecs_instance_statuses(mock, ecs_rfs_backfi
     assert str(mocked_instance_status) == value.value[1]
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_stopped(mock, ecs_rfs_backfill):
+def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_stopped(ecs_rfs_backfill, mocker):
     mocked_stopped_status = DeploymentStatus(
         desired=8,
         running=0,
         pending=0
     )
-    mock.return_value = mocked_stopped_status
+    mock = mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True, return_value=mocked_stopped_status)
     value = ecs_rfs_backfill.get_status(deep_check=False)
 
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client)
@@ -160,14 +158,13 @@ def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_stopped(m
     assert str(mocked_stopped_status) == value.value[1]
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_starting(mock, ecs_rfs_backfill):
+def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_starting(ecs_rfs_backfill, mocker):
     mocked_starting_status = DeploymentStatus(
         desired=8,
         running=0,
         pending=6
     )
-    mock.return_value = mocked_starting_status
+    mock = mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True, return_value=mocked_starting_status)
     value = ecs_rfs_backfill.get_status(deep_check=False)
 
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client)
@@ -176,14 +173,13 @@ def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_starting(
     assert str(mocked_starting_status) == value.value[1]
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_running(mock, ecs_rfs_backfill):
+def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_running(ecs_rfs_backfill, mocker):
     mocked_running_status = DeploymentStatus(
         desired=1,
         running=3,
         pending=1
     )
-    mock.return_value = mocked_running_status
+    mock = mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True, return_value=mocked_running_status)
     value = ecs_rfs_backfill.get_status(deep_check=False)
 
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client)
@@ -192,9 +188,7 @@ def test_ecs_rfs_calculates_backfill_status_from_ecs_instance_statuses_running(m
     assert str(mocked_running_status) == value.value[1]
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-@patch('console_link.models.backfill_rfs.get_detailed_status', autospec=True)
-def test_ecs_rfs_get_status_deep_check(mock_detailed_status, mock_get_instance_statuses, ecs_rfs_backfill):
+def test_ecs_rfs_get_status_deep_check(ecs_rfs_backfill, mocker):
     mocked_instance_status = DeploymentStatus(
         desired=1,
         running=1,
@@ -204,19 +198,21 @@ def test_ecs_rfs_get_status_deep_check(mock_detailed_status, mock_get_instance_s
         data = json.load(f)
         total_shards = data['hits']['total']['value']
     
-    # Setup mocks
-    mock_get_instance_statuses.return_value = mocked_instance_status
+    # Mock the deployment status retrieval
+    mock = mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True,
+                               return_value=mocked_instance_status)
     
     # Mock the detailed status function to return a known value
     mocked_detailed_status = f"Work items total: {total_shards}"
-    mock_detailed_status.return_value = mocked_detailed_status
+    mock_detailed = mocker.patch('console_link.models.backfill_rfs.get_detailed_status',
+                                 autospec=True, return_value=mocked_detailed_status)
 
     # Call the function being tested
     value = ecs_rfs_backfill.get_status(deep_check=True)
 
     # Verify the mocks were called
-    mock_get_instance_statuses.assert_called_once_with(ecs_rfs_backfill.ecs_client)
-    mock_detailed_status.assert_called_once()
+    mock.assert_called_once_with(ecs_rfs_backfill.ecs_client)
+    mock_detailed.assert_called_once()
     
     # Verify the output
     assert value.success
@@ -225,15 +221,15 @@ def test_ecs_rfs_get_status_deep_check(mock_detailed_status, mock_get_instance_s
     assert str(total_shards) in value.value[1]
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-@patch.object(Cluster, 'call_api', side_effect=requests.exceptions.RequestException())
-def test_ecs_rfs_deep_status_check_failure(mock_api, mock_ecs, ecs_rfs_backfill, caplog):
+def test_ecs_rfs_deep_status_check_failure(ecs_rfs_backfill, mocker, caplog):
     mocked_instance_status = DeploymentStatus(
         desired=1,
         running=1,
         pending=0
     )
-    mock_ecs.return_value = mocked_instance_status
+    mock_ecs = mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True,
+                                   return_value=mocked_instance_status)
+    mock_api = mocker.patch.object(Cluster, 'call_api', side_effect=requests.exceptions.RequestException())
 
     # Call function being tested
     result = ecs_rfs_backfill.get_status(deep_check=True)
@@ -250,22 +246,18 @@ def test_ecs_rfs_deep_status_check_failure(mock_api, mock_ecs, ecs_rfs_backfill,
     assert result.value[0] == BackfillStatus.RUNNING
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-@patch.object(Cluster, 'fetch_all_documents', autospec=True)
-@patch.object(Cluster, 'call_api', autospec=True)
-def test_ecs_rfs_backfill_archive_as_expected(mock_api, mock_fetch_docs, mock_get_statuses, 
-                                              ecs_rfs_backfill, tmpdir):
+def test_ecs_rfs_backfill_archive_as_expected(ecs_rfs_backfill, mocker, tmpdir):
     mocked_instance_status = DeploymentStatus(
         desired=0,
         running=0,
         pending=0
     )
-    mock_get_statuses.return_value = mocked_instance_status
+    mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True, return_value=mocked_instance_status)
 
     mocked_docs = [{"id": {"key": "value"}}]
-    mock_fetch_docs.return_value = mocked_docs
+    mocker.patch.object(Cluster, 'fetch_all_documents', autospec=True, return_value=mocked_docs)
 
-    mock_api.return_value = requests.Response()
+    mock_api = mocker.patch.object(Cluster, 'call_api', autospec=True, return_value=requests.Response())
 
     result = ecs_rfs_backfill.archive(archive_dir_path=tmpdir.strpath, archive_file_name="backup.json")
 
@@ -282,20 +274,20 @@ def test_ecs_rfs_backfill_archive_as_expected(mock_api, mock_fetch_docs, mock_ge
     )
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-@patch.object(Cluster, 'fetch_all_documents', autospec=True)
-def test_ecs_rfs_backfill_archive_no_index_as_expected(mock_fetch_docs, mock_get_statuses, 
-                                                       ecs_rfs_backfill, tmpdir):
+def test_ecs_rfs_backfill_archive_no_index_as_expected(ecs_rfs_backfill, mocker, tmpdir):
     mocked_instance_status = DeploymentStatus(
         desired=0,
         running=0,
         pending=0
     )
-    mock_get_statuses.return_value = mocked_instance_status
+    mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True, return_value=mocked_instance_status)
 
     response_404 = requests.Response()
     response_404.status_code = 404
-    mock_fetch_docs.side_effect = requests.HTTPError(response=response_404, request=requests.Request())
+    mocker.patch.object(
+        Cluster, 'fetch_all_documents', autospec=True,
+        side_effect=requests.HTTPError(response=response_404, request=requests.Request())
+    )
 
     result = ecs_rfs_backfill.archive()
 
@@ -303,14 +295,13 @@ def test_ecs_rfs_backfill_archive_no_index_as_expected(mock_fetch_docs, mock_get
     assert isinstance(result.value, WorkingIndexDoesntExist)
 
 
-@patch.object(ECSService, 'get_instance_statuses', autospec=True)
-def test_ecs_rfs_backfill_archive_errors_if_in_progress(mock, ecs_rfs_backfill):
+def test_ecs_rfs_backfill_archive_errors_if_in_progress(ecs_rfs_backfill, mocker):
     mocked_instance_status = DeploymentStatus(
         desired=3,
         running=1,
         pending=2
     )
-    mock.return_value = mocked_instance_status
+    mock = mocker.patch.object(ECSService, 'get_instance_statuses', autospec=True, return_value=mocked_instance_status)
     result = ecs_rfs_backfill.archive()
 
     mock.assert_called_once_with(ecs_rfs_backfill.ecs_client)

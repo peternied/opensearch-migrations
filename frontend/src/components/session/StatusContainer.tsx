@@ -57,15 +57,24 @@ export default function StatusContainer<T>({
     return null;
   };
 
-  const onClick = useCallback(() => router.push(goToLocation), [router])
+  const onClick = useCallback(() => router.push(goToLocation), [router]);
   return (
     <Container
-    header={<Header
-      variant="h2"
-      actions={(!!goToLocation && <Button variant='primary' onClick={onClick}>Go to {title}</Button>)}
-      >
-    {title}</Header>
-    }>
+      header={
+        <Header
+          variant="h2"
+          actions={
+            !!goToLocation && (
+              <Button variant="primary" onClick={onClick}>
+                Go to {title}
+              </Button>
+            )
+          }
+        >
+          {title}
+        </Header>
+      }
+    >
       {isLoading
         ? renderLoadingState()
         : data

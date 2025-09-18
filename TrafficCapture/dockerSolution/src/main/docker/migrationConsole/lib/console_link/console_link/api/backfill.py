@@ -30,10 +30,6 @@ def _get_backfill(session_name):
     return env.backfill
 
 
-### TODO: Add in plumbing for support of RFS backfill status info
-### TODO: Also figure out the update model ??? Maybe call argo to check? vs the db?
-### TODO: YES CALL ARGO TO LOOKUP STATUS INFORMATION :SIGH:
-
 @backfill_router.get("/status",
                      response_model=backfill.BackfillOverallStatus,
                      operation_id="backfillStatus")
@@ -48,6 +44,7 @@ def get_metadata_status(session_name: str):
     except Exception as e:
         logger.error(f"Failed to get backfill status: {type(e).__name__} {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get backfill status: {type(e).__name__} {str(e)}")
+
 
 @backfill_router.post("/start",
                       response_model=Dict[str, str],
