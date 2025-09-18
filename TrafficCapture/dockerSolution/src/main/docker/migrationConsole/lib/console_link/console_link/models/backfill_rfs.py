@@ -7,7 +7,6 @@ from typing import Dict, Optional
 
 import requests
 
-from console_link.models.snapshot import Snapshot, S3Snapshot
 from console_link.models.step_state import StepStateWithPause
 from console_link.models.backfill_base import Backfill, BackfillOverallStatus, BackfillStatus, DeepStatusNotYetAvailable
 from console_link.models.client_options import ClientOptions
@@ -16,7 +15,6 @@ from console_link.models.schema_tools import contains_one_of
 from console_link.models.command_result import CommandResult
 from console_link.models.kubectl_runner import DeploymentStatus, KubectlRunner
 from console_link.models.ecs_service import ECSService
-from console_link.models.argo_service import ArgoService, ENDING_ARGO_PHASES
 
 from cerberus import Validator
 
@@ -52,15 +50,6 @@ K8S_RFS_SCHEMA = {
     }
 }
 
-ARGO_RFS_SCHEMA = {
-    "type": "dict",
-    "schema": {
-        "namespace": {"type": "string", "required": False, "default": "ma"},
-        "workflow_template_name": {"type": "string", "required": True},
-        "parameters": {"type": "dict", "required": False}
-    }
-}
-
 RFS_BACKFILL_SCHEMA = {
     "reindex_from_snapshot": {
         "type": "dict",
@@ -68,13 +57,12 @@ RFS_BACKFILL_SCHEMA = {
             "docker": DOCKER_RFS_SCHEMA,
             "ecs": ECS_RFS_SCHEMA,
             "k8s": K8S_RFS_SCHEMA,
-            "argo": ARGO_RFS_SCHEMA,
             "snapshot_name": {"type": "string", "required": False},
             "snapshot_repo": {"type": "string", "required": False},
             "session_name": {"type": "string", "required": False},
             "scale": {"type": "integer", "required": False, "min": 1}
         },
-        "check_with": contains_one_of({'docker', 'ecs', 'k8s', 'argo'}),
+        "check_with": contains_one_of({'docker', 'ecs', 'k8s'}),
     }
 }
 
@@ -88,7 +76,7 @@ class RFSBackfill(Backfill):
             raise ValueError("Invalid config file for RFS backfill", v.errors)
 
     def create(self, *args, **kwargs) -> CommandResult:
-        return CommandResult(True, "no-op")
+        return CommandResult(1, "no-op")
 
     def start(self, *args, **kwargs) -> CommandResult:
         raise NotImplementedError()
@@ -200,284 +188,6 @@ class K8sRFSBackfill(RFSBackfill):
         return get_detailed_status_obj(self.target_cluster, active_workers)
 
 
-class ArgoRFSBackfill(RFSBackfill):
-    """
-    Implementation of RFS backfill using Argo Workflows to control the document bulk load process.
-    This class leverages Argo Workflows to manage the reindex-from-snapshot workflow template.
-    
-    The workflow template should have an entrypoint template named 'run-bulk-load' or 'run-bulk-load-from-config'
-    and should accept the parameters as specified in documentBulkLoad.yaml.
-    """
-    def __init__(self, config: Dict, snapshot: Optional[Snapshot], target_cluster: Cluster,
-                 client_options: Optional[ClientOptions] = None) -> None:
-        super().__init__(config)
-        self.client_options = client_options
-        self.target_cluster = target_cluster
-        
-        if snapshot is None:
-            raise ValueError("A snapshot object is required for ArgoRFSBackfill")
-        self.snapshot = snapshot
-        
-        # Extract Argo configuration
-        self.argo_config = self.config["reindex_from_snapshot"]["argo"]
-        self.namespace = self.argo_config.get("namespace", "ma")
-        self.workflow_template_name = self.argo_config["workflow_template_name"]
-        
-        # Initialize parameters dictionary
-        self.parameters = self._initialize_parameters()
-        
-        # Initialize the ArgoService
-        self.argo_service = ArgoService(namespace=self.namespace)
-        
-        # Track the workflow name once started
-        # TODO: This does not work at all, need to use the new workflow DB
-        self.workflow_name = None
-
-    def _initialize_parameters(self) -> Dict:
-        """
-        Initialize and prepare all parameters needed for the workflow.
-        
-        Returns:
-            Dictionary of parameters to pass to the workflow
-        """
-        # Start with any existing parameters from config
-        parameters = self.argo_config.get("parameters", {}).copy()
-        
-        # Set session name if not provided
-        if "session-name" not in parameters:
-            session_name = self.config["reindex_from_snapshot"].get(
-                "session_name", 
-                f"rfs-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-            )
-            parameters["session-name"] = session_name
-            
-        # Add snapshot configuration - we've validated snapshot is not None in __init__
-        parameters["snapshot-name"] = self.snapshot.snapshot_name
-        logger.debug(f"Using snapshot: {self.snapshot.snapshot_name}")
-        
-        # Add S3 specific parameters if needed
-        if isinstance(self.snapshot, S3Snapshot):
-            parameters["s3-repo-uri"] = self.snapshot.s3_repo_uri
-            parameters["s3-region"] = self.snapshot.s3_region
-            parameters["s3-endpoint"] = self.snapshot.s3_endpoint
-            
-        # Add target cluster parameters
-        parameters["target-host"] = self.target_cluster.endpoint
-        parameters["target-insecure"] = self.target_cluster.allow_insecure
-        parameters["target-username"] = self.target_cluster.auth_details["username"]
-        parameters["target-password"] = self.target_cluster.auth_details["password"]
-        
-        # Add additional configuration parameters
-        if "target-config" not in parameters:
-            parameters["target-config"] = json.dumps(self.target_cluster.config)
-            
-        if "rfs-config" not in parameters:
-            parameters["rfs-config"] = json.dumps({"test": None})
-            
-        if "image-config" not in parameters:
-            parameters["image-config"] = json.dumps({
-                "reindex-from-snapshot": {
-                    "image": "migrations/reindex_from_snapshot:latest",
-                    "pull-policy": "IfNotPresent"
-                },
-                "migration-console": {
-                    "image": "migrations/migration_console:latest", 
-                    "pull-policy": "IfNotPresent"
-                }
-            })
-            
-        # Default to using localstack credentials
-        parameters["use-localstack-aws-creds"] = parameters.get("use-localstack-aws-creds", True)
-        parameters["localstack-enabled"] = parameters.get("localstack-enabled", "true")
-            
-        logger.debug("Workflow parameters prepared successfully")
-        return parameters
-        
-    def start(self, *args, **kwargs) -> CommandResult:
-        """
-        Start the Argo workflow for document bulk loading.
-        
-        Returns:
-            CommandResult: Result of the workflow creation operation
-        """
-        logger.info(f"Starting RFS backfill using Argo workflow template: {self.workflow_template_name}")
-        
-        # Get entrypoint from config or use default
-        entrypoint = self.argo_config.get("entrypoint", "run-bulk-load")
-        
-        # Create workflow with the specified entrypoint
-        workflow_options = {
-            "entrypoint": entrypoint,
-        }
-        
-        try:
-            result = self.argo_service.start_workflow(
-                workflow_template_name=self.workflow_template_name,
-                parameters=self.parameters,
-                workflow_options=workflow_options
-            )
-            
-            if result.success:
-                self.workflow_name = result.value
-                logger.info(f"Successfully started Argo workflow: {self.workflow_name}")
-                return CommandResult(True, f"Started RFS backfill workflow: {self.workflow_name}")
-            else:
-                logger.error(f"Failed to start Argo workflow: {result.value}")
-                return CommandResult(False, f"Failed to start RFS backfill workflow: {result.value}")
-        except Exception as e:
-            logger.error(f"Exception while starting Argo workflow: {str(e)}", exc_info=True)
-            return CommandResult(False, f"Exception while starting RFS backfill workflow: {str(e)}")
-
-    def pause(self, *args, **kwargs) -> CommandResult:
-        """Pause the Argo workflow by stopping it"""
-        if not self.workflow_name:
-            logger.warning("Cannot pause workflow: No active workflow found")
-            return CommandResult(False, "No active workflow found to pause")
-            
-        workflow_name = str(self.workflow_name)  # Ensure it's a string
-        logger.info(f"Pausing RFS backfill workflow: {workflow_name}")
-        result = self.argo_service.stop_workflow(workflow_name=workflow_name)
-        
-        if result.success:
-            logger.info(f"Successfully paused Argo workflow: {self.workflow_name}")
-            return CommandResult(True, f"Paused RFS backfill workflow: {self.workflow_name}")
-        else:
-            error_msg = str(result.value) if result.value is not None else "Unknown error"
-            logger.error(f"Failed to pause Argo workflow: {error_msg}")
-            return CommandResult(False, f"Failed to pause RFS backfill workflow: {error_msg}")
-
-    def stop(self, *args, **kwargs) -> CommandResult:
-        """Stop the Argo workflow"""
-        if not self.workflow_name:
-            logger.warning("Cannot stop workflow: No active workflow found")
-            return CommandResult(False, "No active workflow found to stop")
-            
-        workflow_name = str(self.workflow_name)  # Ensure it's a string
-        logger.info(f"Stopping RFS backfill workflow: {workflow_name}")
-        result = self.argo_service.stop_workflow(workflow_name=workflow_name)
-        
-        if result.success:
-            logger.info(f"Successfully stopped Argo workflow: {self.workflow_name}")
-            return CommandResult(True, f"Stopped RFS backfill workflow: {self.workflow_name}")
-        else:
-            error_msg = str(result.value) if result.value is not None else "Unknown error"
-            logger.error(f"Failed to stop Argo workflow: {error_msg}")
-            return CommandResult(False, f"Failed to stop RFS backfill workflow: {error_msg}")
-
-    def scale(self, units: int, *args, **kwargs) -> CommandResult:
-        """Scaling not directly supported for Argo workflows"""
-        logger.warning("Scaling is not supported for Argo workflow-based RFS backfill")
-        return CommandResult(False, "Scaling is not supported for Argo workflow-based RFS backfill")
-
-    def archive(self, *args, archive_dir_path: str = None, archive_file_name: str = None, **kwargs) -> CommandResult:
-        """Archive the working state index if the workflow is completed"""
-        if not self.workflow_name:
-            logger.warning("Cannot archive: No active workflow found")
-            return CommandResult(False, "No active workflow found to archive")
-            
-        # Check if the workflow is in an ending state
-        workflow_name = str(self.workflow_name)  # Ensure it's a string
-        status_result = self.argo_service.get_workflow_status(workflow_name=workflow_name)
-        if not status_result.success:
-            error_msg = str(status_result.value) if status_result.value is not None else "Unknown error"
-            logger.error(f"Failed to get workflow status: {error_msg}")
-            return CommandResult(False, f"Failed to get workflow status: {error_msg}")
-            
-        status_info = status_result.value
-        if not isinstance(status_info, dict):
-            logger.error("Invalid status info returned: not a dictionary")
-            return CommandResult(False, "Invalid status info returned from workflow")
-            
-        phase = status_info.get("phase", "")
-        
-        # Only archive if the workflow is completed
-        if phase not in ENDING_ARGO_PHASES:
-            logger.warning(f"Cannot archive: Workflow is still active with phase {phase}")
-            return CommandResult(False, f"Cannot archive: Workflow is still active with phase {phase}")
-        
-        # Create a mock deployment status for the archive function
-        mock_status = DeploymentStatus(0, 0, 0, 0)
-        return perform_archive(
-            target_cluster=self.target_cluster,
-            deployment_status=mock_status,
-            archive_dir_path=archive_dir_path,
-            archive_file_name=archive_file_name
-        )
-
-    def get_status(self, deep_check=False, *args, **kwargs) -> CommandResult:
-        """Get the status of the Argo workflow and the underlying RFS process"""
-        if not self.workflow_name:
-            logger.warning("Cannot get status: No active workflow found")
-            return CommandResult(True, (BackfillStatus.STOPPED, "No active workflow found"))
-            
-        workflow_name = str(self.workflow_name)  # Ensure it's a string
-        logger.info(f"Getting status of RFS backfill workflow: {workflow_name}")
-        status_result = self.argo_service.get_workflow_status(workflow_name=workflow_name)
-        
-        if not status_result.success:
-            error_msg = str(status_result.value) if status_result.value is not None else "Unknown error"
-            logger.error(f"Failed to get workflow status: {error_msg}")
-            return CommandResult(False, f"Failed to get workflow status: {error_msg}")
-            
-        status_info = status_result.value
-        if not isinstance(status_info, dict):
-            logger.error("Invalid status info returned: not a dictionary")
-            return CommandResult(False, "Invalid status info returned from workflow")
-            
-        phase = status_info.get("phase", "")
-        has_suspended_nodes = status_info.get("has_suspended_nodes", False)
-        
-        status_str = f"Workflow status: {phase}"
-        if has_suspended_nodes:
-            status_str += " (suspended)"
-            
-        if deep_check:
-            try:
-                session_name = self.parameters.get("session-name", "")
-                shard_status = get_detailed_status(target_cluster=self.target_cluster, session_name=session_name)
-                if shard_status:
-                    status_str += f"\n{shard_status}"
-            except Exception as e:
-                logger.error(f"Failed to get detailed status: {e}")
-        
-        # Map Argo workflow phases to backfill status
-        if phase in ["Running"]:
-            if has_suspended_nodes:
-                return CommandResult(True, (BackfillStatus.STOPPED, status_str))  # Use STOPPED for PAUSED
-            return CommandResult(True, (BackfillStatus.RUNNING, status_str))
-        elif phase in ["Pending"]:
-            return CommandResult(True, (BackfillStatus.STARTING, status_str))
-        elif phase in ["Succeeded"]:
-            return CommandResult(True, (BackfillStatus.STOPPED, status_str))  # Use STOPPED for COMPLETED 
-        elif phase in ["Failed", "Error"]:
-            return CommandResult(True, (BackfillStatus.FAILED, status_str))
-        elif phase in ["Stopped", "Terminated"]:
-            return CommandResult(True, (BackfillStatus.STOPPED, status_str))
-        else:
-            return CommandResult(True, (BackfillStatus.NOT_STARTED, status_str))  # Use NOT_STARTED for UNKNOWN
-            
-    def build_backfill_status(self) -> BackfillOverallStatus:
-        """Build detailed status information about the RFS backfill process"""
-        active_workers = True
-        
-        if self.workflow_name:
-            workflow_name = str(self.workflow_name)  # Ensure it's a string
-            status_result = self.argo_service.get_workflow_status(workflow_name=workflow_name)
-            if status_result.success and isinstance(status_result.value, dict):
-                status_info = status_result.value
-                phase = status_info.get("phase", "")
-                
-                # If workflow is in an ending state or suspended, workers are not active
-                active_workers = (
-                    phase not in ENDING_ARGO_PHASES and
-                    not status_info.get("has_suspended_nodes", False)
-                )
-        
-        # Get session name for detailed status
-        session_name = self.parameters.get("session-name", "")
-        return get_detailed_status_obj(self.target_cluster, active_workers, session_name)
-
-
 class ECSRFSBackfill(RFSBackfill):
     def __init__(self, config: Dict, target_cluster: Cluster, client_options: Optional[ClientOptions] = None) -> None:
         super().__init__(config)
@@ -545,7 +255,7 @@ class ECSRFSBackfill(RFSBackfill):
         return get_detailed_status_obj(self.target_cluster, active_workers)
 
 
-def get_detailed_status(target_cluster: Cluster, session_name: Optional[str] = "") -> Optional[str]:
+def get_detailed_status(target_cluster: Cluster, session_name: str = "") -> Optional[str]:
     values = get_detailed_status_obj(target_cluster,
                                      True,  # Assume active workers
                                      session_name)
@@ -622,13 +332,12 @@ class ShardStatusCounts:
     unclaimed: int = 0
 
 
-def get_detailed_status_obj(target_cluster: Cluster,
+def get_detailed_status_obj(target_cluster,
                             active_workers: bool = True,
-                            session_name: Optional[str] = "") -> BackfillOverallStatus:
+                            session_name: str = "") -> BackfillOverallStatus:
     # Check whether the working state index exists. If not, we can't run queries.
-    index_suffix = f"_{session_name}" if session_name else ""
-    index_to_check = f".migrations_working_state{index_suffix}"
-    logger.info(f"Checking status for index: {index_to_check}")
+    index_to_check = ".migrations_working_state" + ("_" + session_name if session_name else "")
+    logger.info("Checking status for index: " + index_to_check)
     try:
         target_cluster.call_api("/" + index_to_check)
     except requests.exceptions.RequestException as e:
@@ -751,18 +460,19 @@ def generate_status_queries():
         "in progress": in_progress_query,
         "unclaimed": unclaimed_query
     }
+    
     return queries
 
 
-def all_shards_finished_processing(target_cluster: Cluster, session_name: Optional[str] = "") -> bool:
+def all_shards_finished_processing(target_cluster: Cluster, session_name: str = "") -> bool:
     d = get_detailed_status_obj(target_cluster, session_name=session_name)
     return d.shard_total == d.shard_complete and d.shard_in_progress == 0 and d.shard_waiting == 0
 
 
 def perform_archive(target_cluster: Cluster,
                     deployment_status: DeploymentStatus,
-                    archive_dir_path: Optional[str] = None,
-                    archive_file_name: Optional[str] = None) -> CommandResult:
+                    archive_dir_path: str = None,
+                    archive_file_name: str = None) -> CommandResult:
     logger.info("Confirming there are no currently in-progress workers")
     if deployment_status.running > 0 or deployment_status.pending > 0 or deployment_status.desired > 0:
         return CommandResult(False, RfsWorkersInProgress())
@@ -787,44 +497,8 @@ def perform_archive(target_cluster: Cluster,
         return CommandResult(False, e)
 
 
-def create_backfill(config: Dict, target_cluster: Cluster, client_options: Optional[ClientOptions] = None,
-                    snapshot: Optional[Snapshot] = None) -> RFSBackfill:
-    """
-    Factory method to create an appropriate RFSBackfill implementation based on the configuration.
-    
-    Args:
-        config: The RFS backfill configuration.
-        target_cluster: The target cluster for the backfill.
-        client_options: Optional client options.
-        snapshot: Optional snapshot object for Argo implementation.
-        
-    Returns:
-        An instance of RFSBackfill implementation.
-        
-    Raises:
-        ValueError: If the configuration is invalid or no implementation is found.
-    """
-    if "reindex_from_snapshot" not in config:
-        raise ValueError("Invalid config: missing 'reindex_from_snapshot' section")
-        
-    rfs_config = config["reindex_from_snapshot"]
-    
-    if "docker" in rfs_config and rfs_config["docker"] is not None:
-        return DockerRFSBackfill(config, target_cluster)
-    elif "ecs" in rfs_config and rfs_config["ecs"] is not None:
-        return ECSRFSBackfill(config, target_cluster, client_options)
-    elif "k8s" in rfs_config and rfs_config["k8s"] is not None:
-        return K8sRFSBackfill(config, target_cluster, client_options)
-    elif "argo" in rfs_config and rfs_config["argo"] is not None:
-        return ArgoRFSBackfill(config, snapshot, target_cluster, client_options)
-    else:
-        raise ValueError("No valid RFS backfill implementation found in config")
-
-
-def get_working_state_index_backup_path(archive_dir_path: Optional[str] = None, 
-                                        archive_file_name: Optional[str] = None) -> str:
-    # Get backup directory
-    shared_logs_dir = os.getenv("SHARED_LOGS_DIR_PATH")
+def get_working_state_index_backup_path(archive_dir_path: str = None, archive_file_name: str = None) -> str:
+    shared_logs_dir = os.getenv("SHARED_LOGS_DIR_PATH", None)
     if archive_dir_path:
         backup_dir = archive_dir_path
     elif shared_logs_dir is None:
