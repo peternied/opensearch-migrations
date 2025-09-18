@@ -22,6 +22,11 @@ function MetadataPageInner() {
   const searchParams = useSearchParams();
   const sessionName = searchParams?.get("sessionName") ?? "";
 
+  const onSubmit = useCallback(
+    () => router.push(`/backfill?sessionName=${sessionName}`),
+    [router, sessionName],
+  );
+
   if (!sessionName) {
     return (
       <Alert type="error" header={`Unable to find an associated session`}>
@@ -29,12 +34,6 @@ function MetadataPageInner() {
       </Alert>
     );
   }
-
-  const onSubmit = () =>
-    useCallback(
-      () => router.push(`/backfill?sessionName=${sessionName}`),
-      [router],
-    );
 
   const steps: WorkflowWizardStep[] = [
     {

@@ -20,7 +20,7 @@ interface StatusContainerProps<T> {
   readonly data: T | null;
   readonly fields: StatusFieldDefinition[];
   readonly columns?: number;
-  readonly goToLocation: string;
+  readonly goToLocation?: string;
 }
 
 export default function StatusContainer<T>({
@@ -57,7 +57,11 @@ export default function StatusContainer<T>({
     return null;
   };
 
-  const onClick = useCallback(() => router.push(goToLocation), [router]);
+  const onClick = useCallback(() => {
+    if (goToLocation) {
+      router.push(goToLocation);
+    }
+  }, [router, goToLocation]);
   return (
     <Container
       header={

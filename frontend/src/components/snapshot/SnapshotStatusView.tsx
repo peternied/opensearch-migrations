@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { StatusFieldDefinition } from "@/components/session/statusUtils";
-import { useSnapshotStatus } from "@/hooks/apiFetch";
 import StatusContainer from "@/components/session/StatusContainer";
 import {
   StatusDisplay,
@@ -99,7 +98,7 @@ export default function SnapshotStatusView({
         data={snapshotData}
         fields={fields}
         columns={2}
-        showAction={true}
+        goToLocation="snapshot"
       />
 
       <SnapshotDebugControls

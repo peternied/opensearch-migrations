@@ -25,6 +25,11 @@ function SnapshotPageInner() {
   const searchParams = useSearchParams();
   const sessionName = searchParams?.get("sessionName") ?? "";
 
+  const onSubmit = useCallback(
+    () => router.push(`/metadata?sessionName=${sessionName}`),
+    [router, sessionName],
+  );
+
   if (!sessionName) {
     return (
       <Alert type="error" header={`Unable to find an associated session`}>
@@ -32,12 +37,6 @@ function SnapshotPageInner() {
       </Alert>
     );
   }
-
-  const onSubmit = () =>
-    useCallback(
-      () => router.push(`/metadata?sessionName=${sessionName}`),
-      [router],
-    );
 
   const steps: WorkflowWizardStep[] = [
     {

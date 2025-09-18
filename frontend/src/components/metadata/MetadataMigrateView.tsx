@@ -1,6 +1,6 @@
 "use client";
 
-import { SessionStatusProps } from "../session/types";
+import { SessionStatusProps } from "@/components/session/types";
 import { useMetadataMigrateAction } from "@/hooks/apiAction";
 import {
   Alert,
@@ -39,14 +39,14 @@ export default function MetadataMigrateView({
   type ItemKind = "Index" | "Alias" | "Index Template" | "Component Template";
   type ItemResultWithType = ItemResult & { type: ItemKind };
 
-  function withType<T extends ItemResult>(
-    items: T[] | undefined,
-    type: ItemKind,
-  ): ItemResultWithType[] {
-    return (items ?? []).map((item) => ({ ...item, type }));
-  }
-
   const metadataItems = useMemo(() => {
+    function withType<T extends ItemResult>(
+      items: T[] | undefined,
+      type: ItemKind,
+    ): ItemResultWithType[] {
+      return (items ?? []).map((item) => ({ ...item, type }));
+    }
+
     return [
       ...withType(data?.items?.aliases, "Alias"),
       ...withType(data?.items?.indexes, "Index"),
