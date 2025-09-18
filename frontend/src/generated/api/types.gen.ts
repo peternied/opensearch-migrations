@@ -987,6 +987,35 @@ export type MetadataStatusResponses = {
 export type MetadataStatusResponse =
   MetadataStatusResponses[keyof MetadataStatusResponses];
 
+export type MetadataClearStatusHistoryData = {
+  body?: never;
+  path: {
+    /**
+     * Session Name
+     */
+    session_name: string;
+  };
+  query?: never;
+  url: "/sessions/{session_name}/metadata/clear_status_history";
+};
+
+export type MetadataClearStatusHistoryErrors = {
+  /**
+   * Validation Error
+   */
+  422: HttpValidationError;
+};
+
+export type MetadataClearStatusHistoryError =
+  MetadataClearStatusHistoryErrors[keyof MetadataClearStatusHistoryErrors];
+
+export type MetadataClearStatusHistoryResponses = {
+  /**
+   * Successful Response
+   */
+  200: unknown;
+};
+
 export type BackfillStatusData = {
   body?: never;
   path: {
