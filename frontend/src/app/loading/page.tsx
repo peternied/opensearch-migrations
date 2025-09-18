@@ -12,15 +12,15 @@ import {
   Spinner,
 } from "@cloudscape-design/components";
 import { HealthApiResponse } from "@/generated/api";
+import { HealthApiResponse } from "@/generated/api";
 import { getSiteReadiness, setSiteReadiness } from "@/lib/site-readiness";
 import DebugCommands from "@/components/debug/DebugCommands";
 import Image from "next/image";
 import { usePollingSystemHealth } from "@/hooks/apiPoll";
-import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import router from "next/router";
+import { useState } from "react";
 
 export default function LoadingPage() {
-  const router = useRouter();
   const [debugError, setDebugError] = useState<string | null>(null);
   const [debugIsReady, setDebugIsReady] = useState<boolean | null>(null);
 
@@ -33,11 +33,8 @@ export default function LoadingPage() {
       return ready;
     },
   );
-  const isReady =
-    debugIsReady == null
-      ? (getSiteReadiness() ?? data?.status === "ok")
-      : debugIsReady;
-  const errorMessage = debugError == null ? (error ?? null) : debugError;
+  const isReady = debugIsReady ?? getSiteReadiness() ?? data?.status === "ok";
+  const errorMessage = debugError ?? error ?? null;
 
   const startMigration = useCallback(() => router.push("/snapshot?sessionName=abc"), [router]);
 
