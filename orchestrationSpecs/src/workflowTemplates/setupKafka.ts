@@ -22,7 +22,10 @@ function makeDeployKafkaClusterZookeeperManifest(kafkaName: BaseExpression<strin
                         name: "tls",
                         port: 9093,
                         type: "internal",
-                        tls: true
+                        tls: true,
+                        authentication: {
+                            type: "tls"
+                        }
                     }
                 ],
                 config: {
@@ -80,16 +83,13 @@ function makeDeployKafkaClusterKraftManifest(kafkaName: BaseExpression<string>) 
                 },
                 listeners: [
                     {
-                        name: "plain",
-                        port: 9092,
-                        type: "internal",
-                        tls: false
-                    },
-                    {
                         name: "tls",
                         port: 9093,
                         type: "internal",
-                        tls: true
+                        tls: true,
+                        authentication: {
+                            type: "tls"
+                        }
                     }
                 ],
                 config: {
@@ -141,6 +141,137 @@ function makeDeployKafkaNodePool(kafkaName: BaseExpression<string>) {
     };
 }
 
+function makeKafkaUserManifest(args: {
+    kafkaName: BaseExpression<string>,
+    userName: BaseExpression<string>,
+    userType: BaseExpression<string>
+}) {
+    // Define ACLs based on user type
+    const acls = [];
+    
+    // Common ACLs for all users - allow describe on all topics and groups
+    acls.push(
+        {
+            operation: "Describe",
+            resource: {
+                type: "topic",
+                name: "*",
+                patternType: "literal"
+            }
+        },
+        {
+            operation: "Describe",
+            resource: {
+                type: "group",
+                name: "*",
+                patternType: "literal"
+            }
+        }
+    );
+    
+    // Use toString() to compare BaseExpression to string
+    const userType = args.userType.toString();
+    
+    // Add specific ACLs based on user type
+    if (userType === "capture-proxy") {
+        // Capture proxy needs to produce to topics
+        acls.push(
+            {
+                operation: "Write",
+                resource: {
+                    type: "topic",
+                    name: "*",
+                    patternType: "literal"
+                }
+            },
+            {
+                operation: "Create",
+                resource: {
+                    type: "topic",
+                    name: "*",
+                    patternType: "literal"
+                }
+            }
+        );
+    } else if (userType === "replayer") {
+        // Replayer needs to consume from topics
+        acls.push(
+            {
+                operation: "Read",
+                resource: {
+                    type: "topic",
+                    name: "*",
+                    patternType: "literal"
+                }
+            },
+            {
+                operation: "Read",
+                resource: {
+                    type: "group",
+                    name: "*",
+                    patternType: "literal"
+                }
+            }
+        );
+    } else if (userType === "console") {
+        // Console needs to read and write for management purposes
+        acls.push(
+            {
+                operation: "Read",
+                resource: {
+                    type: "topic",
+                    name: "*",
+                    patternType: "literal"
+                }
+            },
+            {
+                operation: "Write",
+                resource: {
+                    type: "topic",
+                    name: "*",
+                    patternType: "literal"
+                }
+            },
+            {
+                operation: "Create",
+                resource: {
+                    type: "topic",
+                    name: "*",
+                    patternType: "literal"
+                }
+            },
+            {
+                operation: "Read",
+                resource: {
+                    type: "group",
+                    name: "*",
+                    patternType: "literal"
+                }
+            }
+        );
+    }
+    
+    return {
+        apiVersion: "kafka.strimzi.io/v1beta2",
+        kind: "KafkaUser",
+        metadata: {
+            name: args.userName,
+            labels: {
+                "strimzi.io/cluster": args.kafkaName
+            }
+        },
+        spec: {
+            authentication: {
+                type: "tls"
+            },
+            authorization: {
+                type: "simple",
+                acls: acls
+            }
+        }
+    };
+}
+
 function makeKafkaTopicManifest(args: {
     kafkaName: BaseExpression<string>,
     topicName: BaseExpression<string>,
@@ -186,7 +317,7 @@ export const SetupKafka = WorkflowBuilder.create({
                 successCondition: "status.listeners",
                 manifest: makeDeployKafkaClusterZookeeperManifest(b.inputs.kafkaName)
             }))
-        .addJsonPathOutput("brokers", "{.status.listeners[?(@.name=='plain')].bootstrapServers}",
+        .addJsonPathOutput("brokers", "{.status.listeners[?(@.name=='tls')].bootstrapServers}",
             typeToken<string>())
     )
 
@@ -211,7 +342,7 @@ export const SetupKafka = WorkflowBuilder.create({
                 successCondition: "status.listeners",
                 manifest: makeDeployKafkaClusterKraftManifest(b.inputs.kafkaName)
             }))
-        .addJsonPathOutput("brokers", "{.status.listeners[?(@.name=='plain')].bootstrapServers}",
+        .addJsonPathOutput("brokers", "{.status.listeners[?(@.name=='tls')].bootstrapServers}",
             typeToken<string>())
     )
 
@@ -253,5 +384,72 @@ export const SetupKafka = WorkflowBuilder.create({
         .addJsonPathOutput("topicName", "{.status.topicName}", typeToken<string>())
     )
 
+    .addTemplate("createKafkaUser", t => t
+        .addRequiredInput("kafkaName", typeToken<string>())
+        .addRequiredInput("userName", typeToken<string>())
+        .addRequiredInput("userType", typeToken<string>())
+        
+        .addResourceTask(b => b
+            .setDefinition({
+                action: "apply",
+                setOwnerReference: true,
+                successCondition: "status.username",
+                manifest: makeKafkaUserManifest(b.inputs)
+            }))
+        .addJsonPathOutput("username", "{.status.username}", typeToken<string>())
+        .addJsonPathOutput("secret", "{.status.secret}", typeToken<string>())
+    )
+
+    .addTemplate("createRequiredUsers", t => t
+        .addRequiredInput("kafkaName", typeToken<string>())
+        
+        .addDag(b => b
+            .addTask("createCaptureProxyUser", INTERNAL, "createKafkaUser", c =>
+                c.register({
+                    kafkaName: b.inputs.kafkaName,
+                    userName: expr.concat(b.inputs.kafkaName, expr.literal("-capture-proxy")),
+                    userType: expr.literal("capture-proxy")
+                }))
+            .addTask("createReplayerUser", INTERNAL, "createKafkaUser", c =>
+                c.register({
+                    kafkaName: b.inputs.kafkaName,
+                    userName: expr.concat(b.inputs.kafkaName, expr.literal("-replayer")),
+                    userType: expr.literal("replayer")
+                }))
+            .addTask("createConsoleUser", INTERNAL, "createKafkaUser", c =>
+                c.register({
+                    kafkaName: b.inputs.kafkaName,
+                    userName: expr.concat(b.inputs.kafkaName, expr.literal("-console")),
+                    userType: expr.literal("console")
+                }))
+        )
+        .addExpressionOutput("captureProxyUsername", c => c.tasks.createCaptureProxyUser.outputs.username)
+        .addExpressionOutput("replayerUsername", c => c.tasks.createReplayerUser.outputs.username)
+        .addExpressionOutput("consoleUsername", c => c.tasks.createConsoleUser.outputs.username)
+        .addExpressionOutput("captureProxySecret", c => c.tasks.createCaptureProxyUser.outputs.secret)
+        .addExpressionOutput("replayerSecret", c => c.tasks.createReplayerUser.outputs.secret)
+        .addExpressionOutput("consoleSecret", c => c.tasks.createConsoleUser.outputs.secret)
+    )
+
+    .addTemplate("setupKafkaWithUsers", t => t
+        .addRequiredInput("kafkaName", typeToken<string>())
+        .addOptionalInput("useKraft", s => true)
+        
+        .addDag(b => b
+            .addTask("deployCluster", INTERNAL, "clusterDeploy", c =>
+                c.register(selectInputsForRegister(b, c)))
+            .addTask("createUsers", INTERNAL, "createRequiredUsers", c =>
+                c.register({kafkaName: b.inputs.kafkaName}),
+                {dependencies: ["deployCluster"]})
+        )
+        .addExpressionOutput("kafkaName", c => c.inputs.kafkaName)
+        .addExpressionOutput("bootstrapServers", c => c.tasks.deployCluster.outputs.bootstrapServers)
+        .addExpressionOutput("captureProxyUsername", c => c.tasks.createUsers.outputs.captureProxyUsername)
+        .addExpressionOutput("replayerUsername", c => c.tasks.createUsers.outputs.replayerUsername)
+        .addExpressionOutput("consoleUsername", c => c.tasks.createUsers.outputs.consoleUsername)
+        .addExpressionOutput("captureProxySecret", c => c.tasks.createUsers.outputs.captureProxySecret)
+        .addExpressionOutput("replayerSecret", c => c.tasks.createUsers.outputs.replayerSecret)
+        .addExpressionOutput("consoleSecret", c => c.tasks.createUsers.outputs.consoleSecret)
+    )
 
     .getFullScope();

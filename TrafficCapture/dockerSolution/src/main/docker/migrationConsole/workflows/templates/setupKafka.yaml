@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: kafka-setup
+  name: kafka-setup-better
 spec:
   entrypoint: cluster-deploy
   serviceAccountName: argo-workflow-executor
@@ -11,8 +11,6 @@ spec:
       inputs:
         parameters:
           - name: kafka-name
-          - name: use-kraft
-            value: "true"
       outputs:
         parameters:
           - name: kafka-name
@@ -21,12 +19,15 @@ spec:
           - name: bootstrap-servers
             valueFrom:
               expression: >-
-                (tasks['deploy-kafka-cluster-kraft'].status == "Skipped" ? tasks['deploy-kafka-cluster-zookeeper'] : tasks['deploy-kafka-cluster-kraft']).outputs.parameters['brokers']
+                tasks['deploy-kafka-cluster-kraft'].outputs.parameters['brokers']
+          - name: cluster-ca-pem
+            valueFrom:
+              expression: >-
+                tasks['export-cluster-ca'].outputs.parameters['cluster-ca-pem']
       dag:
         tasks:
           - name: deploy-kafka-node-pool
             template: deploy-kafka-node-pool
-            when: "{{inputs.parameters.use-kraft}} == true"
             arguments:
               parameters:
                 - name: kafka-name
@@ -34,65 +35,19 @@ spec:
 
           - name: deploy-kafka-cluster-kraft
             template: deploy-kafka-cluster-kraft
-            when: "{{inputs.parameters.use-kraft}} == true"
+            dependencies: [deploy-kafka-node-pool]
             arguments:
               parameters:
                 - name: kafka-name
                   value: "{{inputs.parameters.kafka-name}}"
 
-          - name: deploy-kafka-cluster-zookeeper
-            template: deploy-kafka-cluster-zookeeper
-            when: "{{inputs.parameters.use-kraft}} == false"
+          - name: export-cluster-ca
+            template: export-cluster-ca
+            dependencies: [deploy-kafka-cluster-kraft]
             arguments:
               parameters:
                 - name: kafka-name
                   value: "{{inputs.parameters.kafka-name}}"
-
-
-    - name: deploy-kafka-cluster-zookeeper
-      inputs:
-        parameters:
-          - name: kafka-name
-      outputs:
-        parameters:
-          - name: brokers
-            valueFrom:
-              jsonPath: "{.status.listeners[?(@.name=='plain')].bootstrapServers}"
-      resource:
-        action: create
-        setOwnerReference: true
-        successCondition: status.listeners
-        manifest: |
-          apiVersion: kafka.strimzi.io/v1beta2
-          kind: Kafka
-          metadata:
-            name: {{inputs.parameters.kafka-name}}
-          spec:
-            kafka:
-              version: 3.9.0
-              replicas: 1
-              listeners:
-                - name: tls
-                  port: 9093
-                  type: internal
-                  tls: true
-              config:
-                offsets.topic.replication.factor: 1
-                transaction.state.log.replication.factor: 1
-                transaction.state.log.min.isr: 1
-                default.replication.factor: 1
-                min.insync.replicas: 1
-                inter.broker.protocol.version: "3.9"
-              storage:
-                type: ephemeral
-            zookeeper:
-              replicas: 3
-              storage:
-                type: ephemeral
-            entityOperator:
-              topicOperator: {}
-              userOperator: {}
-
 
     - name: deploy-kafka-node-pool
       inputs:
@@ -130,7 +85,7 @@ spec:
         parameters:
           - name: brokers
             valueFrom:
-              jsonPath: "{.status.listeners[?(@.name=='plain')].bootstrapServers}"
+              jsonPath: "{.status.listeners[].bootstrapServers}"
       resource:
         action: apply
         setOwnerReference: true
@@ -158,14 +113,14 @@ spec:
                 timeoutSeconds: 2
                 failureThreshold: 2
               listeners:
-                - name: plain
-                  port: 9092
-                  type: internal
-                  tls: false
                 - name: tls
                   port: 9093
                   type: internal
                   tls: true
+                  authentication:
+                    type: scram-sha-512
+              authorization:
+                type: simple
               config:
                 auto.create.topics.enable: false
                 offsets.topic.replication.factor: 1
@@ -176,6 +131,25 @@ spec:
             entityOperator:
                 topicOperator: {}
                 userOperator: {}
+
+    - name: export-cluster-ca
+      inputs:
+        parameters:
+          - name: kafka-name
+      outputs:
+        parameters:
+          - name: cluster-ca-pem
+            valueFrom:
+              path: /tmp/ca.crt
+      script:
+        image: bitnami/kubectl:1.30
+        command: [bash, -lc]
+        source: |
+          set -euo pipefail
+          SECRET="{{inputs.parameters.kafka-name}}-cluster-ca-cert"
+          # Extract PEM (base64-decoded) into a file for Argo to capture as a parameter.
+          kubectl get secret "${SECRET}" -o jsonpath='{.data.ca\.crt}' \
+            | base64 -d > /tmp/ca.crt
 
     - name: create-kafka-topic
       inputs:
@@ -216,3 +190,151 @@ spec:
             config:
               retention.ms: 604800000
               segment.bytes: 1073741824
+
+    - name: create-kafka-user
+      inputs:
+        parameters:
+          - name: kafka-name
+          - name: userName
+          - name: userType
+      outputs:
+        parameters:
+          - name: username
+            valueFrom:
+              jsonPath: "{.status.username}"
+          - name: secret
+            valueFrom:
+              jsonPath: "{.status.secret}"
+      resource:
+        action: apply
+        manifest: |
+          apiVersion: kafka.strimzi.io/v1beta2
+          kind: KafkaUser
+          metadata:
+            name: '{{inputs.parameters.userName}}'
+            labels:
+              strimzi.io/cluster: '{{inputs.parameters.kafka-name}}'
+          spec:
+            authentication:
+              type: scram-sha-512
+            authorization:
+              type: simple
+              acls:
+                - operation: Describe
+                  resource:
+                    type: topic
+                    name: '*'
+                    patternType: literal
+                - operation: Describe
+                  resource:
+                    type: group
+                    name: '*'
+                    patternType: literal
+        setOwnerReference: true
+        successCondition: status.username
+
+    - name: createrequiredusers
+      inputs:
+        parameters:
+          - name: kafka-name
+      outputs:
+        parameters:
+          - name: captureProxyUsername
+            valueFrom:
+              expression: tasks.createCaptureProxyUser.outputs.parameters.username
+          - name: replayerUsername
+            valueFrom:
+              expression: tasks.createReplayerUser.outputs.parameters.username
+          - name: consoleUsername
+            valueFrom:
+              expression: tasks.createConsoleUser.outputs.parameters.username
+          - name: captureProxySecret
+            valueFrom:
+              expression: tasks.createCaptureProxyUser.outputs.parameters.secret
+          - name: replayerSecret
+            valueFrom:
+              expression: tasks.createReplayerUser.outputs.parameters.secret
+          - name: consoleSecret
+            valueFrom:
+              expression: tasks.createConsoleUser.outputs.parameters.secret
+      dag:
+        tasks:
+          - name: createCaptureProxyUser
+            template: create-kafka-user
+            arguments:
+              parameters:
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+                - name: userName
+                  value: "{{=inputs.parameters.kafka-name+'-capture-proxy'}}"
+                - name: userType
+                  value: capture-proxy
+          - name: createReplayerUser
+            template: create-kafka-user
+            arguments:
+              parameters:
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+                - name: userName
+                  value: "{{=inputs.parameters.kafka-name+'-replayer'}}"
+                - name: userType
+                  value: replayer
+          - name: createConsoleUser
+            template: create-kafka-user
+            arguments:
+              parameters:
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+                - name: userName
+                  value: "{{=inputs.parameters.kafka-name+'-console'}}"
+                - name: userType
+                  value: console
+    - name: setup-kafka-with-users
+      inputs:
+        parameters:
+          - name: kafka-name
+      outputs:
+        parameters:
+          - name: kafka-name
+            valueFrom:
+              expression: inputs.parameters.kafka-name
+          - name: bootstrapServers
+            valueFrom:
+              expression: tasks.deployCluster.outputs.parameters.bootstrap-servers
+          - name: clusterCaPem
+            valueFrom:
+              expression: tasks.deployCluster.outputs.parameters.cluster-ca-pem
+          - name: captureProxyUsername
+            valueFrom:
+              expression: tasks.createUsers.outputs.parameters.captureProxyUsername
+          - name: replayerUsername
+            valueFrom:
+              expression: tasks.createUsers.outputs.parameters.replayerUsername
+          - name: consoleUsername
+            valueFrom:
+              expression: tasks.createUsers.outputs.parameters.consoleUsername
+          - name: captureProxySecret
+            valueFrom:
+              expression: tasks.createUsers.outputs.parameters.captureProxySecret
+          - name: replayerSecret
+            valueFrom:
+              expression: tasks.createUsers.outputs.parameters.replayerSecret
+          - name: consoleSecret
+            valueFrom:
+              expression: tasks.createUsers.outputs.parameters.consoleSecret
+      dag:
+        tasks:
+          - name: deployCluster
+            template: cluster-deploy
+            arguments:
+              parameters:
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+          - name: createUsers
+            template: createrequiredusers
+            arguments:
+              parameters:
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+            dependencies:
+              - deployCluster

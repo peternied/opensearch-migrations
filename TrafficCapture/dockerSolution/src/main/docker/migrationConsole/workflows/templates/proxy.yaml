@@ -72,6 +72,9 @@ spec:
           - name: replicas
             value: "1"
 
+          - name: capture-proxy-secret
+          - name: cluster-ca-secret
+
           # optional
           - name: trace-directory
             value: ""
@@ -174,52 +177,93 @@ spec:
                     - name: SUPPRESS_CAPTURE_HEADER_PAIRS
                       value: "{{inputs.parameters.suppress-capture-header-pairs}}"
 
+                  volumeMounts:
+                    # --- NEW: mount user credential secret (username/password) ---
+                    - name: kafka-user-secret
+                      mountPath: /var/run/secrets/kafka-user
+                      readOnly: true
+                    # --- NEW: mount cluster CA secret with PKCS#12 truststore ---
+                    - name: kafka-cluster-ca
+                      mountPath: /var/run/secrets/kafka-ca
+                      readOnly: true
+
                   command:
                     - "/bin/sh"
                     - "-c"
                     - |
-                      set -e
+                      set -euo pipefail
 
                       # Build arguments from environment variables
                       ARGS=""
 
                       # Required parameters
-                      ARGS="${ARGS}${BACKSIDE_URI_STRING:+ --destinationUri $BACKSIDE_URI_STRING}"
-                      ARGS="${ARGS}${FRONTSIDE_PORT:+ --listenPort $FRONTSIDE_PORT}"
+                      ARGS="${ARGS}${BACKSIDE_URI_STRING:+ --destinationUri ${BACKSIDE_URI_STRING}}"
+                      ARGS="${ARGS}${FRONTSIDE_PORT:+ --listenPort ${FRONTSIDE_PORT}}"
+
+                      # If no kafka properties file provided, generate one using mounted secrets.
+                      if [ -z "${KAFKA_PROPERTIES_FILE:-}" ]; then
+                        mkdir -p /work
+                        KAFKA_PROPERTIES_FILE="/work/kafka.properties"
+
+                        # Read mounted secrets
+                        USERNAME="$(cat /var/run/secrets/kafka-user/username)"
+                        PASSWORD="$(cat /var/run/secrets/kafka-user/password)"
+                        TRUSTSTORE="/var/run/secrets/kafka-ca/ca.p12"
+                        TRUSTPASS="$(cat /var/run/secrets/kafka-ca/ca.password)"
+
+                        # Note: using PKCS12 truststore from Strimzi cluster CA secret
+                        cat > "${KAFKA_PROPERTIES_FILE}" <<EOF
+security.protocol=SASL_SSL
+sasl.mechanism=SCRAM-SHA-512
+sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username='${USERNAME}' password='${PASSWORD}';
+ssl.truststore.type=PKCS12
+ssl.truststore.location=${TRUSTSTORE}
+ssl.truststore.password=${TRUSTPASS}
+client.id=${KAFKA_CLIENT_ID}
+EOF
+                      fi
 
                       # Optional parameters
-                      ARGS="${ARGS}${TRACE_DIRECTORY:+ --traceDirectory $TRACE_DIRECTORY}"
-                      ARGS="${ARGS}${KAFKA_PROPERTIES_FILE:+ --kafkaConfigFile $KAFKA_PROPERTIES_FILE}"
-                      ARGS="${ARGS}${KAFKA_CLIENT_ID:+ --kafkaClientId $KAFKA_CLIENT_ID}"
-                      ARGS="${ARGS}${KAFKA_CONNECTION:+ --kafkaConnection $KAFKA_CONNECTION}"
-                      ARGS="${ARGS}${KAFKA_TOPIC:+ --kafkaTopic $KAFKA_TOPIC}"
-                      ARGS="${ARGS}${SSL_CONFIG_FILE_PATH:+ --sslConfigFile $SSL_CONFIG_FILE_PATH}"
-                      ARGS="${ARGS}${MAXIMUM_TRAFFIC_STREAM_SIZE:+ --maxTrafficBufferSize $MAXIMUM_TRAFFIC_STREAM_SIZE}"
-                      ARGS="${ARGS}${NUM_THREADS:+ --numThreads $NUM_THREADS}"
-                      ARGS="${ARGS}${DESTINATION_CONNECTION_POOL_SIZE:+ --destinationConnectionPoolSize $DESTINATION_CONNECTION_POOL_SIZE}"
-                      ARGS="${ARGS}${DESTINATION_CONNECTION_POOL_TIMEOUT:+ --destinationConnectionPoolTimeout $DESTINATION_CONNECTION_POOL_TIMEOUT}"
-                      ARGS="${ARGS}${OTEL_COLLECTOR_ENDPOINT:+ --otelCollectorEndpoint $OTEL_COLLECTOR_ENDPOINT}"
-                      ARGS="${ARGS}${HEADER_OVERRIDES:+ --setHeader $HEADER_OVERRIDES}"
-                      ARGS="${ARGS}${SUPPRESS_CAPTURE_HEADER_PAIRS:+ --suppressCaptureForHeaderMatch $SUPPRESS_CAPTURE_HEADER_PAIRS}"
+                      ARGS="${ARGS}${TRACE_DIRECTORY:+ --traceDirectory ${TRACE_DIRECTORY}}"
+                      ARGS="${ARGS}${KAFKA_PROPERTIES_FILE:+ --kafkaConfigFile ${KAFKA_PROPERTIES_FILE}}"
+                      ARGS="${ARGS}${KAFKA_CLIENT_ID:+ --kafkaClientId ${KAFKA_CLIENT_ID}}"
+                      ARGS="${ARGS}${KAFKA_CONNECTION:+ --kafkaConnection ${KAFKA_CONNECTION}}"
+                      ARGS="${ARGS}${KAFKA_TOPIC:+ --kafkaTopic ${KAFKA_TOPIC}}"
+                      ARGS="${ARGS}${SSL_CONFIG_FILE_PATH:+ --sslConfigFile ${SSL_CONFIG_FILE_PATH}}"
+                      ARGS="${ARGS}${MAXIMUM_TRAFFIC_STREAM_SIZE:+ --maxTrafficBufferSize ${MAXIMUM_TRAFFIC_STREAM_SIZE}}"
+                      ARGS="${ARGS}${NUM_THREADS:+ --numThreads ${NUM_THREADS}}"
+                      ARGS="${ARGS}${DESTINATION_CONNECTION_POOL_SIZE:+ --destinationConnectionPoolSize ${DESTINATION_CONNECTION_POOL_SIZE}}"
+                      ARGS="${ARGS}${DESTINATION_CONNECTION_POOL_TIMEOUT:+ --destinationConnectionPoolTimeout ${DESTINATION_CONNECTION_POOL_TIMEOUT}}"
+                      ARGS="${ARGS}${OTEL_COLLECTOR_ENDPOINT:+ --otelCollectorEndpoint ${OTEL_COLLECTOR_ENDPOINT}}"
+                      ARGS="${ARGS}${HEADER_OVERRIDES:+ --setHeader ${HEADER_OVERRIDES}}"
+                      ARGS="${ARGS}${SUPPRESS_CAPTURE_HEADER_PAIRS:+ --suppressCaptureForHeaderMatch ${SUPPRESS_CAPTURE_HEADER_PAIRS}}"
 
                       # Boolean flags
-                      if [ "$NO_CAPTURE" = "true" ] || [ "$NO_CAPTURE" = "1" ]; then
+                      if [ "${NO_CAPTURE:-}" = "true" ] || [ "${NO_CAPTURE:-}" = "1" ]; then
                           ARGS="${ARGS} --noCapture"
                       fi
 
-                      if [ "$MSK_AUTH_ENABLED" = "true" ] || [ "$MSK_AUTH_ENABLED" = "1" ]; then
+                      if [ "${MSK_AUTH_ENABLED:-}" = "true" ] || [ "${MSK_AUTH_ENABLED:-}" = "1" ]; then
                           ARGS="${ARGS} --enableMSKAuth"
                       fi
 
-                      if [ "$ALLOW_INSECURE_CONNECTIONS_TO_BACKSIDE" = "true" ] || [ "$ALLOW_INSECURE_CONNECTIONS_TO_BACKSIDE" = "1" ]; then
+                      if [ "${ALLOW_INSECURE_CONNECTIONS_TO_BACKSIDE:-}" = "true" ] || [ "${ALLOW_INSECURE_CONNECTIONS_TO_BACKSIDE:-}" = "1" ]; then
                           ARGS="${ARGS} --insecureDestination"
                       fi
 
-                      # Log the configuration
-                      echo "Starting proxy with arguments: $ARGS"
-
-                      # Execute the command
-                      exec /runJavaWithClasspath.sh org.opensearch.migrations.trafficcapture.proxyserver.CaptureProxy $ARGS
+                      echo "Starting proxy with arguments: ${ARGS}"
+                      exec /runJavaWithClasspath.sh org.opensearch.migrations.trafficcapture.proxyserver.CaptureProxy ${ARGS}
 
                   ports:
                   - containerPort: {{inputs.parameters.frontside-port}}
+                volumes:
+                  # --- NEW: Strimzi user credentials secret ---
+                  - name: kafka-user-secret
+                    secret:
+                      secretName: {{inputs.parameters.capture-proxy-secret}}
+                      optional: false
+                  # --- NEW: Strimzi cluster CA secret (has ca.p12 and ca.password) ---
+                  - name: kafka-cluster-ca
+                    secret:
+                      secretName: {{inputs.parameters.cluster-ca-secret}}
+                      optional: false
