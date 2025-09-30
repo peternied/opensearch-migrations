@@ -1,0 +1,32 @@
+# TODO: DELETE ME - but until then I am useful reference
+# Tell the producer to use TLS (SSL)
+security.protocol=SASL_SSL
+
+# --- Trust the broker ---
+ssl.truststore.type=JKS
+ssl.truststore.location=/home/ubuntu/git/opensearch-migrations/client.truststore.jks
+ssl.truststore.password=changeit
+ssl.endpoint.identification.algorithm=
+
+# --- Authenticate as the KafkaUser ---
+# Keystore contains your user.crt + user.key
+sasl.mechanism=SCRAM-SHA-512
+sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="aabc-console" password="BdPjRHg2FtzGxGIxvguvEt3PmQqtojrQ";
+
+# docker run -it --rm --network=host confluentinc/cp-kafka:latest kafka-console-producer --bootstrap-server localhost:9092 --topic test --producer.config /home/ubuntu/git/opensearch-migrations/producer.props
+
+#  kafkacat -b localhost:9092 -X security.protocol=SASL_SSL -X sasl.mechanisms=SCRAM-SHA-512 -X sasl.username=abc-console -X sasl.password=ynI40F2QAfjNtiuHUju62pmavWzsjapF -X ssl.ca.location=/home/ubuntu/git/opensearch-migrations/cluster-ca.crt -L
+
+# kafkacat -b localhost:9092 \
+#  -X security.protocol=SASL_SSL \
+#  -X sasl.mechanisms=SCRAM-SHA-512 \
+#  -X sasl.username=abc-console \
+#  -X sasl.password="$PASS" \
+#  -X ssl.ca.location=/home/ubuntu/git/opensearch-migrations/cluster-ca.crt -L
+
+#  kafkacat -b localhost:9093 \
+#    -X security.protocol=SASL_SSL \
+#    -X sasl.mechanisms=SCRAM-SHA-512 \
+#    -X sasl.username=aabc-console \
+#    -X sasl.password="$PASS" \
+#    -X ssl.ca.location=/home/ubuntu/git/opensearch-migrations/cluster-ca.crt -L
