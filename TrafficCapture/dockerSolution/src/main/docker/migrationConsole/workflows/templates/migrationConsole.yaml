@@ -10,7 +10,7 @@ spec:
         parameters:
           - name: kafka-info
             value: ""
-            description: "Snapshot configuration information (JSON)"
+            description: "Kafka configuration information (JSON) with broker_endpoints and optionally properties_secret"
           - name: source-cluster
             value: ""
             description: "Source cluster configuration (JSON)"
@@ -112,6 +112,12 @@ spec:
                   - name: main
                     image: "{{inputs.parameters.migration-console-image}}"
                     imagePullPolicy: "{{inputs.parameters.migration-console-pull-policy}}"
+                    volumeMounts:
+                      {{- if contains(inputs.parameters.kafka-info, "properties_secret") }}
+                      - name: kafka-config
+                        mountPath: /opt/kafka-config
+                        readOnly: true
+                      {{- end }}
                     command:
                       - "/bin/sh"
                       - "-c"
@@ -131,6 +137,13 @@ spec:
                         echo ---
           
                         {{inputs.parameters.command}}
+                
+                {{- if contains(inputs.parameters.kafka-info, "properties_secret") }}
+                volumes:
+                  - name: kafka-config
+                    secret:
+                      secretName: {{= let obj = fromJson(inputs.parameters.kafka-info); obj.properties_secret }}
+                {{- end }}
 
     - name: run-console
       inputs:
