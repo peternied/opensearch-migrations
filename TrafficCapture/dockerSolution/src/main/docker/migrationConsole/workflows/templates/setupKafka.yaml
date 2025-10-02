@@ -3,7 +3,7 @@ kind: WorkflowTemplate
 metadata:
   name: kafka-setup-better
 spec:
-  entrypoint: cluster-deploy
+  entrypoint: setup-kafka-with-users
   serviceAccountName: argo-workflow-executor
 
   templates:
@@ -21,16 +21,16 @@ spec:
               expression: "tasks.deployCluster.outputs.parameters['bootstrap-servers']"
           - name: clusterCaPem
             valueFrom:
-              expression: "tasks.deployCluster.outputs.parameters['cluster-ca-pem']"
+              expression: "tasks.exportClusterCa.outputs.parameters['cluster-ca-pem']"
           - name: captureProxyPropertiesSecret
             valueFrom:
-              expression: tasks.createCaptureProxyProperties.outputs.parameters.secretName
+              expression: "tasks.createClientBundles.outputs.parameters['secret-name'][0]"
           - name: replayerPropertiesSecret
             valueFrom:
-              expression: tasks.createReplayerProperties.outputs.parameters.secretName
+              expression: "tasks.createClientBundles.outputs.parameters['secret-name'][1]"
           - name: consolePropertiesSecret
             valueFrom:
-              expression: tasks.createConsoleProperties.outputs.parameters.secretName
+              expression: "tasks.createClientBundles.outputs.parameters['secret-name'][2]"
       dag:
         tasks:
           - name: deployCluster
@@ -39,107 +39,53 @@ spec:
               parameters:
                 - name: kafka-name
                   value: "{{inputs.parameters.kafka-name}}"
-          - name: createUsers
-            template: createrequiredusers
-            arguments:
-              parameters:
-                - name: kafka-name
-                  value: "{{inputs.parameters.kafka-name}}"
-            dependencies:
-              - deployCluster
+
           - name: exportClusterCa
+            dependencies: [deployCluster]
             template: export-cluster-ca
             arguments:
               parameters:
                 - name: kafka-name
                   value: "{{inputs.parameters.kafka-name}}"
-            dependencies:
-              - deployCluster
-          - name: createCaptureProxyProperties
-            template: create-kafka-properties-file
+
+          - name: createClientBundles
+            dependencies: [deployCluster, exportClusterCa]
+            template: create-kafka-client-bundle
+            withItems:
+              - { role: "capture-proxy" }
+              - { role: "replayer" }
+              - { role: "console" }
             arguments:
               parameters:
-                - name: secretName
-                  value: "{{inputs.parameters.kafka-name}}-capture-proxy-properties"
-                - name: userSecretName
-                  value: "{{tasks.createUsers.outputs.parameters.captureProxySecret}}"
-                - name: caSecretName
-                  value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+                - name: role
+                  value: "{{item.role}}"
                 - name: bootstrapServers
                   value: "{{tasks.deployCluster.outputs.parameters.bootstrap-servers}}"
-                - name: clientId
-                  value: "{{inputs.parameters.kafka-name}}-capture-proxy"
-            dependencies:
-              - createUsers
-          - name: createReplayerProperties
-            template: create-kafka-properties-file
-            arguments:
-              parameters:
-                - name: secretName
-                  value: "{{inputs.parameters.kafka-name}}-replayer-properties"
-                - name: userSecretName
-                  value: "{{tasks.createUsers.outputs.parameters.replayerSecret}}"
                 - name: caSecretName
                   value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
-                - name: bootstrapServers
-                  value: "{{tasks.deployCluster.outputs.parameters.bootstrap-servers}}"
-                - name: clientId
-                  value: "{{inputs.parameters.kafka-name}}-replayer"
-            dependencies:
-              - createUsers
-          - name: createConsoleProperties
-            template: create-kafka-properties-file
-            arguments:
-              parameters:
-                - name: secretName
-                  value: "{{inputs.parameters.kafka-name}}-console-properties"
-                - name: userSecretName
-                  value: "{{tasks.createUsers.outputs.parameters.consoleSecret}}"
-                - name: caSecretName
-                  value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
-                - name: bootstrapServers
-                  value: "{{tasks.deployCluster.outputs.parameters.bootstrap-servers}}"
-                - name: clientId
-                  value: "{{inputs.parameters.kafka-name}}-console"
-            dependencies:
-              - createUsers
+
     - name: cluster-deploy
       inputs:
         parameters:
           - name: kafka-name
       outputs:
         parameters:
-          - name: kafka-name
-            valueFrom:
-              expression: "inputs.parameters['kafka-name']"
           - name: bootstrap-servers
             valueFrom:
-              expression: >-
-                tasks['deploy-kafka-cluster-kraft'].outputs.parameters['brokers']
-          - name: cluster-ca-pem
-            valueFrom:
-              expression: >-
-                tasks['export-cluster-ca'].outputs.parameters['cluster-ca-pem']
+              expression: "tasks.kafka.outputs.parameters['brokers']"
       dag:
         tasks:
-          - name: deploy-kafka-node-pool
+          - name: nodepool
             template: deploy-kafka-node-pool
             arguments:
               parameters:
                 - name: kafka-name
                   value: "{{inputs.parameters.kafka-name}}"
-
-          - name: deploy-kafka-cluster-kraft
+          - name: kafka
+            dependencies: [nodepool]
             template: deploy-kafka-cluster-kraft
-            dependencies: [deploy-kafka-node-pool]
-            arguments:
-              parameters:
-                - name: kafka-name
-                  value: "{{inputs.parameters.kafka-name}}"
-
-          - name: export-cluster-ca
-            template: export-cluster-ca
-            dependencies: [deploy-kafka-cluster-kraft]
             arguments:
               parameters:
                 - name: kafka-name
@@ -247,69 +193,46 @@ spec:
           kubectl get secret "${SECRET}" -o jsonpath='{.data.ca\.crt}' \
             | base64 -d > /tmp/ca.crt
 
-    - name: create-kafka-topic
+    - name: create-kafka-client-bundle
       inputs:
         parameters:
           - name: kafka-name
-          - name: topic-name
-          - name: topic-partitions
-            value: ""
-            description: "Number of partitions for the created topic"
-          - name: default-topic-partitions
-            value: "1"
-            description: "Default number of partitions for the created topic, which will be applied when the topic-partitions is empty or nil."
-          - name: topic-replicas
-            value: ""
-            description: "Number of replicas for the created topic"
-          - name: default-topic-replicas
-            value: "1"
-            description: "Default number of replicas for the created topic, which will be applied when the topic-replicas is empty or nil."
+          - name: role
+          - name: bootstrapServers
+          - name: caSecretName
+          - name: targetNamespace
+            value: "{{workflow.namespace}}"
+          - name: mountPath
+            value: "/opt/kafka-config"
       outputs:
         parameters:
-          - name: topic-name
+          - name: secret-name
             valueFrom:
-              jsonPath: "{.status.topicName}"
-      resource:
-        action: apply
-        setOwnerReference: true
-        successCondition: status.topicName
-        manifest: |
-          apiVersion: kafka.strimzi.io/v1beta2
-          kind: KafkaTopic
-          metadata:
-            name: {{inputs.parameters.topic-name}}
-            labels:
-              strimzi.io/cluster: {{inputs.parameters.kafka-name}}
-          spec:
-            partitions: {{=let v=inputs.parameters['topic-partitions']; (v==nil || v=='') ? inputs.parameters['default-topic-partitions'] : v}}
-            replicas:   {{=let v=inputs.parameters['topic-replicas'];   (v==nil || v=='') ? inputs.parameters['default-topic-replicas']   : v}}
-            config:
-              retention.ms: 604800000
-              segment.bytes: 1073741824
+              path: /tmp/secret_name
+      script:
+        image: bitnamisecure/kubectl:latest
+        command: ["/bin/bash","-euo","pipefail","-c"]
+        source: |
+          set -euo pipefail
+          KAFKA_NAME="{{inputs.parameters.kafka-name}}"
+          ROLE="{{inputs.parameters.role}}"
+          USERNAME="${KAFKA_NAME}-${ROLE}"
+          CA_SECRET="{{inputs.parameters.caSecretName}}"
+          NS="{{inputs.parameters.targetNamespace}}"
+          MOUNT="{{inputs.parameters.mountPath}}"
+          WORK=/work
+          mkdir -p "$WORK"
 
-    - name: create-kafka-user
-      inputs:
-        parameters:
-          - name: kafka-name
-          - name: userName
-          - name: userType
-      outputs:
-        parameters:
-          - name: username
-            valueFrom:
-              jsonPath: "{.status.username}"
-          - name: secret
-            valueFrom:
-              jsonPath: "{.status.secret}"
-      resource:
-        action: apply
-        manifest: |
+          echo "${USERNAME}-properties" > /tmp/secret_name
+
+          # Create the KafkaUser with Strimzi
+          cat <<EOF | kubectl apply -f -
           apiVersion: kafka.strimzi.io/v1beta2
           kind: KafkaUser
           metadata:
-            name: '{{inputs.parameters.userName}}'
+            name: "${USERNAME}"
             labels:
-              strimzi.io/cluster: '{{inputs.parameters.kafka-name}}'
+              strimzi.io/cluster: "${KAFKA_NAME}"
           spec:
             authentication:
               type: scram-sha-512
@@ -326,145 +249,48 @@ spec:
                     type: group
                     name: '*'
                     patternType: literal
-        setOwnerReference: true
-        successCondition: status.username
+          EOF
 
-    - name: createrequiredusers
-      inputs:
-        parameters:
-          - name: kafka-name
-      outputs:
-        parameters:
-          - name: captureProxyUsername
-            valueFrom:
-              expression: tasks.createCaptureProxyUser.outputs.parameters.username
-          - name: replayerUsername
-            valueFrom:
-              expression: tasks.createReplayerUser.outputs.parameters.username
-          - name: consoleUsername
-            valueFrom:
-              expression: tasks.createConsoleUser.outputs.parameters.username
-          - name: captureProxySecret
-            valueFrom:
-              expression: tasks.createCaptureProxyUser.outputs.parameters.secret
-          - name: replayerSecret
-            valueFrom:
-              expression: tasks.createReplayerUser.outputs.parameters.secret
-          - name: consoleSecret
-            valueFrom:
-              expression: tasks.createConsoleUser.outputs.parameters.secret
-      dag:
-        tasks:
-          - name: createCaptureProxyUser
-            template: create-kafka-user
-            arguments:
-              parameters:
-                - name: kafka-name
-                  value: "{{inputs.parameters.kafka-name}}"
-                - name: userName
-                  value: "{{inputs.parameters.kafka-name}}-capture-proxy"
-                - name: userType
-                  value: "capture-proxy"
-          - name: createReplayerUser
-            template: create-kafka-user
-            arguments:
-              parameters:
-                - name: kafka-name
-                  value: "{{inputs.parameters.kafka-name}}"
-                - name: userName
-                  value: "{{inputs.parameters.kafka-name}}-replayer"
-                - name: userType
-                  value: replayer
-          - name: createConsoleUser
-            template: create-kafka-user
-            arguments:
-              parameters:
-                - name: kafka-name
-                  value: "{{inputs.parameters.kafka-name}}"
-                - name: userName
-                  value: "{{inputs.parameters.kafka-name}}-console"
-                - name: userType
-                  value: console
-    - name: create-kafka-properties-file
-      inputs:
-        parameters:
-          - name: secretName
-          - name: userSecretName
-          - name: caSecretName
-          - name: bootstrapServers
-          - name: clientId
-          - name: mountPath
-            value: "/opt/kafka-config"
-          - name: targetNamespace
-            value: "{{workflow.namespace}}"
-      outputs:
-        parameters:
-          - name: secretName
-            valueFrom:
-              path: /tmp/secret_name
-      script:
-        image: bitnamisecure/kubectl:latest
-        command: ["/bin/bash","-euo","pipefail","-c"]
-        env:
-          - name: SASL_JAAS_CONFIG
-            valueFrom:
-              secretKeyRef:
-                name: "{{inputs.parameters.userSecretName}}"
-                key: sasl.jaas.config
-          - name: TRUSTPASS
-            valueFrom:
-              secretKeyRef:
-                name: "{{inputs.parameters.caSecretName}}"
-                key: ca.password
-        source: |
-          WORK=/work
-          mkdir -p "$WORK"
+          # Wait for Strimzi to create the user Secret
+          #    Secret keys include: username, password, sasl.jaas.config, mechanism
+          for i in {1..60}; do
+            if kubectl get secret "${USERNAME}" >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          kubectl get secret "${USERNAME}" -o jsonpath='{.data.sasl\.jaas\.config}' | base64 -d > "$WORK/sasl.jaas.config"
 
-          # Copy truststore from the mounted CA secret so we can package it into the new Secret
-          cp /var/run/ca-secret/ca.p12 "$WORK/ca.p12"
-          printf "%s" "$TRUSTPASS" > "$WORK/ca.password"
+          # Grab truststore (PKCS12) + password from the CA secret
+          kubectl get secret "${CA_SECRET}" -o jsonpath='{.data.ca\.p12}' | base64 -d > "$WORK/ca.p12"
+          kubectl get secret "${CA_SECRET}" -o jsonpath='{.data.ca\.password}' | base64 -d > "$WORK/ca.password"
+          TRUSTPASS="$(cat "$WORK/ca.password")"
 
-          # Render kafka.properties using ENV vars
-          KAFKA_PROPERTIES_FILE="$WORK/kafka.properties"
-          
-          # Save secret name to output file
-          echo "{{inputs.parameters.secretName}}" > /tmp/secret_name
-          
-          cat > "$KAFKA_PROPERTIES_FILE" <<-EOF
-          sasl.jaas.config=${SASL_JAAS_CONFIG}
+          # Render kafka.properties
+          cat > "$WORK/kafka.properties" <<EOF
           security.protocol=SASL_SSL
           sasl.mechanism=SCRAM-SHA-512
+          sasl.jaas.config=$(cat "$WORK/sasl.jaas.config")
           ssl.truststore.type=PKCS12
           ssl.truststore.location={{inputs.parameters.mountPath}}/ca.p12
           ssl.truststore.password=${TRUSTPASS}
           bootstrap.servers={{inputs.parameters.bootstrapServers}}
-          $( [[ -n "{{inputs.parameters.clientId}}" ]] && echo "client.id={{inputs.parameters.clientId}}" )
+          client.id=${USERNAME}
           EOF
 
-          kubectl -n "{{inputs.parameters.targetNamespace}}" create secret generic "{{inputs.parameters.secretName}}" \
-            --from-file=kafka.properties="$KAFKA_PROPERTIES_FILE" \
+          # 5) Secret the bundle for mounting by apps
+          kubectl -n "$NS" create secret generic "${USERNAME}-properties" \
+            --from-file=kafka.properties="$WORK/kafka.properties" \
             --from-file=ca.p12="$WORK/ca.p12" \
             --from-file=ca.password="$WORK/ca.password" \
             --dry-run=client -o yaml | kubectl apply -f -
       podSpecPatch: |
         {
           "volumes": [
-            {
-              "name": "ca-secret",
-              "secret": {
-                "secretName": "{{inputs.parameters.caSecretName}}",
-                "items": [
-                  {"key": "ca.p12", "path": "ca.p12"}
-                ]
-              }
-            },
             { "name": "work", "emptyDir": {} }
           ],
           "containers": [
             {
               "name": "main",
               "volumeMounts": [
-                {"name": "ca-secret", "mountPath": "/var/run/ca-secret", "readOnly": true},
                 {"name": "work", "mountPath": "/work"}
               ]
             }
