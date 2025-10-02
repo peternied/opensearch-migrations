@@ -18,10 +18,10 @@ spec:
               expression: "inputs.parameters['kafka-name']"
           - name: bootstrapServers
             valueFrom:
-              expression: tasks.deployCluster.outputs.parameters.bootstrap-servers
+              expression: "tasks.deployCluster.outputs.parameters['bootstrap-servers']"
           - name: clusterCaPem
             valueFrom:
-              expression: tasks.deployCluster.outputs.parameters.cluster-ca-pem
+              expression: "tasks.deployCluster.outputs.parameters['cluster-ca-pem']"
           - name: captureProxyPropertiesSecret
             valueFrom:
               expression: tasks.createCaptureProxyProperties.outputs.parameters.secretName
@@ -63,8 +63,6 @@ spec:
                   value: "{{inputs.parameters.kafka-name}}-capture-proxy-properties"
                 - name: userSecretName
                   value: "{{tasks.createUsers.outputs.parameters.captureProxySecret}}"
-                - name: username                                  # <-- ADD
-                  value: "{{tasks.createUsers.outputs.parameters.captureProxyUsername}}"
                 - name: caSecretName
                   value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
                 - name: bootstrapServers
@@ -81,8 +79,6 @@ spec:
                   value: "{{inputs.parameters.kafka-name}}-replayer-properties"
                 - name: userSecretName
                   value: "{{tasks.createUsers.outputs.parameters.replayerSecret}}"
-                - name: username
-                  value: "{{tasks.createUsers.outputs.parameters.replayerUsername}}"
                 - name: caSecretName
                   value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
                 - name: bootstrapServers
@@ -99,8 +95,6 @@ spec:
                   value: "{{inputs.parameters.kafka-name}}-console-properties"
                 - name: userSecretName
                   value: "{{tasks.createUsers.outputs.parameters.consoleSecret}}"
-                - name: username
-                  value: "{{tasks.createUsers.outputs.parameters.consoleUsername}}"
                 - name: caSecretName
                   value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
                 - name: bootstrapServers
@@ -396,7 +390,6 @@ spec:
         parameters:
           - name: secretName
           - name: userSecretName
-          - name: username
           - name: caSecretName
           - name: bootstrapServers
           - name: clientId
@@ -413,13 +406,11 @@ spec:
         image: bitnamisecure/kubectl:latest
         command: ["/bin/bash","-euo","pipefail","-c"]
         env:
-          - name: SASL_USERNAME
-            value: "{{inputs.parameters.username}}"
-          - name: SASL_PASSWORD
+          - name: SASL_JAAS_CONFIG
             valueFrom:
               secretKeyRef:
                 name: "{{inputs.parameters.userSecretName}}"
-                key: password
+                key: sasl.jaas.config
           - name: TRUSTPASS
             valueFrom:
               secretKeyRef:
@@ -440,9 +431,9 @@ spec:
           echo "{{inputs.parameters.secretName}}" > /tmp/secret_name
           
           cat > "$KAFKA_PROPERTIES_FILE" <<-EOF
+          sasl.jaas.config=${SASL_JAAS_CONFIG}
           security.protocol=SASL_SSL
           sasl.mechanism=SCRAM-SHA-512
-          sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username='${SASL_USERNAME}' password='${SASL_PASSWORD}';
           ssl.truststore.type=PKCS12
           ssl.truststore.location={{inputs.parameters.mountPath}}/ca.p12
           ssl.truststore.password=${TRUSTPASS}
