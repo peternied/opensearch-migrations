@@ -400,6 +400,113 @@ export const SetupKafka = WorkflowBuilder.create({
         .addJsonPathOutput("secret", "{.status.secret}", typeToken<string>())
     )
 
+    .addTemplate("exportClusterCa", t => t
+        .addRequiredInput("kafkaName", typeToken<string>())
+        .addScriptTask(b => b
+            .setImage("bitnami/kubectl:1.30")
+            .setCommand(["bash", "-lc"])
+            .setSource(`
+                set -euo pipefail
+                SECRET="{{inputs.parameters.kafkaName}}-cluster-ca-cert"
+                # Extract PEM (base64-decoded) into a file for Argo to capture as a parameter.
+                kubectl get secret "${SECRET}" -o jsonpath='{.data.ca\\.crt}' \\
+                | base64 -d > /tmp/ca.crt
+            `)
+        )
+        .addPathOutput("clusterCaPem", "/tmp/ca.crt", typeToken<string>())
+    )
+
+    .addTemplate("createKafkaPropertiesFile", t => t
+        .addRequiredInput("secretName", typeToken<string>())
+        .addRequiredInput("userSecretName", typeToken<string>())
+        .addRequiredInput("caSecretName", typeToken<string>())
+        .addRequiredInput("bootstrapServers", typeToken<string>())
+        .addRequiredInput("clientId", typeToken<string>())
+        .addOptionalInput("mountPath", s => "/opt/kafka-config")
+        .addOptionalInput("targetNamespace", s => "{{workflow.namespace}}")
+        .addScriptTask(b => b
+            .setImage("bitnami/kubectl:1.30")
+            .setCommand(["/bin/bash", "-euo", "pipefail", "-c"])
+            .addEnv("SASL_USERNAME", {
+                valueFrom: {
+                    secretKeyRef: {
+                        name: "{{inputs.parameters.userSecretName}}",
+                        key: "username"
+                    }
+                }
+            })
+            .addEnv("SASL_PASSWORD", {
+                valueFrom: {
+                    secretKeyRef: {
+                        name: "{{inputs.parameters.userSecretName}}",
+                        key: "password"
+                    }
+                }
+            })
+            .addEnv("TRUSTPASS", {
+                valueFrom: {
+                    secretKeyRef: {
+                        name: "{{inputs.parameters.caSecretName}}",
+                        key: "ca.password"
+                    }
+                }
+            })
+            .setSource(`
+                WORK=/work
+                mkdir -p "$WORK"
+
+                # Copy truststore from the mounted CA secret so we can package it into the new Secret
+                cp /var/run/ca-secret/ca.p12 "$WORK/ca.p12"
+                printf "%s" "$TRUSTPASS" > "$WORK/ca.password"
+
+                # Render kafka.properties using ENV vars
+                KAFKA_PROPERTIES_FILE="$WORK/kafka.properties"
+                cat > "$KAFKA_PROPERTIES_FILE" <<EOF
+security.protocol=SASL_SSL
+sasl.mechanism=SCRAM-SHA-512
+sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username='\${SASL_USERNAME}' password='\${SASL_PASSWORD}';
+ssl.truststore.type=PKCS12
+ssl.truststore.location={{inputs.parameters.mountPath}}/ca.p12
+ssl.truststore.password=\${TRUSTPASS}
+bootstrap.servers={{inputs.parameters.bootstrapServers}}
+\$( [[ -n "{{inputs.parameters.clientId}}" ]] && echo "client.id={{inputs.parameters.clientId}}" )
+EOF
+
+                kubectl -n "{{inputs.parameters.targetNamespace}}" create secret generic "{{inputs.parameters.secretName}}" \\
+                  --from-file=kafka.properties="$KAFKA_PROPERTIES_FILE" \\
+                  --from-file=ca.p12="$WORK/ca.p12" \\
+                  --from-file=ca.password="$WORK/ca.password" \\
+                  --dry-run=client -o yaml | kubectl apply -f -
+            `)
+            .setPodSpecPatch(`
+                {
+                    "volumes": [
+                        {
+                            "name": "ca-secret",
+                            "secret": {
+                                "secretName": "{{inputs.parameters.caSecretName}}",
+                                "items": [
+                                    {"key": "ca.p12", "path": "ca.p12"}
+                                ]
+                            }
+                        },
+                        { "name": "work", "emptyDir": {} }
+                    ],
+                    "containers": [
+                        {
+                            "name": "main",
+                            "volumeMounts": [
+                                {"name": "ca-secret", "mountPath": "/var/run/ca-secret", "readOnly": true},
+                                {"name": "work", "mountPath": "/work"}
+                            ]
+                        }
+                    ],
+                    "serviceAccountName": "argo-workflow-executor"
+                }
+            `)
+        )
+    )
+
     .addTemplate("createRequiredUsers", t => t
         .addRequiredInput("kafkaName", typeToken<string>())
         
@@ -441,15 +548,43 @@ export const SetupKafka = WorkflowBuilder.create({
             .addTask("createUsers", INTERNAL, "createRequiredUsers", c =>
                 c.register({kafkaName: b.inputs.kafkaName}),
                 {dependencies: ["deployCluster"]})
+            .addTask("exportClusterCa", INTERNAL, "exportClusterCa", c =>
+                c.register({kafkaName: b.inputs.kafkaName}),
+                {dependencies: ["deployCluster"]})
+            .addTask("createCaptureProxyProperties", INTERNAL, "createKafkaPropertiesFile", c =>
+                c.register({
+                    secretName: expr.concat(b.inputs.kafkaName, expr.literal("-capture-proxy-properties")),
+                    userSecretName: c.tasks.createUsers.outputs.captureProxySecret,
+                    caSecretName: expr.concat(b.inputs.kafkaName, expr.literal("-cluster-ca-cert")),
+                    bootstrapServers: c.tasks.deployCluster.outputs.bootstrapServers,
+                    clientId: expr.concat(b.inputs.kafkaName, expr.literal("-capture-proxy"))
+                }),
+                {dependencies: ["createUsers"]})
+            .addTask("createReplayerProperties", INTERNAL, "createKafkaPropertiesFile", c =>
+                c.register({
+                    secretName: expr.concat(b.inputs.kafkaName, expr.literal("-replayer-properties")),
+                    userSecretName: c.tasks.createUsers.outputs.replayerSecret,
+                    caSecretName: expr.concat(b.inputs.kafkaName, expr.literal("-cluster-ca-cert")),
+                    bootstrapServers: c.tasks.deployCluster.outputs.bootstrapServers,
+                    clientId: expr.concat(b.inputs.kafkaName, expr.literal("-replayer"))
+                }),
+                {dependencies: ["createUsers"]})
+            .addTask("createConsoleProperties", INTERNAL, "createKafkaPropertiesFile", c =>
+                c.register({
+                    secretName: expr.concat(b.inputs.kafkaName, expr.literal("-console-properties")),
+                    userSecretName: c.tasks.createUsers.outputs.consoleSecret,
+                    caSecretName: expr.concat(b.inputs.kafkaName, expr.literal("-cluster-ca-cert")),
+                    bootstrapServers: c.tasks.deployCluster.outputs.bootstrapServers,
+                    clientId: expr.concat(b.inputs.kafkaName, expr.literal("-console"))
+                }),
+                {dependencies: ["createUsers"]})
         )
         .addExpressionOutput("kafkaName", c => c.inputs.kafkaName)
         .addExpressionOutput("bootstrapServers", c => c.tasks.deployCluster.outputs.bootstrapServers)
-        .addExpressionOutput("captureProxyUsername", c => c.tasks.createUsers.outputs.captureProxyUsername)
-        .addExpressionOutput("replayerUsername", c => c.tasks.createUsers.outputs.replayerUsername)
-        .addExpressionOutput("consoleUsername", c => c.tasks.createUsers.outputs.consoleUsername)
-        .addExpressionOutput("captureProxySecret", c => c.tasks.createUsers.outputs.captureProxySecret)
-        .addExpressionOutput("replayerSecret", c => c.tasks.createUsers.outputs.replayerSecret)
-        .addExpressionOutput("consoleSecret", c => c.tasks.createUsers.outputs.consoleSecret)
+        .addExpressionOutput("clusterCaPem", c => c.tasks.exportClusterCa.outputs.clusterCaPem)
+        .addExpressionOutput("captureProxyPropertiesSecret", c => expr.concat(c.inputs.kafkaName, expr.literal("-capture-proxy-properties")))
+        .addExpressionOutput("replayerPropertiesSecret", c => expr.concat(c.inputs.kafkaName, expr.literal("-replayer-properties")))
+        .addExpressionOutput("consolePropertiesSecret", c => expr.concat(c.inputs.kafkaName, expr.literal("-console-properties")))
     )
 
     .getFullScope();

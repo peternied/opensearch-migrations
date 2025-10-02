@@ -7,6 +7,108 @@ spec:
   serviceAccountName: argo-workflow-executor
 
   templates:
+    - name: setup-kafka-with-users
+      inputs:
+        parameters:
+          - name: kafka-name
+      outputs:
+        parameters:
+          - name: kafka-name
+            valueFrom:
+              expression: "inputs.parameters['kafka-name']"
+          - name: bootstrapServers
+            valueFrom:
+              expression: tasks.deployCluster.outputs.parameters.bootstrap-servers
+          - name: clusterCaPem
+            valueFrom:
+              expression: tasks.deployCluster.outputs.parameters.cluster-ca-pem
+          - name: captureProxyPropertiesSecret
+            valueFrom:
+              expression: tasks.createCaptureProxyProperties.outputs.parameters.secretName
+          - name: replayerPropertiesSecret
+            valueFrom:
+              expression: tasks.createReplayerProperties.outputs.parameters.secretName
+          - name: consolePropertiesSecret
+            valueFrom:
+              expression: tasks.createConsoleProperties.outputs.parameters.secretName
+      dag:
+        tasks:
+          - name: deployCluster
+            template: cluster-deploy
+            arguments:
+              parameters:
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+          - name: createUsers
+            template: createrequiredusers
+            arguments:
+              parameters:
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+            dependencies:
+              - deployCluster
+          - name: exportClusterCa
+            template: export-cluster-ca
+            arguments:
+              parameters:
+                - name: kafka-name
+                  value: "{{inputs.parameters.kafka-name}}"
+            dependencies:
+              - deployCluster
+          - name: createCaptureProxyProperties
+            template: create-kafka-properties-file
+            arguments:
+              parameters:
+                - name: secretName
+                  value: "{{inputs.parameters.kafka-name}}-capture-proxy-properties"
+                - name: userSecretName
+                  value: "{{tasks.createUsers.outputs.parameters.captureProxySecret}}"
+                - name: username                                  # <-- ADD
+                  value: "{{tasks.createUsers.outputs.parameters.captureProxyUsername}}"
+                - name: caSecretName
+                  value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
+                - name: bootstrapServers
+                  value: "{{tasks.deployCluster.outputs.parameters.bootstrap-servers}}"
+                - name: clientId
+                  value: "{{inputs.parameters.kafka-name}}-capture-proxy"
+            dependencies:
+              - createUsers
+          - name: createReplayerProperties
+            template: create-kafka-properties-file
+            arguments:
+              parameters:
+                - name: secretName
+                  value: "{{inputs.parameters.kafka-name}}-replayer-properties"
+                - name: userSecretName
+                  value: "{{tasks.createUsers.outputs.parameters.replayerSecret}}"
+                - name: username
+                  value: "{{tasks.createUsers.outputs.parameters.replayerUsername}}"
+                - name: caSecretName
+                  value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
+                - name: bootstrapServers
+                  value: "{{tasks.deployCluster.outputs.parameters.bootstrap-servers}}"
+                - name: clientId
+                  value: "{{inputs.parameters.kafka-name}}-replayer"
+            dependencies:
+              - createUsers
+          - name: createConsoleProperties
+            template: create-kafka-properties-file
+            arguments:
+              parameters:
+                - name: secretName
+                  value: "{{inputs.parameters.kafka-name}}-console-properties"
+                - name: userSecretName
+                  value: "{{tasks.createUsers.outputs.parameters.consoleSecret}}"
+                - name: username
+                  value: "{{tasks.createUsers.outputs.parameters.consoleUsername}}"
+                - name: caSecretName
+                  value: "{{inputs.parameters.kafka-name}}-cluster-ca-cert"
+                - name: bootstrapServers
+                  value: "{{tasks.deployCluster.outputs.parameters.bootstrap-servers}}"
+                - name: clientId
+                  value: "{{inputs.parameters.kafka-name}}-console"
+            dependencies:
+              - createUsers
     - name: cluster-deploy
       inputs:
         parameters:
@@ -142,7 +244,7 @@ spec:
             valueFrom:
               path: /tmp/ca.crt
       script:
-        image: bitnami/kubectl:1.30
+        image: bitnamisecure/kubectl:latest
         command: [bash, -lc]
         source: |
           set -euo pipefail
@@ -266,9 +368,9 @@ spec:
                 - name: kafka-name
                   value: "{{inputs.parameters.kafka-name}}"
                 - name: userName
-                  value: "{{=inputs.parameters.kafka-name+'-capture-proxy'}}"
+                  value: "{{inputs.parameters.kafka-name}}-capture-proxy"
                 - name: userType
-                  value: capture-proxy
+                  value: "capture-proxy"
           - name: createReplayerUser
             template: create-kafka-user
             arguments:
@@ -276,7 +378,7 @@ spec:
                 - name: kafka-name
                   value: "{{inputs.parameters.kafka-name}}"
                 - name: userName
-                  value: "{{=inputs.parameters.kafka-name+'-replayer'}}"
+                  value: "{{inputs.parameters.kafka-name}}-replayer"
                 - name: userType
                   value: replayer
           - name: createConsoleUser
@@ -286,55 +388,95 @@ spec:
                 - name: kafka-name
                   value: "{{inputs.parameters.kafka-name}}"
                 - name: userName
-                  value: "{{=inputs.parameters.kafka-name+'-console'}}"
+                  value: "{{inputs.parameters.kafka-name}}-console"
                 - name: userType
                   value: console
-    - name: setup-kafka-with-users
+    - name: create-kafka-properties-file
       inputs:
         parameters:
-          - name: kafka-name
+          - name: secretName
+          - name: userSecretName
+          - name: username
+          - name: caSecretName
+          - name: bootstrapServers
+          - name: clientId
+          - name: mountPath
+            value: "/opt/kafka-config"
+          - name: targetNamespace
+            value: "{{workflow.namespace}}"
       outputs:
         parameters:
-          - name: kafka-name
+          - name: secretName
             valueFrom:
-              expression: inputs.parameters.kafka-name
-          - name: bootstrapServers
+              path: /tmp/secret_name
+      script:
+        image: bitnamisecure/kubectl:latest
+        command: ["/bin/bash","-euo","pipefail","-c"]
+        env:
+          - name: SASL_USERNAME
+            value: "{{inputs.parameters.username}}"
+          - name: SASL_PASSWORD
             valueFrom:
-              expression: tasks.deployCluster.outputs.parameters.bootstrap-servers
-          - name: clusterCaPem
+              secretKeyRef:
+                name: "{{inputs.parameters.userSecretName}}"
+                key: password
+          - name: TRUSTPASS
             valueFrom:
-              expression: tasks.deployCluster.outputs.parameters.cluster-ca-pem
-          - name: captureProxyUsername
-            valueFrom:
-              expression: tasks.createUsers.outputs.parameters.captureProxyUsername
-          - name: replayerUsername
-            valueFrom:
-              expression: tasks.createUsers.outputs.parameters.replayerUsername
-          - name: consoleUsername
-            valueFrom:
-              expression: tasks.createUsers.outputs.parameters.consoleUsername
-          - name: captureProxySecret
-            valueFrom:
-              expression: tasks.createUsers.outputs.parameters.captureProxySecret
-          - name: replayerSecret
-            valueFrom:
-              expression: tasks.createUsers.outputs.parameters.replayerSecret
-          - name: consoleSecret
-            valueFrom:
-              expression: tasks.createUsers.outputs.parameters.consoleSecret
-      dag:
-        tasks:
-          - name: deployCluster
-            template: cluster-deploy
-            arguments:
-              parameters:
-                - name: kafka-name
-                  value: "{{inputs.parameters.kafka-name}}"
-          - name: createUsers
-            template: createrequiredusers
-            arguments:
-              parameters:
-                - name: kafka-name
-                  value: "{{inputs.parameters.kafka-name}}"
-            dependencies:
-              - deployCluster
+              secretKeyRef:
+                name: "{{inputs.parameters.caSecretName}}"
+                key: ca.password
+        source: |
+          WORK=/work
+          mkdir -p "$WORK"
+
+          # Copy truststore from the mounted CA secret so we can package it into the new Secret
+          cp /var/run/ca-secret/ca.p12 "$WORK/ca.p12"
+          printf "%s" "$TRUSTPASS" > "$WORK/ca.password"
+
+          # Render kafka.properties using ENV vars
+          KAFKA_PROPERTIES_FILE="$WORK/kafka.properties"
+          
+          # Save secret name to output file
+          echo "{{inputs.parameters.secretName}}" > /tmp/secret_name
+          
+          cat > "$KAFKA_PROPERTIES_FILE" <<-EOF
+          security.protocol=SASL_SSL
+          sasl.mechanism=SCRAM-SHA-512
+          sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username='${SASL_USERNAME}' password='${SASL_PASSWORD}';
+          ssl.truststore.type=PKCS12
+          ssl.truststore.location={{inputs.parameters.mountPath}}/ca.p12
+          ssl.truststore.password=${TRUSTPASS}
+          bootstrap.servers={{inputs.parameters.bootstrapServers}}
+          $( [[ -n "{{inputs.parameters.clientId}}" ]] && echo "client.id={{inputs.parameters.clientId}}" )
+          EOF
+
+          kubectl -n "{{inputs.parameters.targetNamespace}}" create secret generic "{{inputs.parameters.secretName}}" \
+            --from-file=kafka.properties="$KAFKA_PROPERTIES_FILE" \
+            --from-file=ca.p12="$WORK/ca.p12" \
+            --from-file=ca.password="$WORK/ca.password" \
+            --dry-run=client -o yaml | kubectl apply -f -
+      podSpecPatch: |
+        {
+          "volumes": [
+            {
+              "name": "ca-secret",
+              "secret": {
+                "secretName": "{{inputs.parameters.caSecretName}}",
+                "items": [
+                  {"key": "ca.p12", "path": "ca.p12"}
+                ]
+              }
+            },
+            { "name": "work", "emptyDir": {} }
+          ],
+          "containers": [
+            {
+              "name": "main",
+              "volumeMounts": [
+                {"name": "ca-secret", "mountPath": "/var/run/ca-secret", "readOnly": true},
+                {"name": "work", "mountPath": "/work"}
+              ]
+            }
+          ],
+          "serviceAccountName": "argo-workflow-executor"
+        }
