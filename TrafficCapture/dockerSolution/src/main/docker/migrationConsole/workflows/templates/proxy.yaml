@@ -5,6 +5,7 @@ metadata:
 spec:
   entrypoint: deploy-capture-proxy
   serviceAccountName: argo-workflow-executor
+
   templates:
     - name: deploy-service
       inputs:
@@ -41,7 +42,7 @@ spec:
       resource:
         action: create
         setOwnerReference: true
-        flags: [ "--validate=false" ]
+        flags: [ "--validate=false" ]  # validation requires Cluster permissions rather than just namespace permissions
         manifest: |
           apiVersion: v1
           kind: Service
@@ -51,29 +52,64 @@ spec:
               app: proxy
           spec:
             selector:
-              app: proxy
+              app: proxy  # Selector should match pod labels directly, not use matchLabels
             ports:
             - port: {{inputs.parameters.frontside-port}}
               targetPort: {{inputs.parameters.frontside-port}}
             type: LoadBalancer
+          
 
     - name: deploy-capture-proxy
       inputs:
         parameters:
+          # required
+          - name: kafka-properties-secret
           - name: backside-uri-string
+            value: "localhost"
           - name: frontside-port
+            value: "8282"
           - name: capture-proxy-image
+            value: "migrations/capture_proxy:latest"
           - name: capture-proxy-pull-policy
+            value: "IfNotPresent"
+
+          # required, but has defaults
           - name: replicas
             value: "1"
-          - name: kafka-properties-secret
+
+          # optional
+          - name: trace-directory
             value: ""
-          - name: kafka-topic
+          - name: no-capture
+            value: ""
+          - name: kafka-properties-file
+            value: ""
+          - name: kafka-client-id
             value: ""
           - name: kafka-connection
             value: ""
+          - name: kafka-topic
+            value: ""
+          - name: msk-auth-enabled
+            value: ""
+          - name: ssl-config-file-path
+            value: ""
+          - name: maximum-traffic-stream-size
+            value: ""
           - name: allow-insecure-connections-to-backside
-            value: "false"
+            value: ""
+          - name: num-threads
+            value: ""
+          - name: destination-connection-pool-size
+            value: ""
+          - name: destination-connection-pool-timeout
+            value: ""
+          - name: otel-collector-endpoint
+            value: "http://otel-collector:4317"
+          - name: header-overrides
+            value: ""
+          - name: suppress-capture-header-pairs
+            value: ""
       resource:
         action: create
         setOwnerReference: true
@@ -99,37 +135,109 @@ spec:
                   image: {{inputs.parameters.capture-proxy-image}}
                   imagePullPolicy: {{inputs.parameters.capture-proxy-pull-policy}}
                   env:
+                    # Required parameters
                     - name: BACKSIDE_URI_STRING
                       value: "{{inputs.parameters.backside-uri-string}}"
                     - name: FRONTSIDE_PORT
                       value: "{{inputs.parameters.frontside-port}}"
+
+                    # Optional parameters with defaults
+                    - name: TRACE_DIRECTORY
+                      value: "{{inputs.parameters.trace-directory}}"
+                    - name: NO_CAPTURE
+                      value: "{{inputs.parameters.no-capture}}"
+                    - name: KAFKA_CLIENT_ID
+                      value: "{{inputs.parameters.kafka-client-id}}"
+                    - name: MSK_AUTH_ENABLED
+                      value: "{{inputs.parameters.msk-auth-enabled}}"
+                    - name: MAXIMUM_TRAFFIC_STREAM_SIZE
+                      value: "{{inputs.parameters.maximum-traffic-stream-size}}"
                     - name: ALLOW_INSECURE_CONNECTIONS_TO_BACKSIDE
                       value: "{{inputs.parameters.allow-insecure-connections-to-backside}}"
+                    - name: NUM_THREADS
+                      value: "{{inputs.parameters.num-threads}}"
+                    - name: DESTINATION_CONNECTION_POOL_SIZE
+                      value: "{{inputs.parameters.destination-connection-pool-size}}"
+                    - name: DESTINATION_CONNECTION_POOL_TIMEOUT
+                      value: "{{inputs.parameters.destination-connection-pool-timeout}}"
+
+                    # Optional parameters that may be empty
+                    - name: KAFKA_PROPERTIES_FILE
+                      value: "/opt/kafka-config/kafka.properties"
                     - name: KAFKA_CONNECTION
                       value: "{{inputs.parameters.kafka-connection}}"
                     - name: KAFKA_TOPIC
                       value: "{{inputs.parameters.kafka-topic}}"
-                    - name: KAFKA_PROPERTIES_FILE
-                      value: "/opt/kafka-config/kafka.properties"
+                    - name: SSL_CONFIG_FILE_PATH
+                      value: "{{inputs.parameters.ssl-config-file-path}}"
+                    - name: OTEL_COLLECTOR_ENDPOINT
+                      value: "{{inputs.parameters.otel-collector-endpoint}}"
+
+                    # List parameters
+                    - name: HEADER_OVERRIDES
+                      value: "{{inputs.parameters.header-overrides}}"
+                    - name: SUPPRESS_CAPTURE_HEADER_PAIRS
+                      value: "{{inputs.parameters.suppress-capture-header-pairs}}"
+
                   volumeMounts:
                   - name: kafka-config
                     mountPath: /opt/kafka-config
                     readOnly: true
-                  ports:
-                  - containerPort: {{inputs.parameters.frontside-port}}
                   command:
                     - "/bin/sh"
                     - "-c"
                     - |
                       set -e
-                      exec /runJavaWithClasspath.sh org.opensearch.migrations.trafficcapture.proxyserver.CaptureProxy \
-                        --destinationUri "$BACKSIDE_URI_STRING" \
-                        --listenPort "$FRONTSIDE_PORT" \
-                        --kafkaConnection "$KAFKA_CONNECTION" \
-                        --kafkaTopic "$KAFKA_TOPIC" \
-                        --kafkaConfigFile "$KAFKA_PROPERTIES_FILE" \
-                        $([[ "$ALLOW_INSECURE_CONNECTIONS_TO_BACKSIDE" == "true" ]] && echo "--insecureDestination")
+
+                      # Build arguments from environment variables
+                      ARGS=""
+
+                      # Required parameters
+                      ARGS="${ARGS}${BACKSIDE_URI_STRING:+ --destinationUri $BACKSIDE_URI_STRING}"
+                      ARGS="${ARGS}${FRONTSIDE_PORT:+ --listenPort $FRONTSIDE_PORT}"
+
+                      # Optional parameters
+                      ARGS="${ARGS}${TRACE_DIRECTORY:+ --traceDirectory $TRACE_DIRECTORY}"
+                      ARGS="${ARGS}${KAFKA_PROPERTIES_FILE:+ --kafkaConfigFile $KAFKA_PROPERTIES_FILE}"
+                      ARGS="${ARGS}${KAFKA_CLIENT_ID:+ --kafkaClientId $KAFKA_CLIENT_ID}"
+                      ARGS="${ARGS}${KAFKA_CONNECTION:+ --kafkaConnection $KAFKA_CONNECTION}"
+                      ARGS="${ARGS}${KAFKA_TOPIC:+ --kafkaTopic $KAFKA_TOPIC}"
+                      ARGS="${ARGS}${SSL_CONFIG_FILE_PATH:+ --sslConfigFile $SSL_CONFIG_FILE_PATH}"
+                      ARGS="${ARGS}${MAXIMUM_TRAFFIC_STREAM_SIZE:+ --maxTrafficBufferSize $MAXIMUM_TRAFFIC_STREAM_SIZE}"
+                      ARGS="${ARGS}${NUM_THREADS:+ --numThreads $NUM_THREADS}"
+                      ARGS="${ARGS}${DESTINATION_CONNECTION_POOL_SIZE:+ --destinationConnectionPoolSize $DESTINATION_CONNECTION_POOL_SIZE}"
+                      ARGS="${ARGS}${DESTINATION_CONNECTION_POOL_TIMEOUT:+ --destinationConnectionPoolTimeout $DESTINATION_CONNECTION_POOL_TIMEOUT}"
+                      ARGS="${ARGS}${OTEL_COLLECTOR_ENDPOINT:+ --otelCollectorEndpoint $OTEL_COLLECTOR_ENDPOINT}"
+                      ARGS="${ARGS}${HEADER_OVERRIDES:+ --setHeader $HEADER_OVERRIDES}"
+                      ARGS="${ARGS}${SUPPRESS_CAPTURE_HEADER_PAIRS:+ --suppressCaptureForHeaderMatch $SUPPRESS_CAPTURE_HEADER_PAIRS}"
+
+                      # Boolean flags
+                      if [ "$NO_CAPTURE" = "true" ] || [ "$NO_CAPTURE" = "1" ]; then
+                          ARGS="${ARGS} --noCapture"
+                      fi
+
+                      if [ "$MSK_AUTH_ENABLED" = "true" ] || [ "$MSK_AUTH_ENABLED" = "1" ]; then
+                          ARGS="${ARGS} --enableMSKAuth"
+                      fi
+
+                      if [ "$ALLOW_INSECURE_CONNECTIONS_TO_BACKSIDE" = "true" ] || [ "$ALLOW_INSECURE_CONNECTIONS_TO_BACKSIDE" = "1" ]; then
+                          ARGS="${ARGS} --insecureDestination"
+                      fi
+
+                      echo "&&& KAFKA_PROPERTIES_FILE location"
+                      ls -al /opt/kafka-config
+                      echo "&&&"
+
+                      # Log the configuration
+                      echo "Starting proxy with arguments: $ARGS"
+
+                      # Execute the command
+                      exec /runJavaWithClasspath.sh org.opensearch.migrations.trafficcapture.proxyserver.CaptureProxy $ARGS
+
+                  ports:
+                  - containerPort: {{inputs.parameters.frontside-port}}
                 volumes:
                 - name: kafka-config
                   secret:
-                    secretName: {{inputs.parameters.kafka-properties-secret}}
+                    secretName: "authed-capture-proxy-properties"
+
