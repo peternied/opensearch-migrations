@@ -42,11 +42,15 @@ spec:
           - name: config-contents
           - name: migration-console-image
           - name: migration-console-pull-policy
+          - name: kafka-secret-name
           - name: use-localstack-aws-creds
             value: "false"
       container:
         image: "{{inputs.parameters.migration-console-image}}"
         imagePullPolicy: "{{inputs.parameters.migration-console-pull-policy}}"
+        volumeMounts:
+        - name: kafka-config
+          mountPath: "/opt/kafka-config"
         command: ["/bin/sh", "-c"]
         args:
           - |
@@ -75,6 +79,10 @@ spec:
             echo ---
             
             {{inputs.parameters.command}}
+        volumes:
+        - name: kafka-config
+          secret:
+            secretName: "{{inputs.parameters.kafka-secret-name}}"
 
     - name: deploy-console-with-config
       inputs:
@@ -84,6 +92,7 @@ spec:
           - name: name
           - name: migration-console-image
           - name: migration-console-pull-policy
+          - name: kafka-secret-name
       outputs:
         parameters:
           - name: deployment-name
@@ -112,6 +121,9 @@ spec:
                   - name: main
                     image: "{{inputs.parameters.migration-console-image}}"
                     imagePullPolicy: "{{inputs.parameters.migration-console-pull-policy}}"
+                    volumeMounts:
+                    - name: kafka-config
+                      mountPath: "/opt/kafka-config"
                     command:
                       - "/bin/sh"
                       - "-c"
@@ -131,6 +143,10 @@ spec:
                         echo ---
           
                         {{inputs.parameters.command}}
+                  volumes:
+                  - name: kafka-config
+                    secret:
+                      secretName: {{inputs.parameters.kafka-secret-name}}
 
     - name: run-console
       inputs:
@@ -146,6 +162,7 @@ spec:
             value: ""
           - name: kafka-info
             value: ""
+          - name: kafka-secret-name
       steps:
         - - name: get-console-config
             template: get-console-config
@@ -171,6 +188,8 @@ spec:
                   value: "{{inputs.parameters.migration-console-image}}"
                 - name: migration-console-pull-policy
                   value: "{{inputs.parameters.migration-console-pull-policy}}"
+                - name: kafka-secret-name
+                  value: "{{inputs.parameters.kafka-secret-name}}"
 
     - name: deploy-console
       inputs:
@@ -188,6 +207,7 @@ spec:
             value: ""
           - name: target-cluster
             value: ""
+          - name: kafka-secret-name
       outputs:
         parameters:
           - name: deployment-name
@@ -220,3 +240,5 @@ spec:
                   value: "{{inputs.parameters.migration-console-image}}"
                 - name: migration-console-pull-policy
                   value: "{{inputs.parameters.migration-console-pull-policy}}"
+                - name: kafka-secret-name
+                  value: "{{inputs.parameters.kafka-secret-name}}"

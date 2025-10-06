@@ -98,6 +98,8 @@ spec:
                   value: "{{tasks.get-brokers-list.outputs.parameters.bootstrap-servers}}"
                 - name: kafka-topic
                   value: "{{tasks.kafka-topic-setup.outputs.parameters.topic-name}}"
+                - name: kafka-secret-name
+                  value: "{{tasks.kafka-cluster-setup.outputs.parameters.captureProxyKafkaSecret}}"
                 - name: capture-proxy-image
                   value: "{{=fromJSON(inputs.parameters['image-config'])['capture-proxy']['image']}}"
                 - name: capture-proxy-pull-policy
@@ -136,6 +138,8 @@ spec:
                   value: "{{tasks.kafka-topic-setup.outputs.parameters.topic-name}}"
                 - name: kafka-traffic-group-id
                   value: "{{tasks.id-generator.id}}"
+                - name: kafka-secret-name
+                  value: "{{tasks.kafka-cluster-setup.outputs.parameters.replayerKafkaSecret}}"
                 - name: replicas
                   value: "1"
                 - name: traffic-replayer-image
@@ -162,6 +166,8 @@ spec:
                       "broker_endpoints": "{{tasks.get-brokers-list.outputs.parameters.bootstrap-servers}}",
                       "standard": ""
                     }
+                - name: kafka-secret-name
+                  value: "{{tasks.kafka-cluster-setup.outputs.parameters.consoleKafkaSecret}}"
                 - name: command
                   value: tail -f /dev/null
                 - name: migration-console-image
