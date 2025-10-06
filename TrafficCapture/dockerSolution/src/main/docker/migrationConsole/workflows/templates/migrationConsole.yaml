@@ -4,14 +4,13 @@ metadata:
   name: migration-console-template
 spec:
   entrypoint: run-migration-command
-  serviceAccountName: argo-workflow-executor
   templates:
     - name: get-console-config
       inputs:
         parameters:
           - name: kafka-info
             value: ""
-            description: "Kafka configuration information (JSON) with broker_endpoints and optionally properties_secret"
+            description: "Snapshot configuration information (JSON)"
           - name: source-cluster
             value: ""
             description: "Source cluster configuration (JSON)"
@@ -81,15 +80,10 @@ spec:
       inputs:
         parameters:
           - name: command
-            value: "bash"
           - name: config-contents
-            value: ""
           - name: name
-            value: "test"
           - name: migration-console-image
-            value: "migrations/migration_console:latest"
           - name: migration-console-pull-policy
-            value: "IfNotPresent"
       outputs:
         parameters:
           - name: deployment-name
@@ -118,10 +112,6 @@ spec:
                   - name: main
                     image: "{{inputs.parameters.migration-console-image}}"
                     imagePullPolicy: "{{inputs.parameters.migration-console-pull-policy}}"
-                    volumeMounts:
-                      - name: kafka-config
-                        mountPath: /opt/kafka-config
-                        readOnly: true
                     command:
                       - "/bin/sh"
                       - "-c"
@@ -141,11 +131,6 @@ spec:
                         echo ---
           
                         {{inputs.parameters.command}}
-                
-                volumes:
-                  - name: kafka-config
-                    secret:
-                      secretName: "authed-console-properties"
 
     - name: run-console
       inputs:

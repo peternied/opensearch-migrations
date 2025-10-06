@@ -63,15 +63,10 @@ spec:
       inputs:
         parameters:
           # required
-          - name: kafka-properties-secret
           - name: backside-uri-string
-            value: "localhost"
           - name: frontside-port
-            value: "8282"
           - name: capture-proxy-image
-            value: "migrations/capture_proxy:latest"
           - name: capture-proxy-pull-policy
-            value: "IfNotPresent"
 
           # required, but has defaults
           - name: replicas
@@ -163,7 +158,7 @@ spec:
 
                     # Optional parameters that may be empty
                     - name: KAFKA_PROPERTIES_FILE
-                      value: "/opt/kafka-config/kafka.properties"
+                      value: "{{inputs.parameters.kafka-properties-file}}"
                     - name: KAFKA_CONNECTION
                       value: "{{inputs.parameters.kafka-connection}}"
                     - name: KAFKA_TOPIC
@@ -179,10 +174,6 @@ spec:
                     - name: SUPPRESS_CAPTURE_HEADER_PAIRS
                       value: "{{inputs.parameters.suppress-capture-header-pairs}}"
 
-                  volumeMounts:
-                  - name: kafka-config
-                    mountPath: /opt/kafka-config
-                    readOnly: true
                   command:
                     - "/bin/sh"
                     - "-c"
@@ -224,10 +215,6 @@ spec:
                           ARGS="${ARGS} --insecureDestination"
                       fi
 
-                      echo "&&& KAFKA_PROPERTIES_FILE location"
-                      ls -al /opt/kafka-config
-                      echo "&&&"
-
                       # Log the configuration
                       echo "Starting proxy with arguments: $ARGS"
 
@@ -236,8 +223,3 @@ spec:
 
                   ports:
                   - containerPort: {{inputs.parameters.frontside-port}}
-                volumes:
-                - name: kafka-config
-                  secret:
-                    secretName: "authed-capture-proxy-properties"
-

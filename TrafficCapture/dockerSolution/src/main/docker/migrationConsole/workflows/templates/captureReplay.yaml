@@ -11,7 +11,7 @@ spec:
       inputs:
         parameters:
           - name: session-name
-            value: "temp" # temporary - just to launch a migration console
+            # temporary - just to launch a migration console
           - name: source-config
             value: ""
             # Kafka setup
@@ -27,38 +27,10 @@ spec:
             value: ""
             # Proxy setup
           - name: proxy-destination
-            value: |
-              {
-                  "endpoint": "https://elasticsearch-master-headless:9200",
-                  "allow_insecure": true
-              }
           - name: proxy-listen-port
-            value: 9200
             # Replayer setup
           - name: replayer-target-config
-            value: |
-              {
-                  "endpoint": "https://opensearch-cluster-master-headless:9200",
-                  "allow_insecure": true,
-                  "basic_auth": {
-                      "username": "admin",
-                      "password": "admin"
-                  }
-              }
           - name: image-config
-            value: |
-              {
-                "captureProxyImage": "migrations/capture_proxy:latest",
-                "captureProxyPullPolicy": "IfNotPresent",
-                "etcdUtilsImage": "migrations/migration_console:latest",
-                "etcdUtilsPullPolicy": "IfNotPresent",
-                "migrationConsoleImage": "migrations/migration_console:latest",
-                "migrationConsolePullPolicy": "IfNotPresent",
-                "reindexFromSnapshotImage": "migrations/reindex_from_snapshot:latest",
-                "reindexFromSnapshotPullPolicy": "IfNotPresent",
-                "trafficReplayerImage": "migrations/traffic_replayer:latest",
-                "trafficReplayerPullPolicy": "IfNotPresent"
-              }
       dag:
         tasks:
           - name: id-generator
@@ -72,8 +44,8 @@ spec:
 
           - name: kafka-cluster-setup
             templateRef:
-              name: kafka-setup-better
-              template: setup-kafka-with-users
+              name: kafka-setup
+              template: cluster-deploy
             when: "'{{inputs.parameters.provided-kafka-bootstrap-servers}}' == ''"
             dependencies: [ id-generator ]
             arguments:
@@ -89,11 +61,7 @@ spec:
                 - name: created-kafka-name
                   value: "{{tasks.kafka-cluster-setup.outputs.parameters.kafka-name}}"
                 - name: created-bootstrap-servers
-                  value: "{{tasks.kafka-cluster-setup.outputs.parameters.bootstrapServers}}"
-                - name: created-capture-proxy-secret
-                  value: "{{tasks.kafka-cluster-setup.outputs.parameters.captureProxyPropertiesSecret}}"
-                - name: created-replayer-secret
-                  value: "{{tasks.kafka-cluster-setup.outputs.parameters.replayerPropertiesSecret}}"
+                  value: "{{tasks.kafka-cluster-setup.outputs.parameters.bootstrap-servers}}"
                 - name: provided-kafka-bootstrap-servers
                   value: "{{inputs.parameters.provided-kafka-bootstrap-servers}}"
                 - name: provided-kafka-k8s-name
@@ -128,14 +96,12 @@ spec:
                   value: "{{inputs.parameters.proxy-listen-port}}"
                 - name: kafka-connection
                   value: "{{tasks.get-brokers-list.outputs.parameters.bootstrap-servers}}"
-                - name: kafka-properties-secret
-                  value: "{{tasks.get-brokers-list.outputs.parameters.capture-proxy-secret}}"
                 - name: kafka-topic
                   value: "{{tasks.kafka-topic-setup.outputs.parameters.topic-name}}"
                 - name: capture-proxy-image
-                  value: "{{=fromJSON(inputs.parameters['image-config'])['captureProxyImage']}}"
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['capture-proxy']['image']}}"
                 - name: capture-proxy-pull-policy
-                  value: "{{=fromJSON(inputs.parameters['image-config'])['captureProxyPullPolicy']}}"
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['capture-proxy']['pull-policy']}}"
 
           - name: proxy-service
             templateRef:
@@ -164,8 +130,8 @@ spec:
                   value: "{{=let a=fromJSON(inputs.parameters['replayer-target-config'])['basic_auth']; a==nil ? '' : 'Basic ' + toBase64(a['username'] + ':' + a['password'])}}"
                 - name: speedup-factor
                   value: "20.0"
-                - name: kafka-properties-secret
-                  value: "{{tasks.get-brokers-list.outputs.parameters.replayer-secret}}"
+                - name: kafka-traffic-brokers
+                  value: "{{tasks.get-brokers-list.outputs.parameters.bootstrap-servers}}"
                 - name: kafka-traffic-topic
                   value: "{{tasks.kafka-topic-setup.outputs.parameters.topic-name}}"
                 - name: kafka-traffic-group-id
@@ -173,40 +139,39 @@ spec:
                 - name: replicas
                   value: "1"
                 - name: traffic-replayer-image
-                  value: "{{=fromJSON(inputs.parameters['image-config'])['trafficReplayerImage']}}"
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['traffic-replayer']['image']}}"
                 - name: traffic-replayer-pull-policy
-                  value: "{{=fromJSON(inputs.parameters['image-config'])['trafficReplayerPullPolicy']}}"
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['traffic-replayer']['pull-policy']}}"
 
-          # - name: run-migration-console
-          #   templateRef:
-          #     name: migration-console-template
-          #     template: deploy-console
-          #   dependencies: [ get-brokers-list ]
-          #   arguments:
-          #     parameters:
-          #       - name: name
-          #         value: "diagnostic-console-{{inputs.parameters.session-name}}"
-          #       - name: source-cluster
-          #         value: "{{=replace(inputs.parameters['source-config'], fromJSON(inputs.parameters['source-config'])['endpoint'], tasks['id-generator'].outputs.parameters['proxy-endpoint'])}}"
-          #       - name: target-cluster
-          #         value: "{{inputs.parameters.replayer-target-config}}"
-          #       - name: kafka-info
-          #         value: |
-          #           {
-          #             "broker_endpoints": "{{tasks.get-brokers-list.outputs.parameters.bootstrap-servers}}",
-          #             "properties_secret": "{{tasks.get-brokers-list.outputs.parameters.capture-proxy-secret}}",
-          #             "standard": ""
-          #           }
-          #       - name: command
-          #         value: tail -f /dev/null
-          #       - name: migration-console-image
-          #         value: "{{=fromJSON(inputs.parameters['image-config'])['migration-console']['image']}}"
-          #       - name: migration-console-pull-policy
-          #         value: "{{=fromJSON(inputs.parameters['image-config'])['migration-console']['pull-policy']}}"
+          - name: run-migration-console
+            templateRef:
+              name: migration-console-template
+              template: deploy-console
+            dependencies: [ get-brokers-list ]
+            arguments:
+              parameters:
+                - name: name
+                  value: "diagnostic-console-{{inputs.parameters.session-name}}"
+                - name: source-cluster
+                  value: "{{=replace(inputs.parameters['source-config'], fromJSON(inputs.parameters['source-config'])['endpoint'], tasks['id-generator'].outputs.parameters['proxy-endpoint'])}}"
+                - name: target-cluster
+                  value: "{{inputs.parameters.replayer-target-config}}"
+                - name: kafka-info
+                  value: |
+                    {
+                      "broker_endpoints": "{{tasks.get-brokers-list.outputs.parameters.bootstrap-servers}}",
+                      "standard": ""
+                    }
+                - name: command
+                  value: tail -f /dev/null
+                - name: migration-console-image
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['migration-console']['image']}}"
+                - name: migration-console-pull-policy
+                  value: "{{=fromJSON(inputs.parameters['image-config'])['migration-console']['pull-policy']}}"
 
           - name: get-user-satisfied-confirmation
             template: get-user-satisfied-confirmation
-            dependencies: [ proxy-service, deploy-replayer ]
+            dependencies: [ proxy-service, deploy-replayer, run-migration-console ]
 
     - name: get-brokers-list
       steps: [[]]
@@ -214,10 +179,6 @@ spec:
           parameters:
             - name: created-bootstrap-servers
             - name: created-kafka-name
-            - name: created-capture-proxy-secret
-              value: ""
-            - name: created-replayer-secret
-              value: ""
             - name: provided-kafka-bootstrap-servers
             - name: provided-kafka-k8s-name
       outputs:
@@ -228,12 +189,6 @@ spec:
           - name: bootstrap-servers
             valueFrom:
               expression: "inputs.parameters['provided-kafka-bootstrap-servers'] == '' ? inputs.parameters['created-bootstrap-servers'] : inputs.parameters['provided-kafka-bootstrap-servers']"
-          - name: capture-proxy-secret
-            valueFrom:
-              expression: "inputs.parameters['created-capture-proxy-secret']"
-          - name: replayer-secret
-            valueFrom:
-              expression: "inputs.parameters['created-replayer-secret']"
 
     - name: get-user-satisfied-confirmation
       suspend: {}

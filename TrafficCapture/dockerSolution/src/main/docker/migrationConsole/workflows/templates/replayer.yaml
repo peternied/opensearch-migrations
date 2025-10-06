@@ -63,10 +63,8 @@ spec:
               value: ""
             - name: kafka-traffic-group-id
               value: ""
-            - name: kafka-properties-secret
-              value: ""
             - name: kafka-traffic-property-file
-              value: "/opt/kafka-config/kafka.properties"
+              value: ""
             - name: kafka-traffic-enable-msk-auth
               value: ""
             - name: otel-collector-endpoint
@@ -96,12 +94,6 @@ spec:
                 - name: replayer
                   image: {{inputs.parameters.traffic-replayer-image}}
                   imagePullPolicy: {{inputs.parameters.traffic-replayer-pull-policy}}
-                  volumeMounts:
-                  {{- if ne inputs.parameters.kafka-properties-secret "" }}
-                  - name: kafka-config
-                    mountPath: /opt/kafka-config
-                    readOnly: true
-                  {{- end }}
                   env:
                     # Required parameters
                     - name: TARGET_URL
@@ -220,10 +212,4 @@ spec:
           
                       echo "Starting traffic replayer with arguments: ${ARGS[*]}"
                       exec /runJavaWithClasspath.sh org.opensearch.migrations.replay.TrafficReplayer "${ARGS[@]}"
-                
-                {{- if ne inputs.parameters.kafka-properties-secret "" }}
-                volumes:
-                - name: kafka-config
-                  secret:
-                    secretName: {{inputs.parameters.kafka-properties-secret}}
-                {{- end }}
+
