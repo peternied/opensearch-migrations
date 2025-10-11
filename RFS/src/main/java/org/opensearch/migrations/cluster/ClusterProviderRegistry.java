@@ -117,7 +117,7 @@ public class ClusterProviderRegistry {
                 return new UnsupportedVersionException(message);
             });
 
-        log.info("Found remote reader for version: " + version);
+        log.info("Found remote reader for version: {}", version);
         return remoteProvider;
     }
 
@@ -145,7 +145,7 @@ public class ClusterProviderRegistry {
                 return new UnsupportedVersionException(message);
             });
 
-        log.info("Found remote writer for version: " + version);
+        log.info("Found remote writer for version: {}", version);
         return remoteProvider;
     }
 

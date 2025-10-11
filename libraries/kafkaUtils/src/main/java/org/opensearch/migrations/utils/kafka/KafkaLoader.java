@@ -65,13 +65,13 @@ public class KafkaLoader {
             // Flush batch
             if (i % batchSize == 0) {
                 waitForFutures(futures);
-                log.info("Sent " + i + " messages to kafka topic " + topicName);
+                log.info("Sent {} messages to kafka topic {}", i, topicName);
                 futures.clear();
             }
         }
         log.info("End of stream reached");
         waitForFutures(futures);
-        log.info("Sent total of " + i + " messages to kafka topic " + topicName);
+        log.info("Sent total of {} messages to kafka topic {}", i, topicName);
     }
 
     private void waitForFutures(List<Future<RecordMetadata>> futures) throws ExecutionException, InterruptedException {

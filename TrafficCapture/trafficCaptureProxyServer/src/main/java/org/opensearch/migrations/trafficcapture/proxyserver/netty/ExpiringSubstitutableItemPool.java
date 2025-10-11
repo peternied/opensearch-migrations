@@ -253,7 +253,7 @@ public class ExpiringSubstitutableItemPool<F extends Future<U>, U> {
         BiFunction<F, String, F> durationTrackingDecoratedItem = (itemsFuture, label) -> (F) itemsFuture.addListener(
             f -> {
                 stats.addWaitTime(Duration.between(startTime, Instant.now()));
-                log.trace(label + "returning value=" + f.get() + " from future " + itemsFuture);
+                log.trace("{} returning value={} from future {}", label, f.get(), itemsFuture);
             }
         );
         stats.addColdGet();
@@ -284,12 +284,12 @@ public class ExpiringSubstitutableItemPool<F extends Future<U>, U> {
 
     private void expireItems() {
         var thresholdTimestamp = Instant.now().minus(this.inactivityTimeout);
-        log.debug("expiration threshold = " + thresholdTimestamp);
+        log.debug("expiration threshold = {}", thresholdTimestamp);
         while (!readyItems.isEmpty()) {
             var oldestItem = readyItems.peek();
             var gap = Duration.between(thresholdTimestamp, oldestItem.timestamp);
             if (!gap.isNegative()) {
-                log.debug("scheduling next sweep for " + gap);
+                log.debug("scheduling next sweep for {}", gap);
                 scheduleNextExpirationSweep(gap);
                 return;
             } else {
@@ -299,7 +299,7 @@ public class ExpiringSubstitutableItemPool<F extends Future<U>, U> {
                     + "so with a fixed item timeout, nothing should ever be able to cut back in time.  "
                     + "Secondly, a concurrent mutation of any sort while in this function "
                     + "should have been impossible since we're only modifying this object through a shared eventloop";
-                log.debug("Removing " + removedItem);
+                log.debug("Removing {}", removedItem);
                 onExpirationConsumer.accept(removedItem.future);
                 beginLoadingNewItemIfNecessary();
             }

@@ -36,7 +36,7 @@ public class TypeMappingSanitizationTransformerProvider extends JsonJSTransforme
                     MAPPER.convertValue(m, SourceProperties.class)).orElse(null),
                 (Map<String, Object>) config.get(FEATURE_FLAGS));
         } catch (ClassCastException e) {
-            log.error("Configuration error: {}", e.getMessage(), e);
+            log.error("Configuration error", e);
             throw new IllegalArgumentException(getConfigUsageStr(), e);
         }
     }

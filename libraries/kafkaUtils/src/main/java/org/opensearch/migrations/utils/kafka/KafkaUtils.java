@@ -43,7 +43,7 @@ public class KafkaUtils {
             }
             return p;
         } catch (ParameterException e) {
-            log.error(e.getMessage());
+            log.error("Parameter error", e);
             log.error("Got args: {}", String.join("; ", args));
             jCommander.usage();
             System.exit(2);
