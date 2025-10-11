@@ -1,6 +1,5 @@
 package org.opensearch.migrations.dashboards.savedobjects;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -17,9 +16,9 @@ public class SavedObjectParser {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     
-    private Map<String, Class<? extends SavedObject>> specialSavedObjectTypes = new HashMap<>() {{
-        put("dashboard", Dashboard.class);
-    }};
+    private Map<String, Class<? extends SavedObject>> specialSavedObjectTypes = Map.of(
+        "dashboard", Dashboard.class
+    );
 
     public SavedObject load(String jsonString) throws JsonProcessingException {
         if (jsonString == null) {

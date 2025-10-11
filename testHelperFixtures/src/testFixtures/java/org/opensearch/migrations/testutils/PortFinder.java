@@ -47,10 +47,10 @@ public class PortFinder {
     public static int findOpenPort() {
         try (ServerSocket serverSocket = new ServerSocket(0)) {
             int port = serverSocket.getLocalPort();
-            log.info("Open port found: " + port);
+            log.atInfo().setMessage("Open port found: {}").addArgument(port).log();
             return port;
         } catch (IOException e) {
-            log.error("Failed to find an open port: " + e.getMessage());
+            log.atError().setCause(e).setMessage("Failed to find an open port").log();
             throw new RuntimeException(e);
         }
     }

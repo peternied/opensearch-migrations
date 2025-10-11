@@ -1,7 +1,5 @@
 package org.opensearch.migrations.dashboards;
 
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -28,32 +26,32 @@ public class Sanitizer {
 
     private final SavedObjectParser savedObjectParser = new SavedObjectParser();
 
-    private Queue<SavedObject> processingQueue = new java.util.LinkedList<>();
+    private Queue<SavedObject> processingQueue = new java.util.ArrayDeque<>();
 
     @Getter
     private Stats stats = new Stats();
 
     @SuppressWarnings("rawtypes")
-    private Map<String, SavedObjectConverter> typeConverters = new HashMap<>() {{
-        put("index-pattern", new IndexPatternConverter());
-        put("search", new SearchConverter());
-        put("dashboard", new DashboardConverter());
-        put("visualization", new VisualizationConverter());
-        put("url", new UrlConverter());
-        put("query", new QueryConverter());
-    }};
+    private Map<String, SavedObjectConverter> typeConverters = Map.of(
+        "index-pattern", new IndexPatternConverter(),
+        "search", new SearchConverter(),
+        "dashboard", new DashboardConverter(),
+        "visualization", new VisualizationConverter(),
+        "url", new UrlConverter(),
+        "query", new QueryConverter()
+    );
 
-    private Set<String> notSupportedTypes = new HashSet<>() {{
-        add("map");
-        add("canvas-workpad");
-        add("canvas-element");
-        add("graph-workspace");
-        add("connector");
-        add("rule");
-        add("action");
-        add("config");
-        add("lens");
-    }};
+    private Set<String> notSupportedTypes = Set.of(
+        "map",
+        "canvas-workpad",
+        "canvas-element",
+        "graph-workspace",
+        "connector",
+        "rule",
+        "action",
+        "config",
+        "lens"
+    );
 
     public static Sanitizer getInstance() {
         return INSTANCE;
@@ -93,7 +91,7 @@ public class Sanitizer {
 
     @SuppressWarnings("unchecked")
     public String processQueue() {
-        final StringBuffer buffer = new StringBuffer();
+        final StringBuilder buffer = new StringBuilder();
         while (!processingQueue.isEmpty()) {
             final SavedObject savedObject = processingQueue.poll();
 

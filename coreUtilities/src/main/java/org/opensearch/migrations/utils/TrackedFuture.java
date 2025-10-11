@@ -112,7 +112,10 @@ public class TrackedFuture<D, T> {
 
     /**
      * Propagates completion to a dependent future.
-     *
+     * @param dependentFuture the future to propagate completion to
+     * @param consume the consumer to handle completion
+     * @param diagnosticSupplier the diagnostic information supplier
+     * @return the tracked future
      * @throws IllegalStateException if the dependentFuture has already been passed to this method
      * before or if it has already been marked as completed or was initialized with a parent.
      */
@@ -183,6 +186,9 @@ public class TrackedFuture<D, T> {
      * NB/TODO - I can't yet figure out how to enforce type-checking on the incoming fn parameter.
      * For example, I can pass a fn as a lambda which returns a String or an integer and the
      * compiler doesn't give an error.
+     * @param fn the function to handle the result
+     * @param diagnosticSupplier the diagnostic information supplier
+     * @return the tracked future
      */
     public <U> TrackedFuture<D, U> getDeferredFutureThroughHandle(
         @NonNull BiFunction<? super T, Throwable, ? extends TrackedFuture<D, U>> fn,

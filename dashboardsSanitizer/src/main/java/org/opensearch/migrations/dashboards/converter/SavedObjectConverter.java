@@ -112,7 +112,7 @@ public abstract class SavedObjectConverter<T extends SavedObject> {
         FALSE("false"),
         STRICT("strict");
     
-        private String value;
+        private final String value;
     
         DynamicMapping(String value) {
             this.value = value;

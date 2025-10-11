@@ -67,16 +67,4 @@ public abstract class BaseSpanContext<S extends IInstrumentConstructor>
         IScopedInstrumentationAttributes.super.addTraceException(e, isPropagating);
         observedExceptionToIncludeInMetrics = e;
     }
-
-    public @NonNull Span getCurrentSpan() {
-        return this.currentSpan;
-    }
-
-    public S getRootInstrumentationScope() {
-        return this.rootInstrumentationScope;
-    }
-
-    public Throwable getObservedExceptionToIncludeInMetrics() {
-        return this.observedExceptionToIncludeInMetrics;
-    }
 }

@@ -32,7 +32,7 @@ public class Stats {
     /**
      * This method registers a skipped dashboard object by incrementing the count and updating the details map.
      * It skips the registration if the dashboard object type is null or empty.
-     * @param type The type of the exported object.
+     * @param type the type of the exported object
      */
     public void registerSkipped(String type) {
         skipped.count++;
@@ -50,7 +50,10 @@ public class Stats {
     }
 
     /**
-     * This method prints the statistics in a JSON format using the Gson library.
+     * This method prints the statistics in a JSON format.
+     * @return the statistics as a JSON string
+     * @throws JsonProcessingException if JSON processing fails
+     * @throws IllegalArgumentException if arguments are invalid
      */
     public String printStats() throws JsonProcessingException, IllegalArgumentException {
         ObjectMapper mapper = new ObjectMapper();

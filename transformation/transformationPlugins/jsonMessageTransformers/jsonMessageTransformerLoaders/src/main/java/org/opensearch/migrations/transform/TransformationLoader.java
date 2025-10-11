@@ -121,7 +121,7 @@ public class TransformationLoader {
 
     @AllArgsConstructor
     private static class UserAgentTransformer implements IJsonTransformer {
-        public static final String USER_AGENT = "user-agent";
+        static final String USER_AGENT = "user-agent";
         private final String userAgent;
 
         @Override

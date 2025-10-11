@@ -1,6 +1,5 @@
 package org.opensearch.migrations.dashboards.converter;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.opensearch.migrations.dashboards.savedobjects.SavedObject;
@@ -54,17 +53,14 @@ public class VisualizationConverter extends SavedObjectConverter<SavedObject> {
     }
 
     private String convertLegendSize(String size) {
-        final Map<String, String> sizeMap = new HashMap<>() {
-            {
-                put("auto", null);
-                put("small", "80");
-                put("medium", "130");
-                put("large", "180");
-                put("xlarge", "230");
-            }
-        };
+        final Map<String, String> sizeMap = Map.of(
+            "small", "80",
+            "medium", "130",
+            "large", "180",
+            "xlarge", "230"
+        );
 
-        return sizeMap.getOrDefault(size, size);
+        return "auto".equals(size) ? null : sizeMap.getOrDefault(size, size);
     }
 
     private void backportUpdatePieVisApi(SavedObject savedObject) {

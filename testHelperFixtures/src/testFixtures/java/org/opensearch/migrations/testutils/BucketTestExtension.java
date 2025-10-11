@@ -34,6 +34,6 @@ public class BucketTestExtension implements BeforeEachCallback {
         
         // Skip tests that are not in the selected bucket
         Assumptions.assumeTrue(stripingIndex.equals(testIndex),
-            () -> "Skipping test " + context.getDisplayName() + " due to striping index " + (testIndex));
+            () -> "Skipping test " + context.getDisplayName() + " due to striping index " + testIndex);
     }
 }

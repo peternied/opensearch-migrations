@@ -83,12 +83,15 @@ public class CountingNettyResourceLeakDetector<T> extends ResourceLeakDetector<T
 
     private static void setupMonitoringLogger() {
         var eventExecutor = new NioEventLoopGroup(1, new DefaultThreadFactory("leakMonitor"));
-        eventExecutor.scheduleAtFixedRate(() -> {
+        var unused = eventExecutor.scheduleAtFixedRate(() -> {
             System.gc();
             System.runFinalization();
             var numLeaks = numLeaksFoundAtomic.get();
             if (numLeaks > 0) {
-                log.warn("numLeaks=" + CountingNettyResourceLeakDetector.getNumLeaks());
+                log.atWarn()
+                    .setMessage("numLeaks={}")
+                    .addArgument(CountingNettyResourceLeakDetector.getNumLeaks())
+                    .log();
             }
         }, 0, 1000, TimeUnit.MILLISECONDS);
     }

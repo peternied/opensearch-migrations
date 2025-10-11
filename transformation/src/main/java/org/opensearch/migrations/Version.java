@@ -21,6 +21,7 @@ public class Version {
     private final int minor;
     private final int patch;
 
+    @Override
     public String toString() {
         return String.format("%s %d.%d.%d", flavor.name(), major, minor, patch);
     }

@@ -8,8 +8,14 @@ import lombok.RequiredArgsConstructor;
  */
 public abstract class CanApplyResult {
     private CanApplyResult() {}
-    public static final CanApplyResult YES = new Yes();
-    public static final CanApplyResult NO = new No();
+
+    private static class Holder {
+        static final CanApplyResult YES = new Yes();
+        static final CanApplyResult NO = new No();
+    }
+
+    public static final CanApplyResult YES = Holder.YES;
+    public static final CanApplyResult NO = Holder.NO;
 
     /** Yes, the transformation can be applied */
     public static final class Yes extends CanApplyResult {}

@@ -10,11 +10,13 @@ public interface IJsonTransformerProvider {
      *
      * @param jsonConfig is a List, Map, String, or null that should be used to configure the
      *                   IJsonTransformer that is being created
+     * @return the created transformer
      */
     IJsonTransformer createTransformer(Object jsonConfig);
 
     /**
      * Friendly name that can be used as a key to identify transformer providers.
+     * @return the provider name
      */
     default @NonNull String getName() {
         return this.getClass().getSimpleName();
