@@ -1,6 +1,7 @@
 package org.opensearch.migrations.dashboards;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 import org.opensearch.migrations.dashboards.util.Stats;
@@ -25,8 +26,8 @@ public class SanitizerCli implements Runnable {
     @Override
     public void run() {
         //check for sourceFile, if empty, print usage and return
-        try (Scanner scanner = new Scanner(new BufferedInputStream(new FileInputStream(sourceFile)));
-            BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+        try (Scanner scanner = new Scanner(new BufferedInputStream(new FileInputStream(sourceFile)), StandardCharsets.UTF_8);
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8))) {
             
             Stats stats = sanitizeDashboardsFromFile(scanner, writer);
             log.atInfo()

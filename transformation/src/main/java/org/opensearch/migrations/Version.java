@@ -2,6 +2,7 @@ package org.opensearch.migrations;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Locale;
 
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -26,18 +27,18 @@ public class Version {
 
     public static Version fromString(final String raw) throws RuntimeException {
         var builder = Version.builder();
-        var remainingString = raw.toLowerCase();
+        var remainingString = raw.toLowerCase(Locale.ROOT);
 
         var finalRemainingString = remainingString;
         var matchedFlavor = Arrays.stream(Flavor.values())
             .sorted(Comparator.comparing((Flavor f) -> f.shorthand.length()).reversed())
-            .filter(flavor -> finalRemainingString.startsWith(flavor.name().toLowerCase()) ||
-                              finalRemainingString.startsWith(flavor.shorthand.toLowerCase()))
+            .filter(flavor -> finalRemainingString.startsWith(flavor.name().toLowerCase(Locale.ROOT)) ||
+                              finalRemainingString.startsWith(flavor.shorthand.toLowerCase(Locale.ROOT)))
             .findFirst();
 
         if (matchedFlavor.isPresent()) {
             Flavor flavor = matchedFlavor.get();
-            remainingString = remainingString.startsWith(flavor.name().toLowerCase()) ?
+            remainingString = remainingString.startsWith(flavor.name().toLowerCase(Locale.ROOT)) ?
                 remainingString.substring(flavor.name().length()) :
                 remainingString.substring(flavor.shorthand.length());
             builder.flavor(flavor);

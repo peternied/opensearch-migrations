@@ -39,7 +39,7 @@ public final class TransformerConfigUtils {
         }
 
         if (params.getTransformerConfigEncoded() != null && !params.getTransformerConfigEncoded().isBlank()) {
-            return new String(Base64.getDecoder().decode(params.getTransformerConfigEncoded()));
+            return new String(Base64.getDecoder().decode(params.getTransformerConfigEncoded()), StandardCharsets.UTF_8);
         }
 
         return null;

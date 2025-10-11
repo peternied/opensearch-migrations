@@ -7,6 +7,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -140,6 +141,6 @@ public class SigV4Signer {
         return signedRequest.headers()
             .entrySet()
             .stream()
-            .filter(kvp -> headersToReturn.contains(kvp.getKey().toLowerCase()));
+            .filter(kvp -> headersToReturn.contains(kvp.getKey().toLowerCase(Locale.ROOT)));
     }
 }
