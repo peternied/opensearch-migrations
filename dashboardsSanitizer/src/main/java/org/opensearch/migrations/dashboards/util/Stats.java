@@ -51,8 +51,6 @@ public class Stats {
 
     /**
      * This method prints the statistics in a JSON format using the Gson library.
-     * @throws IllegalArgumentException 
-     * @throws JsonProcessingException 
      */
     public String printStats() throws JsonProcessingException, IllegalArgumentException {
         ObjectMapper mapper = new ObjectMapper();

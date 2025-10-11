@@ -66,9 +66,6 @@ public class OnlineRadixSorter {
      * Both futures will be tracked by this class with the first future acting as a signal while the
      * second future returned by processor acts as a gate that prevents the triggering of subsequent
      * work from happening until it has completed.
-     * @param index
-     * @param processor
-     * @return
      */
     public <T> TrackedFuture<String, T> addFutureForWork(final int index, FutureTransformer<T> processor) {
         var workItem = items.get(index);
