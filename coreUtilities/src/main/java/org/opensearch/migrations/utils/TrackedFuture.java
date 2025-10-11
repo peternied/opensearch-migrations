@@ -105,7 +105,7 @@ public class TrackedFuture<D, T> {
         }
         // the parent is a pretty good breadcrumb for the current stack... but the grandparent of the most recently
         // finished ancestor begins to have diminished value immediately, so cut the ancestry tree at this point
-        future.whenComplete(
+        var unused = future.whenComplete(
             (v, t) -> Optional.ofNullable(getParentDiagnosticFuture()).ifPresent(p -> p.setParentDiagnosticFuture(null))
         );
     }
@@ -171,7 +171,7 @@ public class TrackedFuture<D, T> {
         var wrappedDiagnosticFuture = new TrackedFuture<>(newCf, diagnosticSupplier, this);
         wrappedDiagnosticFuture.innerComposedPendingCompletableFutureReference =
             innerComposedCompletableFutureReference;
-        wrappedDiagnosticFuture.future.whenComplete((v2, t2) -> innerComposedCompletableFutureReference.set(null));
+        var unused = wrappedDiagnosticFuture.future.whenComplete((v2, t2) -> innerComposedCompletableFutureReference.set(null));
         return wrappedDiagnosticFuture;
     }
 
@@ -199,7 +199,7 @@ public class TrackedFuture<D, T> {
         wrappedDiagnosticFuture.innerComposedPendingCompletableFutureReference =
             innerComposedCompletableFutureReference;
         // TODO: Add a count to how many futures have been completed and are falling away?
-        wrappedDiagnosticFuture.future.whenComplete((v2, t2) -> innerComposedCompletableFutureReference.set(null));
+        var unused = wrappedDiagnosticFuture.future.whenComplete((v2, t2) -> innerComposedCompletableFutureReference.set(null));
         return wrappedDiagnosticFuture;
     }
 

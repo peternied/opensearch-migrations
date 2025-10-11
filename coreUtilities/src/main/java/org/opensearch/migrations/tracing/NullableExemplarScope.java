@@ -5,7 +5,7 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.context.Scope;
 
 public class NullableExemplarScope implements Scope {
-    final Scope underlyingScope;
+    private final Scope underlyingScope;
 
     public NullableExemplarScope(Span span) {
         underlyingScope = span == null ? null : Context.current().with(span).makeCurrent();
