@@ -80,6 +80,13 @@ tasks.withType(JavaCompile).configureEach {
         // SLF4J structured logging checks
         check('Slf4jPlaceholderMismatch', net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
         check('Slf4jFormatShouldBeConst', net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
+
+        // Disable low-priority style checks
+        check('SameNameButDifferent', net.ltgt.gradle.errorprone.CheckSeverity.OFF)
+        check('EmptyBlockTag', net.ltgt.gradle.errorprone.CheckSeverity.OFF)
+        check('MissingSummary', net.ltgt.gradle.errorprone.CheckSeverity.OFF)
+        check('NotJavadoc', net.ltgt.gradle.errorprone.CheckSeverity.OFF)
+        check('MissingOverride', net.ltgt.gradle.errorprone.CheckSeverity.OFF)
     }
 }
 
