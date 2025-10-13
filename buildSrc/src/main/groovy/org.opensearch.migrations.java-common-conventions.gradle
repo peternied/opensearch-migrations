@@ -48,6 +48,7 @@ configurations {
 dependencies {
     errorprone libs.errorprone
     errorprone libs.errorprone.slf4j
+    errorprone project(':errorProneChecks')
 
     bomAliases.each { alias ->
         def lib = libVersions.findLibrary(alias).get().get()
@@ -80,6 +81,7 @@ tasks.withType(JavaCompile).configureEach {
         // SLF4J structured logging checks
         check('Slf4jPlaceholderMismatch', net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
         check('Slf4jFormatShouldBeConst', net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
+        check('StructuredLoggingOnly', net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
 
         // Disable low-priority style checks
         check('SameNameButDifferent', net.ltgt.gradle.errorprone.CheckSeverity.OFF)
