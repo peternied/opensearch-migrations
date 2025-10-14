@@ -1,4 +1,5 @@
 [versions]
+auto-service = "1.1.1"
 aws-crt = "0.39.0"
 aws-msk-iam-auth = "2.3.2"
 aws-sdk = "2.34.0"
@@ -47,6 +48,8 @@ toxiproxy = "2.1.11"
 zstd-jni = "1.5.7-4"
 
 [libraries]
+auto-service = { module = "com.google.auto.service:auto-service", version.ref = "auto-service" }
+
 aws-arns = { module = "software.amazon.awssdk:arns", version.ref = "aws-sdk" }
 aws-auth = { module = "software.amazon.awssdk:auth", version.ref = "aws-sdk" }
 aws-crt = { module = "software.amazon.awssdk.crt:aws-crt", version.ref = "aws-crt" }

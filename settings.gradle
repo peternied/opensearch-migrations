@@ -38,7 +38,7 @@ void addSubProjects(String path, File dir) {
 }
 
 rootProject.name = 'OpensearchMigrations'
-include 'errorProneChecks'
+include 'dev-tools:errorProneChecks'
 include 'awsUtilities'
 include 'coreUtilities'
 include 'libraries:kafkaCommandLineFormatter'

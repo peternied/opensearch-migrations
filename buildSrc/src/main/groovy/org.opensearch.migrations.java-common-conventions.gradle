@@ -48,7 +48,7 @@ configurations {
 dependencies {
     errorprone libs.errorprone
     errorprone libs.errorprone.slf4j
-    errorprone project(':errorProneChecks')
+    errorprone project(':dev-tools:errorProneChecks')
 
     bomAliases.each { alias ->
         def lib = libVersions.findLibrary(alias).get().get()
