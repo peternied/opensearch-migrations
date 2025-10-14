@@ -171,7 +171,7 @@ public class LoggingHttpHandler<T> extends ChannelDuplexHandler {
         getConnectionContext().onUnregistered();
         trafficOffloader.flushCommitAndResetStream(true).whenComplete((result, t) -> {
             if (t != null) {
-                log.warn("Got error: " + t.getMessage());
+                log.warn("Got error", t);
                 ctx.close();
             } else {
                 try {
@@ -191,7 +191,7 @@ public class LoggingHttpHandler<T> extends ChannelDuplexHandler {
 
         trafficOffloader.flushCommitAndResetStream(true).whenComplete((result, t) -> {
             if (t != null) {
-                log.warn("Got error: " + t.getMessage());
+                log.warn("Got error", t);
             }
             try {
                 super.channelUnregistered(ctx);

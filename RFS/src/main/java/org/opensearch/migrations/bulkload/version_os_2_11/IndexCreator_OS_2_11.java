@@ -111,7 +111,7 @@ public class IndexCreator_OS_2_11 implements IndexCreator {
         } catch (InvalidResponse invalidResponse) {
             var potentialAwarenessAttributeException = invalidResponse.containsAwarenessAttributeException();
             if (potentialAwarenessAttributeException.isPresent()) {
-                log.warn("Index creation failed due to awareness attribute exception: " + potentialAwarenessAttributeException.get());
+                log.warn("Index creation failed due to awareness attribute exception: {}", potentialAwarenessAttributeException.get());
                 throw new IncompatibleReplicaCountException(potentialAwarenessAttributeException.get(), invalidResponse);
             }
 
@@ -124,7 +124,7 @@ public class IndexCreator_OS_2_11 implements IndexCreator {
 
             for (var illegalArgument : illegalArguments) {
                 if (!illegalArgument.startsWith("index.")) {
-                    log.warn("Expecting all retryable errors to start with 'index.', instead saw " + illegalArgument);
+                    log.warn("Expecting all retryable errors to start with 'index.', instead saw {}", illegalArgument);
                     throw invalidResponse;
                 }
 

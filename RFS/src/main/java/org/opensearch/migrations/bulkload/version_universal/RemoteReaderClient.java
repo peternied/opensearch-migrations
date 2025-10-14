@@ -46,7 +46,7 @@ public class RemoteReaderClient extends OpenSearchClient {
                 .getAsync(entry.getValue(), null)
                 .flatMap(this::getJsonForTemplateApis)
                 .map(json -> Map.entry(entry.getKey(), json))
-                .doOnError(e -> log.error("Error fetching template {}: {}", entry.getKey(), e.getMessage()))
+                .doOnError(e -> log.error("Error fetching template {}", entry.getKey(), e))
                 .retryWhen(OpenSearchClient.CHECK_IF_ITEM_EXISTS_RETRY_STRATEGY)
             )
             .collectMap(Entry::getKey, Entry::getValue)

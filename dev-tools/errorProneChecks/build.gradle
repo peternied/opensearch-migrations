@@ -1,0 +1,20 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    compileOnly libs.errorprone
+    annotationProcessor libs.errorprone
+    annotationProcessor libs.auto.service
+}
+
+def jdkExports = [
+    '--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
+    '--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+    '--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
+    '--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED'
+]
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += jdkExports
+}

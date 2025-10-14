@@ -95,7 +95,7 @@ public abstract class OpenSearchClient {
                     return Mono.error(new OperationFailed(errorMessage, resp));
                 }
             })
-            .doOnError(e -> log.error(e.getMessage()))
+            .doOnError(e -> log.error("Error getting awareness attribute settings", e))
             .retryWhen(CHECK_IF_ITEM_EXISTS_RETRY_STRATEGY)
             .block();
         long duration = System.currentTimeMillis() - startTime;
@@ -240,7 +240,7 @@ public abstract class OpenSearchClient {
                     return Mono.error(new OperationFailed(errorMessage, resp));
                 }
             })
-                .doOnError(e -> log.error(e.getMessage()))
+                .doOnError(e -> log.error("Error creating object", e))
                 .retryWhen(CREATE_ITEM_EXISTS_RETRY_STRATEGY)
                 .block();
             
@@ -285,7 +285,7 @@ public abstract class OpenSearchClient {
                     return Mono.error(new OperationFailed(errorMessage, resp));
                 }
             })
-            .doOnError(e -> log.error(e.getMessage()))
+            .doOnError(e -> log.error("Error checking if object exists", e))
             .retryWhen(CHECK_IF_ITEM_EXISTS_RETRY_STRATEGY)
             .block();
 
@@ -316,7 +316,7 @@ public abstract class OpenSearchClient {
                 return Mono.error(new OperationFailed(errorMessage, resp));
             }
         })
-            .doOnError(e -> log.error(e.getMessage()))
+            .doOnError(e -> log.error("Error registering snapshot repo", e))
             .retryWhen(SNAPSHOT_RETRY_STRATEGY)
             .block();
         long duration = System.currentTimeMillis() - startTime;
@@ -344,7 +344,7 @@ public abstract class OpenSearchClient {
                 return Mono.error(new OperationFailed(errorMessage, resp));
             }
         })
-            .doOnError(e -> log.error(e.getMessage()))
+            .doOnError(e -> log.error("Error creating snapshot", e))
             .retryWhen(SNAPSHOT_RETRY_STRATEGY)
             .block();
         long duration = System.currentTimeMillis() - startTime;
@@ -377,7 +377,7 @@ public abstract class OpenSearchClient {
                 return Mono.error(new OperationFailed(errorMessage, resp));
             }
         })
-            .doOnError(e -> log.error(e.getMessage()))
+            .doOnError(e -> log.error("Error getting snapshot status", e))
             .retryWhen(SNAPSHOT_RETRY_STRATEGY)
             .block();
 

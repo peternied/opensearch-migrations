@@ -67,9 +67,7 @@ public class KafkaConfig {
             try (var fileReader = new FileReader(kafkaPropertiesFile)) {
                 kafkaProps.load(fileReader);
             } catch (IOException e) {
-                log.error(
-                        "Unable to locate provided Kafka producer properties file path: " + kafkaPropertiesFile
-                );
+                log.error("Unable to locate provided Kafka producer properties file path: {}", kafkaPropertiesFile);
                 throw e;
             }
         }

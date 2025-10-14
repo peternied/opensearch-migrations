@@ -1,6 +1,7 @@
 package org.opensearch.migrations.dashboards;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 import org.opensearch.migrations.dashboards.util.Stats;
@@ -25,12 +26,16 @@ public class SanitizerCli implements Runnable {
     @Override
     public void run() {
         //check for sourceFile, if empty, print usage and return
-        try (Scanner scanner = new Scanner(new BufferedInputStream(new FileInputStream(sourceFile)));
-            BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+        try (Scanner scanner = new Scanner(new BufferedInputStream(new FileInputStream(sourceFile)), StandardCharsets.UTF_8);
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8))) {
             
             Stats stats = sanitizeDashboardsFromFile(scanner, writer);
-            log.info("Input file {} is sanitized and output available at %", sourceFile, outputFile);
-            log.info(stats.printStats());
+            log.atInfo()
+                .setMessage("Input file {} is sanitized and output available at {}")
+                .addArgument(sourceFile)
+                .addArgument(outputFile)
+                .log();
+            log.atInfo().setMessage("{}").addArgument(stats.printStats()).log();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -50,7 +55,7 @@ public class SanitizerCli implements Runnable {
             
             cli.run();
         } catch (ParameterException e) {
-            log.error(e.getMessage());
+            log.atError().setCause(e).setMessage("Parameter error").log();
             jCommander.usage();
             return;
         }

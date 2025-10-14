@@ -29,7 +29,7 @@ public class SavedObjectParser {
         final JsonNode json = objectMapper.readTree(jsonString);
 
         if (json.has("exportedCount")) {
-            log.debug("Skipping the exported summary line.");
+            log.atDebug().setMessage("Skipping the exported summary line.").log();
             return null;
         }
 

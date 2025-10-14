@@ -45,22 +45,22 @@ public abstract class SavedObjectConverter<T extends SavedObject> {
     public SavedObject convert(T savedObject) {
 
         if (savedObject.getVersion().compareTo(this.compatibility) > 0) {
-            log.warn(
-                    "Object id {} with type {} core version {} is newer than the converter supported version {}. This might result in unexpected behavior.",
-                    savedObject.getId(),
-                    savedObject.getObjectType(),
-                    savedObject.getVersion(),
-                    this.compatibility
-            );
+            log.atWarn()
+                .setMessage("Object id {} with type {} core version {} is newer than the converter supported version {}. This might result in unexpected behavior.")
+                .addArgument(savedObject.getId())
+                .addArgument(savedObject.getObjectType())
+                .addArgument(savedObject.getVersion())
+                .addArgument(this.compatibility)
+                .log();
         }
 
         if (!this.migrations.isEmpty()) {
             for (Map.Entry<Semver, Consumer<T>> entry : this.migrations.entrySet()) {
-                log.debug("Version converter: {}", entry.getKey());
+                log.atDebug().setMessage("Version converter: {}").addArgument(entry.getKey()).log();
                 if (savedObject.getVersion().isGreaterThan(entry.getKey())) {
                     entry.getValue().accept(savedObject);
                     
-                    log.debug("Applied converter: {}", entry.getKey());
+                    log.atDebug().setMessage("Applied converter: {}").addArgument(entry.getKey()).log();
 
                     if (!entry.getKey().isEqualTo("0.0.0")) {
                         savedObject.updateVersion(entry.getKey().getVersion());
@@ -92,12 +92,12 @@ public abstract class SavedObjectConverter<T extends SavedObject> {
             String fieldName = field.getKey();
 
             if (!this.allowedAttributes.contains(fieldName)) {
-                log.info(
-                        "Object id {} with type {} has an unsupported attribute {}. This attribute will be removed.",
-                        savedObject.getId(),
-                        savedObject.getObjectType(),
-                        fieldName
-                );
+                log.atInfo()
+                    .setMessage("Object id {} with type {} has an unsupported attribute {}. This attribute will be removed.")
+                    .addArgument(savedObject.getId())
+                    .addArgument(savedObject.getObjectType())
+                    .addArgument(fieldName)
+                    .log();
                 fields.remove();
             }
         }

@@ -38,7 +38,7 @@ public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
     @Override
     public ClusterWriter initialize(Version versionOverride) {
         if (versionOverride != null) {
-            log.warn("Overriding version for cluster, " + versionOverride);
+            log.warn("Overriding version for cluster, {}", versionOverride);
             this.version = versionOverride;
         }
         return this;

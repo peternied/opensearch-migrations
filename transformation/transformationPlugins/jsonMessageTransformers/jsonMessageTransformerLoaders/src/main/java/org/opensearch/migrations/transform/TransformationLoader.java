@@ -32,7 +32,7 @@ public class TransformationLoader {
         );
         var inProgressProviders = new ArrayList<IJsonTransformerProvider>();
         for (var provider : transformerProviders) {
-            log.info("Adding IJsonTransfomerProvider: " + provider);
+            log.atInfo().setMessage("Adding IJsonTransfomerProvider: {}").addArgument(provider).log();
             inProgressProviders.add(provider);
         }
         providers = Collections.unmodifiableList(inProgressProviders);
@@ -55,7 +55,7 @@ public class TransformationLoader {
         throws JsonProcessingException {
         var configList = fullConfig == null ? List.of() : parseFullConfig(fullConfig);
         if (configList.isEmpty() || providers.isEmpty()) {
-            log.warn("No transformer configuration specified.  No custom transformations will be performed");
+            log.atWarn().setMessage("No transformer configuration specified.  No custom transformations will be performed").log();
             return Stream.of();
         } else {
             return configList.stream().map(c -> configureTransformerFromConfig((Map<String, Object>) c));
@@ -64,7 +64,7 @@ public class TransformationLoader {
 
     public Stream<IJsonTransformer> getTransformerFactoryFromServiceLoaderParsed(List<Object> configList) {
         if (configList.isEmpty() || providers.isEmpty()) {
-            log.warn("No transformer configuration specified.  No custom transformations will be performed");
+            log.atWarn().setMessage("No transformer configuration specified.  No custom transformations will be performed").log();
             return Stream.of();
         } else {
             return configList.stream().map(c -> configureTransformerFromConfig((Map<String, Object>) c));
@@ -121,7 +121,7 @@ public class TransformationLoader {
 
     @AllArgsConstructor
     private static class UserAgentTransformer implements IJsonTransformer {
-        public static final String USER_AGENT = "user-agent";
+        static final String USER_AGENT = "user-agent";
         private final String userAgent;
 
         @Override

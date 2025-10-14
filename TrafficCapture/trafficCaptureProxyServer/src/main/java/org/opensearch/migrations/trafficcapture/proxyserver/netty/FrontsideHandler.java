@@ -29,7 +29,7 @@ public class FrontsideHandler extends ChannelInboundHandlerAdapter {
     public void channelActive(ChannelHandlerContext ctx) {
         final Channel inboundChannel = ctx.channel();
         var outboundChannelFuture = backsideConnectionPool.getOutboundConnectionFuture(inboundChannel.eventLoop());
-        log.debug("Active - setting up backend connection with channel " + outboundChannelFuture.channel());
+        log.debug("Active - setting up backend connection with channel {}", outboundChannelFuture.channel());
         outboundChannelFuture.addListener((ChannelFutureListener) (future -> {
             if (future.isSuccess()) {
                 var pipeline = future.channel().pipeline();
@@ -46,9 +46,9 @@ public class FrontsideHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
-        log.debug("frontend handler[" + this.outboundChannel + "] read: " + msg);
+        log.debug("frontend handler[{}] read: {}", this.outboundChannel, msg);
         if (outboundChannel.isActive()) {
-            log.debug("Writing data to backside handler " + outboundChannel);
+            log.debug("Writing data to backside handler {}", outboundChannel);
             outboundChannel.writeAndFlush(msg).addListener((ChannelFutureListener) future -> {
                 if (future.isSuccess()) {
                     ctx.channel().read(); // kickoff another read for the frontside
@@ -62,7 +62,7 @@ public class FrontsideHandler extends ChannelInboundHandlerAdapter {
             });
             outboundChannel.config().setAutoRead(true);
         } else { // if the outbound channel has died, so be it... let this frontside finish with its call naturally
-            log.warn("Output channel (" + outboundChannel + ") is NOT active");
+            log.warn("Output channel ({}) is NOT active", outboundChannel);
             ReferenceCountUtil.release(msg);
         }
     }

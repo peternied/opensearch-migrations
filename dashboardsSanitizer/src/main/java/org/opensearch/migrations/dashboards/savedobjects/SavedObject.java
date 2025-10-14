@@ -74,7 +74,7 @@ public class SavedObject {
             try {
                 return (ObjectNode)objectMapper.readTree(attrs.get(attribute).asText());
             } catch (JsonProcessingException e) {
-                log.error("Parsing of the locatorJSON: {} has failed", e);
+                log.atError().setCause(e).setMessage("Parsing of the locatorJSON has failed").log();
             }
         }
 
@@ -96,11 +96,11 @@ public class SavedObject {
         } else if (exportedVersion != null) {
             return Semver.parse(exportedVersion);
         } else {
-            log.warn(
-                "Object id {} with type {} does not have a migration version or core migration version.",
-                id,
-                objectType
-            );
+            log.atWarn()
+                .setMessage("Object id {} with type {} does not have a migration version or core migration version.")
+                .addArgument(id)
+                .addArgument(objectType)
+                .log();
             return Semver.parse("0.0.0");
         }
     }

@@ -59,12 +59,12 @@ public class DashboardConverter extends SavedObjectConverter<Dashboard> {
             if (panelConverter.isCompatible(panel)) {
                 newPanels.add(panel);
             } else if (panelConverter.isConvertible(panel)) {
-                log.debug("Panel is convertible {}", panel);
+                log.atDebug().setMessage("Panel is convertible {}").addArgument(panel).log();
                 panelConverter.convert(panel);
                 // log.debug("New saved objects: {}", this.getNewSavedObjects().stream().map(SavedObject::getId).toList());
                 newPanels.add(panel);
             } else {
-                log.warn("Dashboard: {}, panel: {} is not compatible and cannot be converted", dashboard.getId(), panel.getPanelIndex());
+                log.atWarn().setMessage("Dashboard: {}, panel: {} is not compatible and cannot be converted").addArgument(dashboard.getId()).addArgument(panel.getPanelIndex()).log();
             }
         }
 
@@ -75,7 +75,7 @@ public class DashboardConverter extends SavedObjectConverter<Dashboard> {
                     );
                 dashboard.attributes().put("panelsJSON", panelsJson);
             } catch (JsonProcessingException e) {
-                log.error("Error converting panels to JSON", e);
+                log.atError().setCause(e).setMessage("Error converting panels to JSON").log();
             }
         }
 
@@ -227,7 +227,7 @@ public class DashboardConverter extends SavedObjectConverter<Dashboard> {
                     if (reference != null) {
                         panel.getJson().put("panelRefName", panelRefName);
                     } else {
-                        log.warn("Panel reference {} not found in dashboard {}", panelIndex, panel.getDashboard().getId());
+                        log.atWarn().setMessage("Panel reference {} not found in dashboard {}").addArgument(panelIndex).addArgument(panel.getDashboard().getId()).log();
                         panel.getJson().remove("panelRefName");
                     }
                 });
@@ -244,7 +244,7 @@ public class DashboardConverter extends SavedObjectConverter<Dashboard> {
                     if (ref != null) {
                         ((ObjectNode)parent).put("indexRefName", refName);
                     } else {
-                        log.warn("Index reference {} not found in dashboard {}", refName, panel.getDashboard().getId());
+                        log.atWarn().setMessage("Index reference {} not found in dashboard {}").addArgument(refName).addArgument(panel.getDashboard().getId()).log();
                     }
                 }
             });

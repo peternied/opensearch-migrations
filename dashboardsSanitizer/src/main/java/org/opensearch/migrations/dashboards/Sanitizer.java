@@ -76,16 +76,16 @@ public class Sanitizer {
                 stats.registerProcessed();
                 
             } else if (notSupportedTypes.contains(savedObject.getObjectType())) {
-                log.warn("The object type {} is not supported.", savedObject.getObjectType());
+                log.atWarn().setMessage("The object type {} is not supported.").addArgument(savedObject.getObjectType()).log();
                 stats.registerSkipped(savedObject.getObjectType());
             } else {
-                log.warn("No converter found for the object type {}.", savedObject.getObjectType());
+                log.atWarn().setMessage("No converter found for the object type {}.").addArgument(savedObject.getObjectType()).log();
                 stats.registerSkipped(savedObject.getObjectType());
             }
         } catch (JsonProcessingException e) {
-            log.error("Failed to parse the provided string as a json.", e);
+            log.atError().setCause(e).setMessage("Failed to parse the provided string as a json.").log();
         } catch (IllegalArgumentException e) {
-            log.error("Failed to load the saved object.", e);
+            log.atError().setCause(e).setMessage("Failed to load the saved object.").log();
         }
         return result;
     }
