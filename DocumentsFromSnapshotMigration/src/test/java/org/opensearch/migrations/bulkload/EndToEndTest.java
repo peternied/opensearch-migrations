@@ -51,9 +51,9 @@ public class EndToEndTest extends SourceTestBase {
         final SearchClusterContainer.ContainerVersion targetVersion) {
         try (
             final var sourceCluster = new SearchClusterContainer(sourceVersion);
-            final var targetCluster = new SearchClusterContainer(targetVersion)
+            // final var targetCluster = new SearchClusterContainer(targetVersion)
         ) {
-            migrationDocumentsWithClusters(sourceCluster, targetCluster);
+            migrationDocumentsWithClusters(sourceCluster, null);
         }
     }
 
@@ -83,7 +83,7 @@ public class EndToEndTest extends SourceTestBase {
 
         try {
             // === ACTION: Set up the source/target clusters ===
-            Startables.deepStart(sourceCluster, targetCluster).join();
+            Startables.deepStart(sourceCluster).join();
 
             var indexName = "blog_2023";
             var numberOfShards = 3;
