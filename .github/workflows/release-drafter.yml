@@ -5,6 +5,8 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
+
 env:
   java-version: '17'
   gradle-version: '8.12.1'
