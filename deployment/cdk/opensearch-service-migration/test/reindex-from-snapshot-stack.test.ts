@@ -1,4 +1,4 @@
-import { Template, Capture } from 'aws-cdk-lib/assertions';
+import { Template } from 'aws-cdk-lib/assertions';
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
 import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import { ReindexFromSnapshotStack } from '../lib/service-stacks/reindex-from-snapshot-stack';
@@ -90,8 +90,6 @@ describe('ReindexFromSnapshotStack Tests', () => {
       reindexFromSnapshotServiceEnabled: true,
       stage: 'unit-test',
       migrationAssistanceEnabled: true,
-      fineGrainedManagerUserName: "test-user",
-      fineGrainedManagerUserSecretManagerKeyARN: "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-secret",
       nodeToNodeEncryptionEnabled: true,
       encryptionAtRestEnabled: true,
       enforceHTTPS: true
@@ -102,12 +100,13 @@ describe('ReindexFromSnapshotStack Tests', () => {
     expect(reindexStack).toBeDefined();
     const template = Template.fromStack(reindexStack);
 
-    const taskDefinitionCapture = new Capture();
-    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-      ContainerDefinitions: taskDefinitionCapture,
-    });
-
-    const containerDefinitions = taskDefinitionCapture.asArray();
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+    
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
     expect(containerDefinitions.length).toBe(1);
     expect(containerDefinitions[0].Command).toEqual([
       '/bin/sh',
@@ -120,7 +119,7 @@ describe('ReindexFromSnapshotStack Tests', () => {
         Value: {
           "Fn::Join": [
             "",
-            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
+            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --target-insecure --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
               {
                 "Ref": "SsmParameterValuemigrationunittestdefaultosClusterEndpointC96584B6F00A464EAD1953AFF4B05118Parameter",
               },
@@ -128,18 +127,6 @@ describe('ReindexFromSnapshotStack Tests', () => {
             ],
           ],
         }
-      },
-      {
-        Name: 'RFS_TARGET_USER',
-        Value: 'test-user'
-      },
-      {
-        Name: 'RFS_TARGET_PASSWORD',
-        Value: ''
-      },
-      {
-        Name: 'RFS_TARGET_PASSWORD_ARN',
-        Value: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:test-secret'
       },
       {
         Name: 'SHARED_LOGS_DIR_PATH',
@@ -171,12 +158,13 @@ describe('ReindexFromSnapshotStack Tests', () => {
     expect(reindexStack).toBeDefined();
     const template = Template.fromStack(reindexStack);
 
-    const taskDefinitionCapture = new Capture();
-    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-      ContainerDefinitions: taskDefinitionCapture,
-    });
-
-    const containerDefinitions = taskDefinitionCapture.asArray();
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+    
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
     expect(containerDefinitions.length).toBe(1);
     expect(containerDefinitions[0].Command).toEqual([
       '/bin/sh',
@@ -189,7 +177,7 @@ describe('ReindexFromSnapshotStack Tests', () => {
         Value: {
           "Fn::Join": [
             "",
-            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
+            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --target-insecure --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
               {
                 "Ref": "SsmParameterValuemigrationunittestdefaultosClusterEndpointC96584B6F00A464EAD1953AFF4B05118Parameter",
               },
@@ -199,16 +187,66 @@ describe('ReindexFromSnapshotStack Tests', () => {
         }
       },
       {
-        Name: 'RFS_TARGET_USER',
-        Value: ''
+        Name: 'SHARED_LOGS_DIR_PATH',
+        Value: '/shared-logs-output/reindex-from-snapshot-default'
+      }
+    ]);
+  });
+
+  test('ReindexFromSnapshotStack sets correct RFS command from custom SnapshotYaml', () => {
+    const contextOptions = {
+      vpcEnabled: true,
+      sourceCluster: {
+        "endpoint": "https://test-cluster",
+        "auth": {"type": "none"},
+        "version": "ES_7.10"
       },
-      {
-        Name: 'RFS_TARGET_PASSWORD',
-        Value: ''
+      snapshot: {
+        "snapshotName": "test-snapshot",
+        "snapshotRepoName": "test-repo",
+        "s3Uri": "s3://snapshot-bucket-123456789012-us-east-2/snapshot-repo",
+        "s3Region": "us-east-2"
       },
+      reindexFromSnapshotServiceEnabled: true,
+      stage: 'unit-test',
+      migrationAssistanceEnabled: true,
+      nodeToNodeEncryptionEnabled: true,
+      encryptionAtRestEnabled: true,
+      enforceHTTPS: true
+    };
+
+    const stacks = createStackComposer(contextOptions);
+    const reindexStack = stacks.stacks.find(s => s instanceof ReindexFromSnapshotStack) as ReindexFromSnapshotStack;
+    expect(reindexStack).toBeDefined();
+    const template = Template.fromStack(reindexStack);
+
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+    
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
+    expect(containerDefinitions.length).toBe(1);
+    expect(containerDefinitions[0].Command).toEqual([
+      '/bin/sh',
+      '-c',
+      '/rfs-app/entrypoint.sh'
+    ]);
+    expect(containerDefinitions[0].Environment).toEqual([
       {
-        Name: 'RFS_TARGET_PASSWORD_ARN',
-        Value: ''
+        Name: 'RFS_COMMAND',
+        Value: {
+          "Fn::Join": [
+            "",
+            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --target-insecure --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://snapshot-bucket-123456789012-us-east-2/snapshot-repo\" --s3-region us-east-2 --snapshot-name test-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
+              {
+                "Ref": "SsmParameterValuemigrationunittestdefaultosClusterEndpointC96584B6F00A464EAD1953AFF4B05118Parameter",
+              },
+              " --max-shard-size-bytes 94489280512 --max-connections 10 --source-version \"ES_7.10\""
+            ],
+          ],
+        }
       },
       {
         Name: 'SHARED_LOGS_DIR_PATH',
@@ -236,11 +274,6 @@ describe('ReindexFromSnapshotStack Tests', () => {
 
     expect(reindexStack.rfsBackfillYaml.ecs.cluster_name).toBe('migration-unit-test-ecs-cluster');
     expect(reindexStack.rfsBackfillYaml.ecs.service_name).toBe('migration-unit-test-reindex-from-snapshot');
-    expect(reindexStack.rfsSnapshotYaml.s3).toEqual({
-      repo_uri: expect.stringMatching(/s3:\/\/migration-artifacts-.*-unit-test-.*/),
-      aws_region: expect.any(String),
-    });
-    expect(reindexStack.rfsSnapshotYaml.snapshot_name).toBe('rfs-snapshot');
   });
 
   test('ReindexFromSnapshotStack correctly overrides with extraArgs', () => {
@@ -262,12 +295,13 @@ describe('ReindexFromSnapshotStack Tests', () => {
     expect(reindexStack).toBeDefined();
     const template = Template.fromStack(reindexStack);
 
-    const taskDefinitionCapture = new Capture();
-    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-      ContainerDefinitions: taskDefinitionCapture,
-    });
-
-    const containerDefinitions = taskDefinitionCapture.asArray();
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+    
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
     expect(containerDefinitions.length).toBe(1);
     expect(containerDefinitions[0].Command).toEqual([
       '/bin/sh',
@@ -280,7 +314,7 @@ describe('ReindexFromSnapshotStack Tests', () => {
         Value: {
           "Fn::Join": [
             "",
-            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --lucene-dir \"/storage/lucene\" --target-host ",
+            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --target-insecure --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --lucene-dir \"/storage/lucene\" --target-host ",
               {
                 "Ref": "SsmParameterValuemigrationunittestdefaultosClusterEndpointC96584B6F00A464EAD1953AFF4B05118Parameter",
               },
@@ -288,18 +322,6 @@ describe('ReindexFromSnapshotStack Tests', () => {
             ]
           ]
         }
-      },
-      {
-        Name: 'RFS_TARGET_USER',
-        Value: ''
-      },
-      {
-        Name: 'RFS_TARGET_PASSWORD',
-        Value: ''
-      },
-      {
-        Name: 'RFS_TARGET_PASSWORD_ARN',
-        Value: ''
       },
       {
         Name: 'SHARED_LOGS_DIR_PATH',
@@ -327,12 +349,13 @@ describe('ReindexFromSnapshotStack Tests', () => {
     expect(reindexStack).toBeDefined();
     const template = Template.fromStack(reindexStack);
 
-    const taskDefinitionCapture = new Capture();
-    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-      ContainerDefinitions: taskDefinitionCapture,
-    });
-
-    const containerDefinitions = taskDefinitionCapture.asArray();
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+    
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
     expect(containerDefinitions.length).toBe(1);
     expect(containerDefinitions[0].Command).toEqual([
       '/bin/sh',
@@ -345,26 +368,14 @@ describe('ReindexFromSnapshotStack Tests', () => {
         Value: {
           "Fn::Join": [
             "",
-            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
+            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --target-insecure --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
               {
                 "Ref": "SsmParameterValuemigrationunittestdefaultosClusterEndpointC96584B6F00A464EAD1953AFF4B05118Parameter",
               },
-              " --max-shard-size-bytes 94489280512 --max-connections 100 --target-compression --source-version \"ES_7.10\"",
+              " --max-shard-size-bytes 94489280512 --max-connections 100 --source-version \"ES_7.10\"",
             ],
           ],
         }
-      },
-      {
-        Name: 'RFS_TARGET_USER',
-        Value: ''
-      },
-      {
-        Name: 'RFS_TARGET_PASSWORD',
-        Value: ''
-      },
-      {
-        Name: 'RFS_TARGET_PASSWORD_ARN',
-        Value: ''
       },
       {
         Name: 'SHARED_LOGS_DIR_PATH',
@@ -377,11 +388,13 @@ describe('ReindexFromSnapshotStack Tests', () => {
       Cpu: "16384",
       Memory: "32768",
     });
-      const volumesCapture = new Capture();
-      template.hasResourceProperties('AWS::ECS::Service', {
-        VolumeConfigurations: volumesCapture,
-      });
-      const volumes = volumesCapture.asArray();
+      // Find the ECS service resource
+      const services = template.findResources('AWS::ECS::Service');
+      const serviceKeys = Object.keys(services);
+      expect(serviceKeys.length).toBe(1);
+      
+      const service = services[serviceKeys[0]];
+      const volumes = service.Properties.VolumeConfigurations;
       expect(volumes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -393,12 +406,10 @@ describe('ReindexFromSnapshotStack Tests', () => {
           }),
         ])
       );
-      const volumeCapture = new Capture();
-      template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-        Volumes: volumeCapture,
-      });
+      // Check volumes directly from the task definition
+      const taskVolumes = taskDefinition.Properties.Volumes;
       // Ensure there are 2 volumes, ebs and ephemeral
-      expect(volumeCapture.asArray().length).toBe(2);
+      expect(taskVolumes.length).toBe(2);
     });
 
   test('ReindexFromSnapshotStack configures ephemeral storage in GovCloud', () => {
@@ -419,12 +430,13 @@ describe('ReindexFromSnapshotStack Tests', () => {
     expect(reindexStack.region).toEqual("us-gov-west-1");
     const template = Template.fromStack(reindexStack);
 
-    const taskDefinitionCapture = new Capture();
-    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-      ContainerDefinitions: taskDefinitionCapture,
-    });
-
-    const containerDefinitions = taskDefinitionCapture.asArray();
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+    
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
     expect(containerDefinitions.length).toBe(1);
     expect(containerDefinitions[0].Command).toEqual([
       '/bin/sh',
@@ -432,20 +444,14 @@ describe('ReindexFromSnapshotStack Tests', () => {
       '/rfs-app/entrypoint.sh'
     ]);
 
-    const ephemeralStorageCapture = new Capture();
-    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-      EphemeralStorage: ephemeralStorageCapture,
-    });
-
-    const ephemeralStorage = ephemeralStorageCapture.asObject();
+    // Check ephemeral storage directly from the task definition
+    const ephemeralStorage = taskDefinition.Properties.EphemeralStorage;
     expect(ephemeralStorage.SizeInGiB).toBe(199);
 
-    const volumeCapture = new Capture();
-    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-      Volumes: volumeCapture,
-    });
+    // Check volumes directly from the task definition
+    const taskVolumes = taskDefinition.Properties.Volumes;
     // Ensure the only volume is the ephemeral storage
-    expect(volumeCapture.asArray().length).toBe(1);
+    expect(taskVolumes.length).toBe(1);
   });
 
   test('ReindexFromSnapshotStack uses ceiling of maxShardSizeBytes calculation', () => {
@@ -472,12 +478,13 @@ describe('ReindexFromSnapshotStack Tests', () => {
     expect(reindexStack).toBeDefined();
     const template = Template.fromStack(reindexStack);
 
-    const taskDefinitionCapture = new Capture();
-    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-      ContainerDefinitions: taskDefinitionCapture,
-    });
-
-    const containerDefinitions = taskDefinitionCapture.asArray();
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+    
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
     expect(containerDefinitions.length).toBe(1);
     expect(containerDefinitions[0].Command).toEqual([
       '/bin/sh',
@@ -490,7 +497,7 @@ describe('ReindexFromSnapshotStack Tests', () => {
         Value: {
           "Fn::Join": [
             "",
-            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
+            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --target-insecure --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
               {
                 "Ref": "SsmParameterValuemigrationunittestdefaultosClusterEndpointC96584B6F00A464EAD1953AFF4B05118Parameter",
               },
@@ -498,18 +505,6 @@ describe('ReindexFromSnapshotStack Tests', () => {
             ],
           ],
         }
-      },
-      {
-        Name: 'RFS_TARGET_USER',
-        Value: ''
-      },
-      {
-        Name: 'RFS_TARGET_PASSWORD',
-        Value: ''
-      },
-      {
-        Name: 'RFS_TARGET_PASSWORD_ARN',
-        Value: ''
       },
       {
         Name: 'SHARED_LOGS_DIR_PATH',
@@ -533,8 +528,125 @@ describe('ReindexFromSnapshotStack Tests', () => {
       migrationAssistanceEnabled: true,
     };
 
-    expect(() => createStackComposer(contextOptions, undefined, 'us-gov-west-1')).toThrowError(
+    expect(() => createStackComposer(contextOptions, undefined, 'us-gov-west-1')).toThrow(
       /Your max shard size of 81 GiB is too large to migrate in GovCloud, the max supported is 80 GiB/
     );
+  });
+
+  test('ReindexFromSnapshotStack sets correct RFS command when source cluster is disabled', () => {
+    const contextOptions = {
+      vpcEnabled: true,
+      sourceCluster: {
+        "disabled": true,
+        "version": "ES_7.9"
+      },
+      reindexFromSnapshotServiceEnabled: true,
+      stage: 'unit-test',
+      migrationAssistanceEnabled: true,
+      nodeToNodeEncryptionEnabled: true,
+      encryptionAtRestEnabled: true,
+      enforceHTTPS: true
+    };
+
+    const stacks = createStackComposer(contextOptions);
+    const reindexStack = stacks.stacks.find(s => s instanceof ReindexFromSnapshotStack) as ReindexFromSnapshotStack;
+    expect(reindexStack).toBeDefined();
+    const template = Template.fromStack(reindexStack);
+
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
+    expect(containerDefinitions.length).toBe(1);
+    expect(containerDefinitions[0].Command).toEqual([
+      '/bin/sh',
+      '-c',
+      '/rfs-app/entrypoint.sh'
+    ]);
+    expect(containerDefinitions[0].Environment).toEqual([
+      {
+        Name: 'RFS_COMMAND',
+        Value: {
+          "Fn::Join": [
+            "",
+            [ "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments --target-insecure --s3-local-dir \"/storage/s3_files\" --s3-repo-uri \"s3://migration-artifacts-test-account-unit-test-us-east-1/rfs-snapshot-repo\" --s3-region us-east-1 --snapshot-name rfs-snapshot --lucene-dir \"/storage/lucene\" --target-host ",
+              {
+                "Ref": "SsmParameterValuemigrationunittestdefaultosClusterEndpointC96584B6F00A464EAD1953AFF4B05118Parameter",
+              },
+              " --max-shard-size-bytes 94489280512 --max-connections 10 --source-version \"ES_7.9\""
+            ],
+          ],
+        }
+      },
+      {
+        Name: 'SHARED_LOGS_DIR_PATH',
+        Value: '/shared-logs-output/reindex-from-snapshot-default'
+      }
+    ]);
+  });
+
+  test('ReindexFromSnapshotStack fails when source cluster version is missing with external snapshot', () => {
+    const contextOptions = {
+      vpcEnabled: true,
+      sourceCluster: {
+        "disabled": true
+        // Missing version field
+      },
+      snapshot: {
+        "snapshotName": "test-snapshot",
+        "snapshotRepoName": "test-repo",
+        "s3Uri": "s3://snapshot-bucket/snapshot-repo",
+        "s3Region": "us-east-1"
+      },
+      reindexFromSnapshotServiceEnabled: true,
+      stage: 'unit-test',
+      migrationAssistanceEnabled: true
+    };
+
+    expect(() => createStackComposer(contextOptions)).toThrow(
+      /The `sourceCluster` object must be provided with a `version` field when using an external snapshot/
+    );
+  });
+
+  test('ReindexFromSnapshotStack omits source-version parameter when source cluster version is missing', () => {
+    const contextOptions = {
+      vpcEnabled: true,
+      sourceCluster: {
+        "disabled": true
+        // Missing version field - should result in --source-version being omitted
+      },
+      reindexFromSnapshotServiceEnabled: true,
+      stage: 'unit-test',
+      migrationAssistanceEnabled: true
+    };
+
+    const stacks = createStackComposer(contextOptions);
+    const reindexStack = stacks.stacks.find(s => s instanceof ReindexFromSnapshotStack) as ReindexFromSnapshotStack;
+    expect(reindexStack).toBeDefined();
+    const template = Template.fromStack(reindexStack);
+
+    // Find the task definition resource
+    const taskDefinitions = template.findResources('AWS::ECS::TaskDefinition');
+    const taskDefinitionKeys = Object.keys(taskDefinitions);
+    expect(taskDefinitionKeys.length).toBe(1);
+
+    const taskDefinition = taskDefinitions[taskDefinitionKeys[0]];
+    const containerDefinitions = taskDefinition.Properties.ContainerDefinitions;
+    expect(containerDefinitions.length).toBe(1);
+    
+    // Verify that the RFS command does NOT include --source-version parameter
+    // This will cause the Java application to fail at runtime with JCommander error
+    const rfsCommand = containerDefinitions[0].Environment.find((env: {Name: string, Value: unknown}) => env.Name === 'RFS_COMMAND');
+    expect(rfsCommand).toBeDefined();
+    
+    // The command should NOT include --source-version, which will cause RFS to fail with required parameter error
+    const commandValue = rfsCommand.Value['Fn::Join'][1].join('');
+    expect(commandValue).not.toContain('--source-version');
+    
+    // This demonstrates that RFS will fail at runtime with:
+    // "The following option is required: [--source-version, --sourceVersion]"
   });
 });

@@ -5,10 +5,10 @@ package org.opensearch.migrations;
 import org.opensearch.migrations.bulkload.common.http.ConnectionContext;
 import org.opensearch.migrations.bulkload.models.DataFilterArgs;
 import org.opensearch.migrations.bulkload.transformers.MetadataTransformerParams;
+import org.opensearch.migrations.cli.OutputFormat;
 import org.opensearch.migrations.transform.TransformerParams;
 import org.opensearch.migrations.transformation.rules.IndexMappingTypeRemoval;
 
-import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
 import lombok.Getter;
@@ -16,6 +16,10 @@ import lombok.Getter;
 public class MigrateOrEvaluateArgs {
     @Parameter(names = {"--help", "-h"}, help = true, description = "Displays information about how to use this tool")
     public boolean help;
+ 
+    @Parameter(names = { "--output" }, description = "Output format: human-readable (default) or json", 
+            converter = OutputFormat.OutputFormatConverter.class)
+    public OutputFormat outputFormat = OutputFormat.HUMAN_READABLE;
 
     @Parameter(names = { "--snapshot-name" }, description = "The name of the snapshot to migrate")
     public String snapshotName;
@@ -36,6 +40,12 @@ public class MigrateOrEvaluateArgs {
         "--s3-region" }, description = "The AWS Region the S3 bucket is in, like: us-east-2")
     public String s3Region;
 
+    @Parameter(required = false,
+            names = { "--s3-endpoint", "--s3Endpoint" },
+            description = ("The endpoint URL to use for S3 calls.  " +
+                    "For use when the default AWS ones won't work for a particular context."))
+    public String s3Endpoint = null;
+
     @ParametersDelegate
     public ConnectionContext.SourceArgs sourceArgs = new ConnectionContext.SourceArgs();
 
@@ -45,10 +55,13 @@ public class MigrateOrEvaluateArgs {
     @ParametersDelegate
     public DataFilterArgs dataFilterArgs = new DataFilterArgs(); 
 
-    // https://opensearch.org/docs/2.11/api-reference/cluster-api/cluster-awareness/
-    @Parameter(names = {"--min-replicas" }, description = "Optional.  The minimum number of replicas configured for migrated indices on the target."
-            + " This can be useful for migrating to targets which use zonal deployments and require additional replicas to meet zone requirements.  Default: 0")
-    public int minNumberOfReplicas = 0;
+    // https://opensearch.org/docs/2.19/tuning-your-cluster/#forced-awareness
+    @Parameter(names = {"--cluster-awareness-attributes" }, description = "Optional. This sets up a transformation for all indices to ensure"
+        + " that the number of replicas is compatible with the routing awareness attributes of the cluster (usually the number of zones)."
+        + " This transformation strictly increases the number of replicas for each index to meet the cluster's requirements. This can be"
+        + " useful for migrating to targets which use zonal deployments and require additional replicas to meet zone requirements."
+        + " Default: 1 (which does not apply any transformation)")
+    public int clusterAwarenessAttributes = 1;
 
     @Parameter(required = false, names = {
         "--otel-collector-endpoint" }, arity = 1, description = "Endpoint (host:port) for the OpenTelemetry Collector to which metrics logs should be"
@@ -63,6 +76,9 @@ public class MigrateOrEvaluateArgs {
 
     @ParametersDelegate
     public TransformerParams metadataCustomTransformationParams = new MetadataCustomTransformationParams();
+
+    @ParametersDelegate
+    public VersionStrictness versionStrictness = new VersionStrictness();
 
     @Getter
     public static class MetadataTransformationParams implements MetadataTransformerParams {
@@ -101,12 +117,5 @@ public class MigrateOrEvaluateArgs {
                 arity = 1,
                 description = "Path to the JSON configuration file of metadata transformers.")
         private String transformerConfigFile;
-    }
-
-    static class MultiTypeResolutionBehaviorConverter implements IStringConverter<IndexMappingTypeRemoval.MultiTypeResolutionBehavior> {
-        @Override
-        public IndexMappingTypeRemoval.MultiTypeResolutionBehavior convert(String value) {
-            return IndexMappingTypeRemoval.MultiTypeResolutionBehavior.valueOf(value.toUpperCase());
-        }
     }
 }

@@ -8,7 +8,8 @@ setup(
     install_requires=["requests", "boto3", "pyyaml", "Click", "cerberus", "kubernetes"],
     entry_points={
         "console_scripts": [
-            "console = console_link.cli:cli",
+            "console = console_link.cli:main",
+            "workflow = console_link.workflow.cli:main",
         ],
     },
     classifiers=[

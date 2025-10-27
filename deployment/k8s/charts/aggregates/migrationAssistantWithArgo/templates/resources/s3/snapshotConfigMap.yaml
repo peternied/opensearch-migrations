@@ -1,0 +1,21 @@
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migrations-default-s3-config
+  labels:
+    workflows.argoproj.io/configmap-type: Parameter
+data:
+  AWS_REGION: {{ .Values.aws.region }}
+  {{- if .Values.defaultBucketConfiguration.useLocalStack }}
+  ENDPOINT: "http://{{ .Values.defaultBucketConfiguration.endpoint }}:4566"
+  {{- else }}
+  ENDPOINT: ""
+  {{- end }}
+  {{- if .Values.defaultBucketConfiguration.snapshotRoleArn }}
+  SNAPSHOT_ROLE_ARN: "{{ .Values.defaultBucketConfiguration.snapshotRoleArn }}"
+  {{- else }}
+  SNAPSHOT_ROLE_ARN: ""
+  {{- end }}
+  BUCKET_NAME: {{ printf "\"migrations-default-%s-%s-%s\"" (toString .Values.aws.account) .Values.stageName .Values.aws.region }}

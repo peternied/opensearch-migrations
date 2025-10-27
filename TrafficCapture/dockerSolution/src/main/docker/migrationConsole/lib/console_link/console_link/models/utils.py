@@ -13,6 +13,9 @@ from urllib.parse import urlparse
 from console_link.models.client_options import ClientOptions
 
 
+DEFAULT_SNAPSHOT_REPO_NAME = "migration_assistant_repo"
+
+
 class DeploymentStatus(NamedTuple):
     running: int = 0
     pending: int = 0
@@ -20,7 +23,7 @@ class DeploymentStatus(NamedTuple):
     terminating: int = 0
 
     def __str__(self):
-        return f"Running={self.running}\nPending={self.pending}\nDesired={self.desired}\nTerminating={self.terminating}"
+        return f"Running={self.running} Pending={self.pending} Desired={self.desired} Terminating={self.terminating}"
 
 
 class AWSAPIError(Exception):

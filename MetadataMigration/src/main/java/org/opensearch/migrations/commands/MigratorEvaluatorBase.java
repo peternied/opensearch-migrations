@@ -2,24 +2,27 @@ package org.opensearch.migrations.commands;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
+import org.opensearch.migrations.MetadataTransformationRegistry;
 import org.opensearch.migrations.MigrateOrEvaluateArgs;
 import org.opensearch.migrations.MigrationMode;
+import org.opensearch.migrations.Version;
 import org.opensearch.migrations.bulkload.transformers.FanOutCompositeTransformer;
-import org.opensearch.migrations.bulkload.transformers.TransformFunctions;
 import org.opensearch.migrations.bulkload.transformers.Transformer;
-import org.opensearch.migrations.bulkload.transformers.TransformerToIJsonTransformerAdapter;
+import org.opensearch.migrations.bulkload.transformers.TransformerMapper;
 import org.opensearch.migrations.bulkload.worker.IndexMetadataResults;
 import org.opensearch.migrations.bulkload.worker.IndexRunner;
 import org.opensearch.migrations.bulkload.worker.MetadataRunner;
 import org.opensearch.migrations.cli.ClusterReaderExtractor;
 import org.opensearch.migrations.cli.Clusters;
 import org.opensearch.migrations.cli.Items;
+import org.opensearch.migrations.cli.Transformers;
 import org.opensearch.migrations.cluster.ClusterProviderRegistry;
 import org.opensearch.migrations.metadata.CreationResult;
 import org.opensearch.migrations.metadata.GlobalMetadataCreatorResults;
 import org.opensearch.migrations.metadata.tracing.RootMetadataMigrationContext;
-import org.opensearch.migrations.transform.TransformationLoader;
 import org.opensearch.migrations.transform.TransformerConfigUtils;
 
 import lombok.extern.slf4j.Slf4j;
@@ -27,11 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 /** Shared functionality between migration and evaluation commands */
 @Slf4j
 public abstract class MigratorEvaluatorBase {
-    public static final String NOOP_TRANSFORMATION_CONFIG = "[" +
-            "  {" +
-            "    \"NoopTransformerProvider\":\"\"" +
-            "  }" +
-            "]";
 
     static final int INVALID_PARAMETER_CODE = 999;
     static final int UNEXPECTED_FAILURE_CODE = 888;
@@ -49,36 +47,58 @@ public abstract class MigratorEvaluatorBase {
         var sourceCluster = clusterReaderCliExtractor.extractClusterReader();
         clusters.source(sourceCluster);
 
-        var targetCluster = ClusterProviderRegistry.getRemoteWriter(arguments.targetArgs.toConnectionContext(), null, arguments.dataFilterArgs);
+        var targetCluster = ClusterProviderRegistry.getRemoteWriter(arguments.targetArgs.toConnectionContext(), null, arguments.dataFilterArgs, arguments.versionStrictness.allowLooseVersionMatches);
         clusters.target(targetCluster);
         return clusters.build();
     }
 
-    protected Transformer getCustomTransformer() {
+    protected Transformers getCustomTransformer(Version sourceVersion, Version targetVersion) {
+        var versionSpecificCustomTransforms = MetadataTransformationRegistry.getCustomTransformationByClusterVersions(sourceVersion, targetVersion);
         var transformerConfig = TransformerConfigUtils.getTransformerConfig(arguments.metadataCustomTransformationParams);
         if (transformerConfig != null) {
-            log.atInfo().setMessage("Metadata Transformations config string: {}")
-                    .addArgument(transformerConfig).log();
-        } else {
-            log.atInfo().setMessage("Using Noop custom transformation config: {}")
-                    .addArgument(NOOP_TRANSFORMATION_CONFIG).log();
-            transformerConfig = NOOP_TRANSFORMATION_CONFIG;
+            MetadataTransformationRegistry.logTransformerConfig("User supplied custom transform", transformerConfig);
+            var customTransformInfoBuilder = Transformers.TransformerInfo
+                    .builder()
+                    .name("User Supplied Custom Transform")
+                    .descriptionLine("Custom transformation applied from supplied arguments.");
+                if (!versionSpecificCustomTransforms.getTransformerInfos().isEmpty()) {
+                    customTransformInfoBuilder
+                        .descriptionLine("Skipped default version-specific transformations:")
+                        .descriptionLine("(" + versionSpecificCustomTransforms.getTransformerInfos().stream()
+                            .map(Transformers.TransformerInfo::getName).collect(Collectors.joining(", ")) + ")") ;
+                }
+                return Transformers.builder()
+                    .transformer(MetadataTransformationRegistry.configToTransformer(transformerConfig))
+                    .transformerInfo(customTransformInfoBuilder.build())
+                    .build();
         }
-        var transformer =  new TransformationLoader().getTransformerFactoryLoader(transformerConfig);
-        return new TransformerToIJsonTransformerAdapter(transformer);
+        return versionSpecificCustomTransforms;
     }
 
-    protected Transformer selectTransformer(Clusters clusters) {
-        var versionTransformer = TransformFunctions.getTransformer(
-            clusters.getSource().getVersion(),
-            clusters.getTarget().getVersion(),
-            arguments.minNumberOfReplicas,
-            arguments.metadataTransformationParams
+    protected Transformers selectTransformer(Clusters clusters, int awarenessAttributes, boolean allowLooseVersionMatches) {
+        var mapper = new TransformerMapper(clusters.getSource().getVersion(), clusters.getTarget().getVersion());
+        var versionTransformer = mapper.getTransformer(
+                awarenessAttributes,
+                arguments.metadataTransformationParams,
+                allowLooseVersionMatches
         );
-        var customTransformer = getCustomTransformer();
-        var compositeTransformer = new FanOutCompositeTransformer(customTransformer, versionTransformer);
-        log.atInfo().setMessage("Selected transformer: {}").addArgument(compositeTransformer).log();
-        return compositeTransformer;
+        var customTransformer = getCustomTransformer(clusters.getSource().getVersion(), clusters.getTarget().getVersion());
+        log.atInfo().setMessage("Selected transformer composite: custom = {}, version = {}")
+                .addArgument(customTransformer.getClass().getSimpleName())
+                .addArgument(versionTransformer.getClass().getSimpleName())
+                .log();
+        return Transformers.builder()
+                .transformer(new FanOutCompositeTransformer(customTransformer.getTransformer(), versionTransformer))
+                .transformerInfos(customTransformer.getTransformerInfos())
+                .transformerInfo(Transformers.TransformerInfo.builder()
+                    .name("Version Transform")
+                    .descriptionLine("Other transforms for source to target shape conversion")
+                    .build())
+                .build();
+    }
+
+    protected Transformers selectTransformer(Clusters clusters) {
+        return selectTransformer(clusters, arguments.clusterAwarenessAttributes, arguments.versionStrictness.allowLooseVersionMatches);
     }
 
     protected Items migrateAllItems(MigrationMode migrationMode, Clusters clusters, Transformer transformer, RootMetadataMigrationContext context) {
@@ -124,10 +144,16 @@ public abstract class MigratorEvaluatorBase {
             clusters.getSource().getIndexMetadata(),
             clusters.getTarget().getIndexCreator(),
             transformer,
-            arguments.dataFilterArgs.indexAllowlist
+            arguments.dataFilterArgs.indexAllowlist,
+            clusters.getTarget().getAwarenessAttributeSettings()
         );
         var indexResults = indexRunner.migrateIndices(mode, context.createIndexContext());
         log.info("Index copy complete.");
         return indexResults;
-    } 
+    }
+
+    protected String createUnexpectedErrorMessage(Throwable e) {
+        var causeMessage = Optional.of(e).map(Throwable::getCause).map(Throwable::getMessage).orElse(null);
+        return "Unexpected failure: " + e.getMessage() + (causeMessage == null ? "" : ", inner cause: " + causeMessage);
+    }
 }

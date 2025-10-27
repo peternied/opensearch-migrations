@@ -1,7 +1,10 @@
 package org.opensearch.migrations.bulkload.version_es_7_10;
 
+import org.opensearch.migrations.UnboundVersionMatchers;
 import org.opensearch.migrations.Version;
 import org.opensearch.migrations.VersionMatchers;
+import org.opensearch.migrations.bulkload.common.BaseSnapshotFileFinder;
+import org.opensearch.migrations.bulkload.common.SnapshotFileFinder;
 import org.opensearch.migrations.bulkload.common.SnapshotRepo;
 import org.opensearch.migrations.bulkload.common.SourceRepo;
 import org.opensearch.migrations.bulkload.models.GlobalMetadata;
@@ -9,16 +12,28 @@ import org.opensearch.migrations.bulkload.models.IndexMetadata;
 import org.opensearch.migrations.bulkload.models.ShardMetadata;
 import org.opensearch.migrations.cluster.ClusterSnapshotReader;
 
-public class SnapshotReader_ES_7_10 implements ClusterSnapshotReader {
+import lombok.Getter;
 
+public class SnapshotReader_ES_7_10 implements ClusterSnapshotReader {
     private Version version;
+    
+    @Getter
     private SourceRepo sourceRepo;
 
     @Override
     public boolean compatibleWith(Version version) {
-        return VersionMatchers.equalOrGreaterThanES_7_10
+        return VersionMatchers.equalOrGreaterThanES_7_9
+            .or(VersionMatchers.isES_8_X)
             .or(VersionMatchers.isOS_1_X)
             .or(VersionMatchers.isOS_2_X)
+            .test(version);
+    }
+
+    @Override
+    public boolean looseCompatibleWith(Version version) {
+        return VersionMatchers.equalOrGreaterThanES_7_9
+            .or(UnboundVersionMatchers.isGreaterOrEqualES_7_10)
+            .or(UnboundVersionMatchers.anyOS)
             .test(version);
     }
 
@@ -26,6 +41,17 @@ public class SnapshotReader_ES_7_10 implements ClusterSnapshotReader {
     public ClusterSnapshotReader initialize(SourceRepo sourceRepo) {
         this.sourceRepo = sourceRepo;
         return this;
+    }
+
+    @Override
+    public ClusterSnapshotReader initialize(Version version) {
+        this.version = version;
+        return this;
+    }
+
+    @Override
+    public SnapshotFileFinder getSnapshotFileFinder() {
+        return new BaseSnapshotFileFinder();
     }
 
     @Override
@@ -61,12 +87,6 @@ public class SnapshotReader_ES_7_10 implements ClusterSnapshotReader {
     @Override
     public Version getVersion() {
         return version;
-    }
-
-    @Override
-    public ClusterSnapshotReader initialize(Version version) {
-        this.version = version;
-        return this;
     }
 
     public String toString() {

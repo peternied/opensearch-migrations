@@ -1,5 +1,6 @@
 import {StackPropsExt} from "../stack-composer";
-import {IVpc, SecurityGroup} from "aws-cdk-lib/aws-ec2";
+import {VpcDetails} from "../network-stack";
+import {SecurityGroup} from "aws-cdk-lib/aws-ec2";
 import {CpuArchitecture, PortMapping, Protocol} from "aws-cdk-lib/aws-ecs";
 import {Construct} from "constructs";
 import {MigrationServiceCore} from "./migration-service-core";
@@ -7,7 +8,7 @@ import { MigrationSSMParameter, createMigrationStringParameter, getMigrationStri
 import {KafkaYaml} from "../migration-services-yaml";
 
 export interface KafkaBrokerProps extends StackPropsExt {
-    readonly vpc: IVpc,
+    readonly vpcDetails: VpcDetails,
     readonly fargateCpuArch: CpuArchitecture
 }
 
@@ -42,7 +43,7 @@ export class KafkaStack extends MigrationServiceCore {
         });
         this.createService({
             serviceName: "kafka",
-            dockerImageName: "docker.io/apache/kafka:3.7.0",
+            dockerImageName: "docker.io/apache/kafka:3.9.1",
             securityGroups: securityGroups,
             // see https://github.com/apache/kafka/blob/3.7/docker/examples/jvm/single-node/plaintext/docker-compose.yml
             environment: {

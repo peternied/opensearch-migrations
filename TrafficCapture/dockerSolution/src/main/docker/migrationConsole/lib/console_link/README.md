@@ -6,7 +6,6 @@
     - [Metrics Source](#metrics-source)
     - [Backfill](#backfill)
       - [Reindex From Snapshot](#reindex-from-snapshot)
-      - [OpenSearch Ingestion](#opensearch-ingestion)
     - [Snapshot](#snapshot)
     - [Metadata Migration](#metadata-migration)
     - [Replay](#replay)
@@ -21,6 +20,9 @@
   - [Development](#development)
     - [Unit Tests](#unit-tests)
     - [Coverage](#coverage)
+    - [Backend APIs](#backend-apis)
+      - [Locally testing](#locally-testing)
+      - [Deployment](#deployment)
 
 The console link library is designed to provide a unified interface for the many possible backend services involved in a migration. The interface can be used by multiple frontends--a CLI app and a web API, for instance.
 
@@ -56,31 +58,27 @@ metrics_source:
     prometheus:
         endpoint: "http://prometheus:9090"
 backfill:
-    opensearch_ingestion:
-        pipeline_role_arn: "arn:aws:iam::123456789012:role/OSMigrations-aws-integ-us--pipelineRole"
-        vpc_subnet_ids:
-            - "subnet-123456789"
-        security_group_ids:
-            - "sg-123456789"
-        aws_region: "us-west-2"
-        pipeline_name: "test-cli-pipeline"
-        index_regex_selection:
-            - "test-index*"
-        log_group_name: "/aws/vendedlogs/osi-aws-integ-default"
-        tags:
-            - "migration_deployment=1.0.6"
+    reindex_from_snapshot:
+        snapshot_repo: "abc"
+        snapshot_name: "def"
+        scale: 3
+        ecs:
+            cluster_name: migration-aws-integ-ecs-cluster
+            service_name: migration-aws-integ-reindex-from-snapshot
+            aws-region: us-east-1
 replay:
   ecs:
     cluster-name: "migrations-dev-cluster"
     service-name: "migrations-dev-replayer-service"
 snapshot:
   snapshot_name: "snapshot_2023_01_01"
+  snapshot_repo_name: "my-snapshot-repo"
   s3:
       repo_uri: "s3://my-snapshot-bucket"
       aws_region: "us-east-2"
 metadata_migration:
   from_snapshot:
-  min_replicas: 0
+  cluster_awarness_attributes: 1
 kafka:
   broker_endpoints: "kafka:9092"
   standard:
@@ -103,7 +101,9 @@ Exactly one of the following blocks must be present:
 - `no_auth`: may be empty, no authorization to use.
 - `basic_auth`:
     - `username`
-    - `password` OR `password_from_secret_arn`
+    - `password` \
+    OR 
+    - `user_from_secret_arn`: A secrets manager secret containing both a `username` and `password` key within the secret
 - `sigv4`:
     - `region`: Optional, specify a region for the sigv4 signing, the default is the current region.
     - `service`: Optional, specify a service signing name for the cluster, e.g `es` for Amazon OpenSearch Service and `aoss` for Amazon OpenSearch Serverless. Defaults to `es`
@@ -125,8 +125,7 @@ Exactly one of the following blocks must be present:
 
 ### Backfill
 
-Backfill can be performed via several mechansims. The primary two supported by the console library are Reindex From Snapshot (RFS) and
-OpenSearch Ingestion Pipeline (OSI).
+Backfill can be performed via several mechanisms. The method supported by the console library is  Reindex From Snapshot (RFS).
 
 #### Reindex From Snapshot
 
@@ -183,23 +182,12 @@ backfill:
       deployment_name: "ma-backfill"
 ```
 
-#### OpenSearch Ingestion
-
-- `opensearch_ingestion`
-    - `pipeline_role_arn`: required, IAM pipeline role containing permissions to read from source and read/write to target, more details [here](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/pipeline-security-overview.html#pipeline-security-sink)
-    - `vpc_subnet_ids`: required, VPC subnets to place the OSI pipeline in
-    - `security_group_ids`: required, security groups to apply to OSI pipeline for accessing source and target clusters
-    - `aws_region`: required, AWS region to look for pipeline role and secrets for cluster
-    - `pipeline_name`: optional, name of OSI pipeline
-    - `index_regex_selection`: optional, list of index inclusion regex strings for selecting indices to migrate
-    - `log_group_name`: optional, name of existing CloudWatch log group to use for OSI logs
-    - `tags`: optional, list of tags to apply to OSI pipeline
-
 ### Snapshot
 
 The snapshot configuration specifies a local filesystem or an s3 snapshot that will be created by the `snapshot create` command, and (if not overridden) used as the source for the `metadata migrate` command. In a docker migration, it may also be used as the source for backfill via reindex-from-snapshot. If metadata migration and reindex-from-snapshot are not being used, this block is optional.
 
 - `snapshot_name`: required, name of the snapshot
+- `snapshot_repo_name`: optional, name of the snapshot repository
 
 Exactly one of the following blocks must be present:
 
@@ -215,11 +203,12 @@ Exactly one of the following blocks must be present:
 
 The metadata migration moves indices, components, and templates from a snapshot to the target cluster. In the future, there may be a `from_live_cluster` option, but currently all metadata migration must originate from a snapshot. A snapshot can be created via `console snapshot create` or can be pre-existing. The snapshot details are independently defineable, so if a special case is necessary, a snapshot could theoretically be created and used for document, but metadata migration could operate from a separate, pre-existing snapshot. This block is optional if metadata migration isn't being used as part of the migration.
 
-- `min_replicas`: optional, an integer value for the number of replicas to create. The default value is 0.
+- `cluster_awareness_attributes`: optional, an integer value for the number of awareness attributes that the cluster has (usually this means zones). This is only necessary if routing balancing across attributes is enforced.
 - `index_allowlist`: optional, a list of index names. If this key is provided, only the named indices will be migrated. If the field is not provided, all non-system indices will be migrated.
 - `index_template_allowlist`: optional, a list of index template names. If this key is provided, only the named templates will be migrated. If the field is not provided, all templates will be migrated.
 - `component_template_allowlist`: optional, a list of component template names. If this key is provided, only the named component templates will be migrated. If the field is not provided, all component templates will be migrated.
-- `source_cluster_version`: optional, defaults to `ES_7.10.2`, which should work for closely related versions. Version of the source cluster from which the snapshot was taken and used for handling incompatible settings between versions.
+- `source_cluster_version`: optional, if not provided the specified version in the source_cluster object will be used. Version of the source cluster from which the snapshot was taken and used for handling incompatible settings between versions.
+- `transformer_config_base64`: optional, the transformation config (as a base64 encoded string) to apply during a metadata migration.
 - `from_snapshot`: required. As mentioned above, `from_snapshot` is the only allowable source for a metadata migration at this point. This key must be present, but if it's value is null/empty, the snapshot details will be pulled from the top-level `snapshot` object. If a `snapshot` object does not exist, this block must be populated.
     - `snapshot_name`: required, as described in the Snapshot section
     - `s3` or `fs` block: exactly one must be present, as described in the Snapshot section
@@ -339,3 +328,42 @@ or generated as HTML:
 ```shell
 pipenv run coverage html
 ```
+
+### Backend APIs
+
+As part of the Migration console many console commands are available for use by the frontend website or by workflow management tools.  This is a sub-set of the console_link library, ensuring the command line and backend functionality is passing through the same systems. 
+
+#### Locally testing
+
+For local development, you can use the API development script:
+
+```shell
+pipenv run api-dev
+```
+
+*Website passthrough*
+
+To test the api when the the web frontend is running without deploying in AWS or kubernetes, make the following updates:
+
+1. Update `frontend/nginx.conf` to allow communication to the local host
+`        proxy_pass         http://127.0.0.1:8000/;` -> 
+`        proxy_pass         http://host.docker.internal:8000/;`
+
+1. Rebuild the website docker image
+```shell
+./gradlew :frontend:buildDockerImage
+```
+
+1. Run the website with the additional host
+```shell
+docker run -p 8080:80 --add-host=host.docker.internal:host-gateway migrations/website
+```
+
+1. Access the api through the website passthrough
+```shell
+curl http://localhost:8080/api/docs
+```
+
+#### Deployment
+
+Consult the [frontend readme](../../../../../../../../frontend/README.md) for access when hosted in AWS or kubernetes.

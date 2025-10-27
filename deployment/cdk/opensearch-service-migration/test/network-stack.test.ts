@@ -42,18 +42,6 @@ describe('NetworkStack Tests', () => {
         jest.restoreAllMocks();
     });
 
-    test('Test vpcEnabled setting that is disabled does not create stack', () => {
-        const contextOptions = {
-            vpcEnabled: false
-        }
-
-        const openSearchStacks = createStackComposer(contextOptions)
-
-        openSearchStacks.stacks.forEach(function(stack) {
-            expect(!(stack instanceof NetworkStack))
-        })
-    });
-
     test('Test vpcEnabled setting that is enabled without existing resources creates default VPC resources', () => {
         const contextOptions = {
             vpcEnabled: true,
@@ -76,7 +64,7 @@ describe('NetworkStack Tests', () => {
         // For each AZ, a private and public subnet is created
         networkTemplate.resourceCountIs("AWS::EC2::Subnet", 4)
 
-        const vpc = networkStack.vpc
+        const vpc = networkStack.vpcDetails.vpc
         expect(vpc.publicSubnets.length).toBe(2)
         expect(vpc.privateSubnets.length).toBe(2)
     });

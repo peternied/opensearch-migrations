@@ -1,24 +1,30 @@
-# OpenSearch Migrations Engine
+# OpenSearch Migration Assistant
 
 ## Table of Contents
-1. [Overview](#overview)
-2. [Key Features](#key-features)
-3. [Supported Versions and Platforms](#supported-versions-and-platforms)
-4. [Issue Tracking](#issue-tracking)
-5. [User Guide Documentation](#user-guide-documentation)
-6. [Getting Started](#getting-started)
-   - [Local Deployment](#local-deployment)
-   - [AWS Deployment](#aws-deployment)
-7. [Continuous Integration and Deployment](#continuous-integration-and-deployment)
-8. [Contributing](#contributing)
-9. [Security](#security)
-10. [License](#license)
-11. [Acknowledgments](#acknowledgments)
+- [OpenSearch Migration Assistant](#opensearch-migration-assistant)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Key Features](#key-features)
+  - [Supported Migration Paths and Platforms](#supported-migration-paths-and-platforms)
+    - [Migration Paths](#migration-paths)
+    - [Platforms](#platforms)
+    - [Performance Limitations](#performance-limitations)
+      - [Test Results](#test-results)
+  - [Issue Tracking](#issue-tracking)
+  - [User Guide Documentation](#user-guide-documentation)
+  - [Getting Started](#getting-started)
+    - [Local Deployment](#local-deployment)
+    - [AWS Deployment](#aws-deployment)
+  - [Continuous Integration and Deployment](#continuous-integration-and-deployment)
+  - [Contributing](#contributing)
+  - [Security](#security)
+  - [License](#license)
+  - [Acknowledgments](#acknowledgments)
 
 
 ## Overview
 
-The OpenSearch Migrations Engine is a comprehensive set of tools designed to facilitate upgrades, migrations, and comparisons for OpenSearch and Elasticsearch clusters. This project aims to simplify the process of moving between different versions and platforms while ensuring data integrity and performance.
+OpenSearch Migration Assistant is a comprehensive set of tools designed to facilitate upgrades, migrations, and comparisons for OpenSearch and Elasticsearch clusters. This project aims to simplify the process of moving between different versions and platforms while ensuring data integrity and performance.
 
 ## Key Features
 
@@ -44,21 +50,17 @@ The OpenSearch Migrations Engine is a comprehensive set of tools designed to fac
 
 ### Migration Paths
 
-| **Source Version**          | **Target Version**               | Status|
-|-----------------------------|----------------------------------|---------|
-| Elasticsearch 5.6           | OpenSearch 1.3                   |Supported|
-| Elasticsearch 5.6           | OpenSearch 2.19                  |Supported|
-| Elasticsearch 6.8           | OpenSearch 1.3                   |Supported|
-| Elasticsearch 6.8           | OpenSearch 2.19                  |Supported|
-| Elasticsearch 7.10.2        | OpenSearch 1.3                   |Supported|
-| Elasticsearch 7.10.2        | OpenSearch 2.19                  |Supported|
-| Elasticsearch 7.17          | OpenSearch 1.3                   |Supported|
-| Elasticsearch 7.17          | OpenSearch 2.19                  |Supported|
-| OpenSearch 1.3              | OpenSearch 2.19                  |Supported|
-| OpenSearch 2.x              | OpenSearch 2.19                  |Supported|
-| Elasticsearch 2.3           | OpenSearch 2.x                   |[Prioritized](https://github.com/opensearch-project/opensearch-migrations/issues/1069)|
-| Elasticsearch 1.5           | OpenSearch 2.x                   |[Prioritized](https://github.com/opensearch-project/opensearch-migrations/issues/1070)|
-| Elasticsearch 8.x           | OpenSearch 2.x                   |[Prioritized](https://github.com/opensearch-project/opensearch-migrations/issues/1071)|
+| **Source Version** | **OpenSearch 1.3**                                                                     | **OpenSearch 2.19**                                                                    | **OpenSearch 3.0**                                                                     |
+|-------------------| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Elasticsearch 1.x | :white_check_mark:                                                                     | :white_check_mark:                                                                     | :white_check_mark:                                                                     |
+| Elasticsearch 2.x | :white_check_mark:                                                                     | :white_check_mark:                                                                     | :white_check_mark:                                                                     |
+| Elasticsearch 5.x | :white_check_mark:                                                                     | :white_check_mark:                                                                     | :white_check_mark:                                                                     |
+| Elasticsearch 6.x | :white_check_mark:                                                                     | :white_check_mark:                                                                     | :white_check_mark:                                                                     |
+| Elasticsearch 7.x | :white_check_mark:                                                                     | :white_check_mark:                                                                     | :white_check_mark:                                                                     |
+| Elasticsearch 8.x |                                                                                        | :white_check_mark:                                                                     | :white_check_mark:                                                                     |
+| OpenSearch 1.3    | :white_check_mark:                                                                     | :white_check_mark:                                                                     | :white_check_mark:                                                                     |
+| OpenSearch 2.19   |                                                                                        | :white_check_mark:                                                                     | :white_check_mark:                                                                     |
+| OpenSearch 3.x    |                                                                                        |                                                                                        | :soon: [link](https://github.com/orgs/opensearch-project/projects/229?pane=issue&itemId=117495207)                                                                     |
 
 Note that testing is done on specific minor versions, but any minor versions within a listed major version are expected to work.
 
@@ -84,7 +86,7 @@ Tests were ran with and without the [Type Mapping Sanitization Transformer](./tr
 
 #### Test Results
 | Service               | vCPU | Memory (GB) | Type Mapping Sanitization | Peak Docs Ingested per minute | Primary Shard Data Ingestion Rate (MBps) | Uncompressed Source Data Ingestion Rate (MBps) |
-|-----------------------|------|-------------|---------------------------|-------------------------------|------------------------------------------|------------------------------------------------|
+| --------------------- | ---- | ----------- | ------------------------- | ----------------------------- | ---------------------------------------- | ---------------------------------------------- |
 | Reindex-From-Snapshot | 2    | 4           | Disabled                  | 590,000                       | 15.1                                     | 23.5                                           |
 | Reindex-From-Snapshot | 2    | 4           | Enabled                   | 546,000                       | 14.0                                     | 21.7                                           |
 | Traffic Replay        | 8    | 48          | Disabled                  | 1,694,000 *[1]*               | 43.5  *[1]*                              | 67.5   *[1]*                                   |
@@ -107,7 +109,7 @@ https://opensearch.atlassian.net/
 
 ## User Guide Documentation
 
-User guide documentation is available in the [OpenSearch Migrations Wiki](https://github.com/opensearch-project/opensearch-migrations/wiki).
+User guide documentation is available in the [OpenSearch Migration Assistant documentation](https://docs.opensearch.org/latest/migration-assistant/).
 
 ## Getting Started
 

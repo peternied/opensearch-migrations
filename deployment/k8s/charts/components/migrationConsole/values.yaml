@@ -4,8 +4,8 @@ sharedLogsPvc: ""
 snapshotVolumeEnabled: false
 snapshotVolumePvc: ""
 parameters:
-  migrationApiEnabled:
-    sourceType: parameterConfig
-    parameterType: booleanFlag
-    value: false
-    allowRuntimeOverride: false
+website:
+  enabled: true
+  image: migrations/website:latest
+  ingress:
+    enabled: true

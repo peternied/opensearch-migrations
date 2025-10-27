@@ -1,22 +1,25 @@
 import {StackPropsExt} from "../stack-composer";
+import {VpcDetails} from "../network-stack";
 import {Size} from "aws-cdk-lib/core";
-import {IVpc, SecurityGroup, EbsDeviceVolumeType} from "aws-cdk-lib/aws-ec2";
+import {SecurityGroup, EbsDeviceVolumeType} from "aws-cdk-lib/aws-ec2";
 import {
     CpuArchitecture,
     ServiceManagedVolume,
     FileSystemType,
-    EbsPropagatedTagSource
+    EbsPropagatedTagSource,
+    Secret as EcsSecret
 } from "aws-cdk-lib/aws-ecs";
+import {Secret as SecretsManagerSecret} from "aws-cdk-lib/aws-secretsmanager";
 import {Construct} from "constructs";
 import {MigrationServiceCore} from "./migration-service-core";
 import {Effect, PolicyStatement} from "aws-cdk-lib/aws-iam";
 import {
     MigrationSSMParameter,
-    createOpenSearchIAMAccessPolicy,
-    createOpenSearchServerlessIAMAccessPolicy,
+    createAllAccessOpenSearchIAMAccessPolicy,
+    createAllAccessOpenSearchServerlessIAMAccessPolicy,
     getSecretAccessPolicy,
     getMigrationStringParameterValue,
-    ClusterAuth, parseArgsToDict, appendArgIfNotInExtraArgs, isStackInGovCloud
+    ClusterAuth, parseArgsToDict, appendArgIfNotInExtraArgs, isStackInGovCloud, ContainerEnvVarNames
 } from "../common-utilities";
 import { RFSBackfillYaml, SnapshotYaml } from "../migration-services-yaml";
 import { OtelCollectorSidecar } from "./migration-otel-collector-sidecar";
@@ -25,20 +28,20 @@ import * as rfsDashboard from '../components/reindex-from-snapshot-dashboard.jso
 import { MigrationDashboard } from '../constructs/migration-dashboard';
 
 export interface ReindexFromSnapshotProps extends StackPropsExt {
-    readonly vpc: IVpc,
+    readonly vpcDetails: VpcDetails,
     readonly fargateCpuArch: CpuArchitecture,
     readonly extraArgs?: string,
     readonly otelCollectorEnabled: boolean,
-    readonly clusterAuthDetails: ClusterAuth
+    readonly clusterAuthDetails: ClusterAuth,
+    readonly skipClusterCertCheck?: boolean,
     readonly sourceClusterVersion?: string,
     readonly maxShardSizeGiB?: number,
     readonly reindexFromSnapshotWorkerSize: "default" | "maximum",
-
+    readonly snapshotYaml: SnapshotYaml,
 }
 
 export class ReindexFromSnapshotStack extends MigrationServiceCore {
     rfsBackfillYaml: RFSBackfillYaml;
-    rfsSnapshotYaml: SnapshotYaml;
 
     constructor(scope: Construct, id: string, props: ReindexFromSnapshotProps) {
         super(scope, id, props)
@@ -58,15 +61,9 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
             })),
         ]
 
-        const artifactS3Arn = getMigrationStringParameterValue(this, {
-            parameter: MigrationSSMParameter.ARTIFACT_S3_ARN,
-            stage: props.stage,
-            defaultDeployId: props.defaultDeployId
-        });
-        const artifactS3AnyObjectPath = `${artifactS3Arn}/*`
-        const artifactS3PublishPolicy = new PolicyStatement({
+        const s3AccessPolicy = new PolicyStatement({
             effect: Effect.ALLOW,
-            resources: [artifactS3Arn, artifactS3AnyObjectPath],
+            resources: ["*"],
             actions: [
                 "s3:*"
             ]
@@ -76,25 +73,24 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
             ...props,
             parameter: MigrationSSMParameter.OS_CLUSTER_ENDPOINT,
         });
-        const s3Uri = `s3://migration-artifacts-${this.account}-${props.stage}-${this.region}/rfs-snapshot-repo`;
         let command = "/rfs-app/runJavaWithClasspath.sh org.opensearch.migrations.RfsMigrateDocuments"
         const extraArgsDict = parseArgsToDict(props.extraArgs)
         const storagePath = "/storage"
         const planningSize = props.maxShardSizeGiB ?? 80;
-        const planningSizeBuffer = 1.10
+        const planningSizeBuffer = 1.1
         const maxShardSizeGiB = planningSize * planningSizeBuffer
         const maxShardSizeBytes = maxShardSizeGiB * (1024 ** 3)
+        if (props.skipClusterCertCheck != false) { // when true or unspecified, add the flag
+            command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--target-insecure")
+        }
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--s3-local-dir", `"${storagePath}/s3_files"`)
-        command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--s3-repo-uri", `"${s3Uri}"`)
-        command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--s3-region", this.region)
-        command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--snapshot-name", "rfs-snapshot")
+        command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--s3-repo-uri", `"${props.snapshotYaml.s3?.repo_uri}"`)
+        command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--s3-region", props.snapshotYaml.s3?.aws_region)
+        command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--snapshot-name", props.snapshotYaml.snapshot_name)
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--lucene-dir", `"${storagePath}/lucene"`)
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--target-host", osClusterEndpoint)
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--max-shard-size-bytes", `${Math.ceil(maxShardSizeBytes)}`)
         command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--max-connections", props.reindexFromSnapshotWorkerSize === "maximum" ? "100" : "10")
-        if (props.reindexFromSnapshotWorkerSize === "maximum") {
-            command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--target-compression")
-        }
         if (props.clusterAuthDetails.sigv4) {
             command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--target-aws-service-signing-name", props.clusterAuthDetails.sigv4.serviceSigningName)
             command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--target-aws-region", props.clusterAuthDetails.sigv4.region)
@@ -106,28 +102,21 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
             command = appendArgIfNotInExtraArgs(command, extraArgsDict, "--source-version", `"${props.sourceClusterVersion}"`)
         }
 
-        let targetUser = "";
-        let targetPassword = "";
-        let targetPasswordArn = "";
+        const secrets: Record<string, EcsSecret> = {}
         if (props.clusterAuthDetails.basicAuth) {
-            // Only set user or password if not overridden in extraArgs
-            if (extraArgsDict["--target-username"] === undefined) {
-                targetUser = props.clusterAuthDetails.basicAuth.username
-            }
-            if (extraArgsDict["--target-password"] === undefined) {
-                targetPassword = props.clusterAuthDetails.basicAuth.password ?? ""
-                targetPasswordArn = props.clusterAuthDetails.basicAuth.password_from_secret_arn ?? ""
-            }
+            const secret = SecretsManagerSecret.fromSecretCompleteArn(this, "RfsTargetSecretImport", props.clusterAuthDetails.basicAuth.user_secret_arn)
+            secrets[ContainerEnvVarNames.TARGET_USERNAME] = EcsSecret.fromSecretsManager(secret, "username")
+            secrets[ContainerEnvVarNames.TARGET_PASSWORD] = EcsSecret.fromSecretsManager(secret, "password")
         }
         command = props.extraArgs?.trim() ? command.concat(` ${props.extraArgs?.trim()}`) : command
 
         const sharedLogFileSystem = new SharedLogFileSystem(this, props.stage, props.defaultDeployId);
-        const openSearchPolicy = createOpenSearchIAMAccessPolicy(this.partition, this.region, this.account);
-        const openSearchServerlessPolicy = createOpenSearchServerlessIAMAccessPolicy(this.partition, this.region, this.account);
-        const servicePolicies = [sharedLogFileSystem.asPolicyStatement(), artifactS3PublishPolicy, openSearchPolicy, openSearchServerlessPolicy];
+        const openSearchPolicy = createAllAccessOpenSearchIAMAccessPolicy();
+        const openSearchServerlessPolicy = createAllAccessOpenSearchServerlessIAMAccessPolicy();
+        const servicePolicies = [sharedLogFileSystem.asPolicyStatement(), s3AccessPolicy, openSearchPolicy, openSearchServerlessPolicy];
 
-        const getSecretsPolicy = props.clusterAuthDetails.basicAuth?.password_from_secret_arn ?
-            getSecretAccessPolicy(props.clusterAuthDetails.basicAuth.password_from_secret_arn) : null;
+        const getSecretsPolicy = props.clusterAuthDetails.basicAuth?.user_secret_arn ?
+            getSecretAccessPolicy(props.clusterAuthDetails.basicAuth.user_secret_arn) : null;
         if (getSecretsPolicy) {
             servicePolicies.push(getSecretsPolicy);
         }
@@ -137,7 +126,7 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
 
         // Calculate the volume size based on the max shard size
         // Have space for the snapshot and an unpacked copy, with buffer
-        const shardVolumeSizeGiBBufferMultiple = 1.10
+        const shardVolumeSizeGiBBufferMultiple = 1.1
         const shardVolumeSizeGiB = Math.max(
             Math.ceil(maxShardSizeGiB * 2 * shardVolumeSizeGiBBufferMultiple),
             1
@@ -207,16 +196,14 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
             ephemeralStorageGiB: ephemeralStorageGiB,
             environment: {
                 "RFS_COMMAND": command,
-                "RFS_TARGET_USER": targetUser,
-                "RFS_TARGET_PASSWORD": targetPassword,
-                "RFS_TARGET_PASSWORD_ARN": targetPasswordArn,
                 "SHARED_LOGS_DIR_PATH": `${sharedLogFileSystem.mountPointPath}/reindex-from-snapshot-${props.defaultDeployId}`,
             },
+            secrets: secrets,
             ...props
         });
 
-        new MigrationDashboard(this, 'RFSDashboard', {
-            dashboardName: `MigrationAssistant_ReindexFromSnapshot_Dashboard_${props.stage}`,
+        new MigrationDashboard(this, {
+            dashboardQualifier: `Backfill_Summary`,
             stage: props.stage,
             account: this.account,
             region: this.region,
@@ -226,8 +213,5 @@ export class ReindexFromSnapshotStack extends MigrationServiceCore {
         this.rfsBackfillYaml = new RFSBackfillYaml();
         this.rfsBackfillYaml.ecs.cluster_name = `migration-${props.stage}-ecs-cluster`;
         this.rfsBackfillYaml.ecs.service_name = `migration-${props.stage}-reindex-from-snapshot`;
-        this.rfsSnapshotYaml = new SnapshotYaml();
-        this.rfsSnapshotYaml.s3 = {repo_uri: s3Uri, aws_region: this.region};
-        this.rfsSnapshotYaml.snapshot_name = "rfs-snapshot";
     }
 }

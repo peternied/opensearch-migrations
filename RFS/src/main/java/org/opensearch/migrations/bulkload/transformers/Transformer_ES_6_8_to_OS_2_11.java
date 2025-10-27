@@ -21,16 +21,31 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
     protected List<TransformationRule<Index>> indexTransformations;
     protected List<TransformationRule<Index>> indexTemplateTransformations;
 
-    private final int awarenessAttributeDimensionality;
+    private final int awarenessAttributes;
 
-    public Transformer_ES_6_8_to_OS_2_11(int awarenessAttributeDimensionality, MetadataTransformerParams params) {
-        this.awarenessAttributeDimensionality = awarenessAttributeDimensionality;
-        this.indexTransformations = List.of(new IndexMappingTypeRemoval(
-                params.getMultiTypeResolutionBehavior()
-        ));
-        this.indexTemplateTransformations = List.of(new IndexMappingTypeRemoval(
-                params.getMultiTypeResolutionBehavior()
-        ));
+    protected Transformer_ES_6_8_to_OS_2_11(
+            int awarenessAttributes,
+            List<TransformationRule<Index>> indexTransformations,
+            List<TransformationRule<Index>> indexTemplateTransformations) {
+        this.awarenessAttributes = awarenessAttributes;
+        this.indexTransformations = indexTransformations;
+        this.indexTemplateTransformations = indexTemplateTransformations;
+        log.atInfo()
+            .setMessage("Transformer initialized with {} indexTransformations")
+            .addArgument(indexTransformations.size())
+            .log();
+        log.atInfo()
+            .setMessage("Transformer initialized with {} indexTemplateTransformations")
+            .addArgument(indexTemplateTransformations.size())
+            .log();
+    }
+
+    public Transformer_ES_6_8_to_OS_2_11(int awarenessAttributes, MetadataTransformerParams params) {
+        this(
+            awarenessAttributes,
+            List.of(new IndexMappingTypeRemoval(params.getMultiTypeResolutionBehavior())),
+            List.of(new IndexMappingTypeRemoval(params.getMultiTypeResolutionBehavior()))
+        );
     }
 
     @Override
@@ -41,7 +56,7 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
         var templatesRoot = globalData.getTemplates();
         if (templatesRoot != null) {
             var templates = mapper.createObjectNode();
-            templatesRoot.fields().forEachRemaining(template -> {
+            templatesRoot.properties().forEach(template -> {
                 var templateCopy = (ObjectNode) template.getValue().deepCopy();
                 var indexTemplate = new Index() {
                     @Override
@@ -109,7 +124,7 @@ public class Transformer_ES_6_8_to_OS_2_11 implements Transformer {
 
         newRoot.set("settings", TransformFunctions.convertFlatSettingsToTree((ObjectNode) newRoot.get("settings")));
         TransformFunctions.removeIntermediateIndexSettingsLevel(newRoot); // run before fixNumberOfReplicas
-        TransformFunctions.fixReplicasForDimensionality(newRoot, awarenessAttributeDimensionality);
+        TransformFunctions.fixReplicasForDimensionality(newRoot, awarenessAttributes);
 
         log.atDebug().setMessage("Transformed Object: {}").addArgument(newRoot).log();
     }

@@ -2,10 +2,18 @@ package org.opensearch.migrations.bulkload.common.http;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.time.Clock;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.opensearch.migrations.arguments.ArgNameConstants;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParametersDelegate;
+import com.beust.jcommander.converters.PathConverter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -25,15 +33,26 @@ public class ConnectionContext {
         HTTPS
     }
 
+    @JsonProperty("uri")
     private final URI uri;
+    @JsonProperty("protocol")
     private final Protocol protocol;
+    @JsonProperty("insecure")
     private final boolean insecure;
+    @JsonIgnore
     private final RequestTransformer requestTransformer;
-    private final boolean compressionSupported;
+    @JsonProperty("awsSpecificAuthentication")
     private final boolean awsSpecificAuthentication;
+    @JsonProperty("disableCompression")
+    private final boolean disableCompression;
+
+    @JsonIgnore
+    private TlsCredentialsProvider tlsCredentialsProvider;
 
     private ConnectionContext(IParams params) {
-        assert params.getHost() != null : "host is null";
+        if (params.getHost() == null) {
+            throw new IllegalArgumentException("No host was found");
+        }
 
         this.insecure = params.isInsecure();
 
@@ -72,7 +91,7 @@ public class ConnectionContext {
         else if (sigv4Enabled) {
             log.error("Sigv4 enabled with {}", DefaultCredentialsProvider.create().resolveCredentials().toString());
             requestTransformer = new SigV4AuthTransformer(
-                DefaultCredentialsProvider.create(),
+                DefaultCredentialsProvider.builder().build(),
                 params.getAwsServiceSigningName(),
                 params.getAwsRegion(),
                 protocol.name(),
@@ -81,7 +100,37 @@ public class ConnectionContext {
         else {
             requestTransformer = new NoAuthTransformer();
         }
-        compressionSupported = params.isCompressionEnabled();
+
+        validateClientCertPairPresence(params);
+
+        if (isTlsCredentialsEnabled(params)) {
+            tlsCredentialsProvider = new FileTlsCredentialsProvider(
+                params.getCaCert(),
+                params.getClientCert(),
+                params.getClientCertKey());
+        }
+
+        this.disableCompression = params.isDisableCompression();
+    }
+
+    // Used for presentation to user facing output
+    public Map<String, String> toUserFacingData() {
+        var dataBuilder = new LinkedHashMap<String, String>();
+        dataBuilder.put("Uri", getUri().toString());
+        dataBuilder.put("Protocol", getProtocol().toString());
+        dataBuilder.put("TLS Verification", isInsecure() ? "Disabled" : "Enabled");
+        if (awsSpecificAuthentication) {
+            dataBuilder.put("AWS Auth", "Enabled");
+        }
+        return dataBuilder;
+    }
+
+    /**
+     * Sets the TLS credentials provider.
+     * NOTE: This method is only intended for testing purposes.
+     */
+    public void setTlsCredentialsProvider(TlsCredentialsProvider tlsCredentialsProvider) {
+        this.tlsCredentialsProvider = tlsCredentialsProvider;
     }
 
     public interface IParams {
@@ -95,7 +144,13 @@ public class ConnectionContext {
 
         String getAwsServiceSigningName();
 
-        boolean isCompressionEnabled();
+        Path getCaCert();
+
+        Path getClientCert();
+
+        Path getClientCertKey();
+
+        boolean isDisableCompression();
 
         boolean isInsecure();
 
@@ -113,16 +168,37 @@ public class ConnectionContext {
         public String host;
 
         @Parameter(
-            names = {"--target-username", "--targetUsername" },
+            names = {ArgNameConstants.TARGET_USERNAME_ARG_CAMEL_CASE, ArgNameConstants.TARGET_USERNAME_ARG_KEBAB_CASE },
             description = "Optional.  The target username; if not provided, will assume no auth on target",
             required = false)
         public String username = null;
 
         @Parameter(
-            names = {"--target-password", "--targetPassword" },
+            names = {ArgNameConstants.TARGET_PASSWORD_ARG_CAMEL_CASE, ArgNameConstants.TARGET_PASSWORD_ARG_KEBAB_CASE },
             description = "Optional.  The target password; if not provided, will assume no auth on target",
             required = false)
         public String password = null;
+
+        @Parameter(
+            names = {"--target-cacert", "--targetCaCert" },
+            description = "Optional. The target CA certificate",
+            required = false,
+            converter = PathConverter.class)
+        public Path caCert = null;
+
+        @Parameter(
+            names = {"--target-client-cert", "--targetClientCert" },
+            description = "Optional. The target client TLS certificate",
+            required = false,
+            converter = PathConverter.class)
+        public Path clientCert = null;
+
+        @Parameter(
+            names = {"--target-client-cert-key", "--targetClientCertKey" },
+            description = "Optional. The target client TLS certificate key",
+            required = false,
+            converter = PathConverter.class)
+        public Path clientCertKey = null;
 
         @Parameter(
             names = {"--target-aws-region", "--targetAwsRegion" },
@@ -147,18 +223,18 @@ public class ConnectionContext {
         TargetAdvancedArgs advancedArgs = new TargetAdvancedArgs();
 
         @Override
-        public boolean isCompressionEnabled() {
-            return advancedArgs.isCompressionEnabled();
+        public boolean isDisableCompression() {
+            return advancedArgs.isDisableCompression();
         }
     }
 
     // Flags that require more testing and validation before recommendations are made
     @Getter
     public static class TargetAdvancedArgs {
-        @Parameter(names = {"--target-compression", "--targetCompression" },
-            description = "**Advanced**. Allow request compression to target",
-            required = false)
-        public boolean compressionEnabled = false;
+        @Parameter(names = {"--disable-compression", "--disableCompression" },
+            description = "**Advanced**. Disable request body compression even if supported on the target cluster."
+        )
+        public boolean isDisableCompression = false;
     }
 
     @Getter
@@ -170,16 +246,37 @@ public class ConnectionContext {
         public String host = null;
 
         @Parameter(
-            names = {"--source-username", "--sourceUsername" },
+            names = {ArgNameConstants.SOURCE_USERNAME_ARG_CAMEL_CASE, ArgNameConstants.SOURCE_USERNAME_ARG_KEBAB_CASE },
             description = "The source username; if not provided, will assume no auth on source",
             required = false)
         public String username = null;
 
         @Parameter(
-            names = {"--source-password", "--sourcePassword" },
+            names = {ArgNameConstants.SOURCE_PASSWORD_ARG_CAMEL_CASE, ArgNameConstants.SOURCE_PASSWORD_ARG_KEBAB_CASE },
             description = "The source password; if not provided, will assume no auth on source",
             required = false)
         public String password = null;
+
+        @Parameter(
+            names = {"--source-cacert", "--sourceCaCert" },
+            description = "Optional. The source CA certificate",
+            required = false,
+            converter = PathConverter.class)
+        public Path caCert = null;
+
+        @Parameter(
+            names = {"--source-client-cert", "--sourceClientCert" },
+            description = "Optional. The source client TLS certificate",
+            required = false,
+            converter = PathConverter.class)
+        public Path clientCert = null;
+
+        @Parameter(
+            names = {"--source-client-cert-key", "--sourceClientCertKey" },
+            description = "Optional. The source client TLS certificate key",
+            required = false,
+            converter = PathConverter.class)
+        public Path clientCertKey = null;
 
         @Parameter(
             names = {"--source-aws-region", "--sourceAwsRegion" },
@@ -201,9 +298,21 @@ public class ConnectionContext {
             required = false)
         public boolean insecure = false;
 
-        public boolean isCompressionEnabled() {
-            // No compression on source due to no ingestion
-            return false;
+        @Override
+        public boolean isDisableCompression() {
+            // No need to interrogate source cluster for compression information
+             return true;
         }
+    }
+
+    private static void validateClientCertPairPresence(IParams params) {
+        if ((params.getClientCert() != null) ^ (params.getClientCertKey() != null)) {
+            throw new IllegalArgumentException(
+                    "Both clientCert and clientCertKey must be provided together, or neither.");
+        }
+    }
+
+    private static boolean isTlsCredentialsEnabled(IParams params) {
+        return (params.getCaCert() != null)  || (params.getClientCert() != null && params.getClientCertKey() != null);
     }
 }

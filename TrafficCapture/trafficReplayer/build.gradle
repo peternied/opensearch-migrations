@@ -13,6 +13,7 @@ plugins {
     id 'org.opensearch.migrations.java-application-conventions'
     id 'io.freefair.lombok'
     id 'java-test-fixtures'
+    id 'com.google.cloud.tools.jib'
 }
 
 dependencies {
@@ -37,8 +38,7 @@ dependencies {
     implementation libs.log4j.slf4j2.impl
     implementation libs.slf4j.api
     implementation libs.disruptor
-    implementation libs.aws.arns
-    implementation libs.aws.secretsmanager
+    implementation libs.aws.auth
     implementation libs.aws.sdk.core
     implementation libs.aws.msk.iam.auth
     implementation libs.commons.compress

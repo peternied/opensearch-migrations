@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(force = true) // For Jackson
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, getterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, property = "type")
-public class IndexMetadataData_OS_2_11 extends IndexMetadata {
+public class IndexMetadataData_OS_2_11 implements IndexMetadata {
     @JsonProperty("body")
     private ObjectNode root;
     @JsonProperty("id")
@@ -20,6 +20,7 @@ public class IndexMetadataData_OS_2_11 extends IndexMetadata {
     private String indexName;
 
     public IndexMetadataData_OS_2_11(ObjectNode root, String indexId, String indexName) {
+        validateRawJson(root);
         this.root = root;
         this.indexId = indexId;
         this.indexName = indexName;

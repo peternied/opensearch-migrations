@@ -6,6 +6,7 @@ import javax.net.ssl.SSLParameters;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,12 +18,14 @@ import org.opensearch.migrations.bulkload.common.http.CompositeTransformer;
 import org.opensearch.migrations.bulkload.common.http.ConnectionContext;
 import org.opensearch.migrations.bulkload.common.http.GzipPayloadRequestTransformer;
 import org.opensearch.migrations.bulkload.common.http.HttpResponse;
+import org.opensearch.migrations.bulkload.common.http.TlsCredentialsProvider;
 import org.opensearch.migrations.bulkload.netty.ReadMeteringHandler;
 import org.opensearch.migrations.bulkload.netty.WriteMeteringHandler;
 import org.opensearch.migrations.bulkload.tracing.IRfsContexts;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -48,6 +51,13 @@ public class RestClient {
 
     public static final String READ_METERING_HANDLER_NAME = "REST_CLIENT_READ_METERING_HANDLER";
     public static final String WRITE_METERING_HANDLER_NAME = "REST_CLIENT_WRITE_METERING_HANDLER";
+
+    // This allows us to control the max "staleness" that a request header/body may have been constructed versus sent
+    // This is important for worker coordination (upper bound on valid request of 15 seconds)
+    // and to a lesser degree SigV4 signed requests.
+    private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    // Longer than the default OpenSearch request timeout of 1 minute
+    private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(65);
 
     private static final String USER_AGENT_HEADER_NAME = HttpHeaderNames.USER_AGENT.toString();
     private static final String CONTENT_TYPE_HEADER_NAME = HttpHeaderNames.CONTENT_TYPE.toString();
@@ -75,22 +85,14 @@ public class RestClient {
 
     protected RestClient(ConnectionContext connectionContext, HttpClient httpClient) {
         this.connectionContext = connectionContext;
+        TlsCredentialsProvider tlsCredentialsProvider = connectionContext.getTlsCredentialsProvider();
 
         SslProvider sslProvider;
-        if (connectionContext.isInsecure()) {
-            try {
-                SslContext sslContext = SslContextBuilder.forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .build();
-                sslProvider = SslProvider.builder().sslContext(sslContext).handlerConfigurator(sslHandler -> {
-                    SSLEngine engine = sslHandler.engine();
-                    SSLParameters sslParameters = engine.getSSLParameters();
-                    sslParameters.setEndpointIdentificationAlgorithm(null);
-                    engine.setSSLParameters(sslParameters);
-                }).build();
-            } catch (SSLException e) {
-                throw new IllegalStateException("Unable to construct SslProvider", e);
-            }
+
+        if (tlsCredentialsProvider != null) {
+            sslProvider = getSslProvider(tlsCredentialsProvider);
+        } else if (connectionContext.isInsecure()) {
+            sslProvider = getInsecureSslProvider();
         } else {
             sslProvider = SslProvider.defaultClientProvider();
         }
@@ -99,6 +101,8 @@ public class RestClient {
             .secure(sslProvider)
             .baseUrl(connectionContext.getUri().toString())
             .disableRetry(false) // Enable one retry on connection reset with no delay
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) DEFAULT_CONNECT_TIMEOUT.toMillis())
+            .responseTimeout(DEFAULT_REQUEST_TIMEOUT)
             .keepAlive(true);
     }
 
@@ -182,11 +186,6 @@ public class RestClient {
             .doOnTerminate(() -> contextCleanupRef.get().run());
     }
 
-
-    public boolean supportsGzipCompression() {
-        return connectionContext.isCompressionSupported();
-    }
-
     public static void addGzipResponseHeaders(Map<String, List<String>> headers) {
         headers.put(ACCEPT_ENCODING_HEADER_NAME, List.of(GZIP_TYPE));
     }
@@ -196,10 +195,6 @@ public class RestClient {
     public static void addGzipRequestHeaders(Map<String, List<String>> headers) {
         headers.put(GzipPayloadRequestTransformer.CONTENT_ENCODING_HEADER_NAME,
             List.of(GzipPayloadRequestTransformer.GZIP_CONTENT_ENCODING_HEADER_VALUE));
-    }
-    public static boolean hasGzipRequestHeaders(Map<String, List<String>> headers) {
-        return headers.getOrDefault(GzipPayloadRequestTransformer.CONTENT_ENCODING_HEADER_NAME, List.of())
-            .contains(GzipPayloadRequestTransformer.GZIP_CONTENT_ENCODING_HEADER_VALUE);
     }
 
 
@@ -272,5 +267,56 @@ public class RestClient {
                     removeIfPresent(p, READ_METERING_HANDLER_NAME);
                 };
             };
+    }
+
+    private SslProvider getSslProvider(TlsCredentialsProvider tlsCredentialsProvider) {
+        try {
+            SslContextBuilder builder = SslContextBuilder.forClient();
+
+            if (tlsCredentialsProvider.hasCACredentials()) {
+                builder.trustManager(tlsCredentialsProvider.getCaCertInputStream());
+            }
+
+            if (tlsCredentialsProvider.hasClientCredentials()) {
+                builder.keyManager(
+                    tlsCredentialsProvider.getClientCertInputStream(),
+                    tlsCredentialsProvider.getClientCertKeyInputStream()
+                );
+            }
+
+            SslContext sslContext = builder.build();
+
+            return SslProvider.builder()
+                .sslContext(sslContext)
+                .handlerConfigurator(sslHandler -> {
+                    SSLEngine engine = sslHandler.engine();
+                    SSLParameters sslParameters = engine.getSSLParameters();
+                    engine.setSSLParameters(sslParameters);
+                })
+                .build();
+
+        } catch (SSLException e) {
+            throw new IllegalStateException("Unable to construct custom SslProvider", e);
+        }
+    }
+
+    private SslProvider getInsecureSslProvider() {
+        try {
+            SslContext sslContext = SslContextBuilder.forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
+
+            return SslProvider.builder()
+                .sslContext(sslContext)
+                .handlerConfigurator(sslHandler -> {
+                    SSLEngine engine = sslHandler.engine();
+                    SSLParameters sslParameters = engine.getSSLParameters();
+                    sslParameters.setEndpointIdentificationAlgorithm(null);
+                    engine.setSSLParameters(sslParameters);
+                })
+                .build();
+        } catch (SSLException e) {
+            throw new IllegalStateException("Unable to construct SslProvider", e);
+        }
     }
 }

@@ -1,5 +1,6 @@
 import {StackPropsExt} from "../stack-composer";
-import {ISecurityGroup, IVpc, SubnetType} from "aws-cdk-lib/aws-ec2";
+import {VpcDetails} from "../network-stack";
+import {ISecurityGroup} from "aws-cdk-lib/aws-ec2";
 import {
     Cluster,
     ContainerImage, CpuArchitecture,
@@ -13,7 +14,8 @@ import {
     Volume,
     AwsLogDriverMode,
     ContainerDependencyCondition,
-    ServiceManagedVolume
+    ServiceManagedVolume,
+    Secret as EcsSecret
 } from "aws-cdk-lib/aws-ecs";
 import {Duration, RemovalPolicy, Stack} from "aws-cdk-lib";
 import {LogGroup, RetentionDays} from "aws-cdk-lib/aws-logs";
@@ -25,7 +27,7 @@ import { IApplicationTargetGroup, INetworkTargetGroup } from "aws-cdk-lib/aws-el
 
 export interface MigrationServiceCoreProps extends StackPropsExt {
     readonly serviceName: string,
-    readonly vpc: IVpc,
+    readonly vpcDetails: VpcDetails,
     readonly securityGroups: ISecurityGroup[],
     readonly cpuArchitecture: CpuArchitecture,
     readonly dockerImageName: string,
@@ -43,7 +45,8 @@ export interface MigrationServiceCoreProps extends StackPropsExt {
     readonly maxUptime?: Duration,
     readonly otelCollectorEnabled?: boolean,
     readonly targetGroups?: ELBTargetGroup[],
-    readonly ephemeralStorageGiB?: number
+    readonly ephemeralStorageGiB?: number,
+    readonly secrets?: Record<string, EcsSecret>
 }
 
 export type ELBTargetGroup = IApplicationTargetGroup | INetworkTargetGroup;
@@ -54,21 +57,21 @@ export class MigrationServiceCore extends Stack {
     createService(props: MigrationServiceCoreProps) {
         const ecsCluster = Cluster.fromClusterAttributes(this, 'ecsCluster', {
             clusterName: `migration-${props.stage}-ecs-cluster`,
-            vpc: props.vpc
+            vpc: props.vpcDetails.vpc
         })
 
-        this.serviceTaskRole = props.taskRole ? props.taskRole : createDefaultECSTaskRole(this, props.serviceName)
+        this.serviceTaskRole = props.taskRole ?? createDefaultECSTaskRole(this, props.serviceName, this.region, props.stage)
         props.taskRolePolicies?.forEach(policy => this.serviceTaskRole.addToPolicy(policy))
 
         const serviceTaskDef = new FargateTaskDefinition(this, "ServiceTaskDef", {
-            ephemeralStorageGiB: Math.max(props.ephemeralStorageGiB ? props.ephemeralStorageGiB : 75, 21), // valid values 21 - 200
+            ephemeralStorageGiB: Math.max(props.ephemeralStorageGiB ?? 75, 21), // valid values 21 - 200
             runtimePlatform: {
                 operatingSystemFamily: OperatingSystemFamily.LINUX,
                 cpuArchitecture: props.cpuArchitecture
             },
             family: `migration-${props.stage}-${props.serviceName}`,
-            memoryLimitMiB: props.taskMemoryLimitMiB ? props.taskMemoryLimitMiB : 1024,
-            cpu: props.taskCpuUnits ? props.taskCpuUnits : 256,
+            memoryLimitMiB: props.taskMemoryLimitMiB ?? 1024,
+            cpu: props.taskCpuUnits ?? 256,
             taskRole: this.serviceTaskRole
         });
         if (props.volumes) {
@@ -83,11 +86,13 @@ export class MigrationServiceCore extends Stack {
             logGroupName: `/migration/${props.stage}/${props.defaultDeployId}/${props.serviceName}`
         });
 
+        const multilineRe = /^(\[[A-Z ]{1,5}\] )?\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/;
         const serviceContainer = serviceTaskDef.addContainer("ServiceContainer", {
             image: serviceImage,
             containerName: props.serviceName,
             command: props.dockerImageCommand,
             environment: props.environment,
+            secrets: props.secrets,
             portMappings: props.portMappings,
             logging: LogDrivers.awsLogs({
                 streamPrefix: `${props.serviceName}-logs`,
@@ -96,7 +101,7 @@ export class MigrationServiceCore extends Stack {
                 // and  "[ERROR] 2024-12-31 23:59:59..."
                 // and  "2024-12-31 23:59:59..."
                 // and  "2024-12-31T23:59:59..."
-                multilinePattern: "^(\\[[A-Z ]{1,5}\\] )?\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}",
+                multilinePattern: multilineRe.source,
                 // Defer buffering behavior to log4j2 for greater flexibility
                 mode: AwsLogDriverMode.BLOCKING,
             }),
@@ -150,7 +155,7 @@ export class MigrationServiceCore extends Stack {
         }
 
         if (props.otelCollectorEnabled) {
-            OtelCollectorSidecar.addOtelCollectorContainer(serviceTaskDef, serviceLogGroup.logGroupName);
+            OtelCollectorSidecar.addOtelCollectorContainer(serviceTaskDef, serviceLogGroup.logGroupName, props.stage);
         }
 
         const fargateService = new FargateService(this, "ServiceFargateService", {
@@ -161,12 +166,12 @@ export class MigrationServiceCore extends Stack {
             desiredCount: props.taskInstanceCount,
             enableExecuteCommand: true,
             securityGroups: props.securityGroups,
-            vpcSubnets: props.vpc.selectSubnets({subnetType: SubnetType.PRIVATE_WITH_EGRESS}),
+            vpcSubnets: props.vpcDetails.subnetSelection,
         });
 
         // Add any ServiceManagedVolumes to the service, if they exist
         if (props.volumes) {
-            props.volumes.filter(vol => vol instanceof ServiceManagedVolume).forEach(vol => fargateService.addVolume(vol as ServiceManagedVolume));
+            props.volumes.filter(vol => vol instanceof ServiceManagedVolume).forEach(vol => fargateService.addVolume(vol));
         }
 
         if (props.targetGroups) {

@@ -10,6 +10,7 @@ When performing a migration of a search cluster, the metadata items such as inde
 - [How the tool works](#how-the-tool-works)
   - [Breaking change compatibility](#breaking-change-compatibility)
     - [Deprecation of Mapping Types](#deprecation-of-mapping-types)
+  - [Output formats](#output-formats)
 
 ## Run Metadata Migration
 
@@ -37,7 +38,7 @@ Clusters:
       Remote Cluster: OpenSearch 1.3.16 ConnectionContext(uri=http://localhost:33039, protocol=HTTP, insecure=false, compressionSupported=false)
 
    Target:
-      Remote Cluster: OpenSearch 2.14.0 ConnectionContext(uri=http://localhost:33037, protocol=HTTP, insecure=false, compressionSupported=false)
+      Remote Cluster: OpenSearch 2.19.1 ConnectionContext(uri=http://localhost:33037, protocol=HTTP, insecure=false, compressionSupported=false)
 
 
 Migration Candidates:
@@ -80,7 +81,7 @@ Clusters:
       Snapshot: OpenSearch 1.3.16 FileSystemRepo(repoRootDir=/tmp/junit10626813752669559861)
 
    Target:
-      Remote Cluster: OpenSearch 2.14.0 ConnectionContext(uri=http://localhost:33042, protocol=HTTP, insecure=false, compressionSupported=false)
+      Remote Cluster: OpenSearch 2.19.1 ConnectionContext(uri=http://localhost:33042, protocol=HTTP, insecure=false, compressionSupported=false)
 
 
 Migrated Items:
@@ -151,3 +152,15 @@ As Metadata migration supports migrating from ES 6.8 on to the latest versions o
 ```
 
 *Technical details are available, [view source code](../transformation/src/main/java/org/opensearch/migrations/transformation/rules/IndexMappingTypeRemoval.java).*
+
+### Output formats
+
+The tool supports both human-readable output (default) and JSON output formats. You can specify the desired format using the `--output` parameter:
+
+```shell
+console metadata evaluate [...] --output json
+```
+
+Human-readable format is designed for direct consumption by users, with clear sections and formatting. JSON output is particularly useful for programmatic consumption, logging to external systems, or post-processing with tools like `jq`.
+
+For detailed examples of both output formats and how to use them in different scenarios, see the [Output Formats section](./DEVELOPER_GUIDE.md#output-formats) in the Developer Guide.

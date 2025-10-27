@@ -104,21 +104,21 @@ public class IndexMappingTypeRemoval implements TransformationRule<Index> {
             var mappingsArray = (ArrayNode) mappingsNode;
             if (mappingsArray.size() < 2) {
                 final var mappingsInnerNode = (ObjectNode) mappingsArray.get(0);
-                var properties = mappingsInnerNode.fields().next().getValue().get(PROPERTIES_KEY);
+                var properties = mappingsInnerNode.properties().iterator().next().getValue().get(PROPERTIES_KEY);
                 resolvedMappingsNode.set(PROPERTIES_KEY, properties);
             } else if (MultiTypeResolutionBehavior.UNION.equals(multiTypeResolutionBehavior)) {
                 mergePropertiesFromMappings(mappingsArray, index, resolvedProperties);
             }
             index.getRawJson().set(MAPPINGS_KEY, resolvedMappingsNode);
         } else if (mappingsNode.isObject()) {
-            mergePropertiesFromMappings((ObjectNode)mappingsNode, index, resolvedProperties);
+            mergePropertiesFromMappings((ObjectNode) mappingsNode, index, resolvedProperties);
         }
         index.getRawJson().set(MAPPINGS_KEY, resolvedMappingsNode);
         return true;
     }
 
     private void mergePropertiesFromMappings(ObjectNode mappingsNode, Index index, ObjectNode resolvedProperties) {
-        mappingsNode.fields().forEachRemaining(typeEntry -> {
+        mappingsNode.properties().forEach(typeEntry -> {
             var typeNode = typeEntry.getValue();
             if (typeNode.has(PROPERTIES_KEY)) {
                 var propertiesNode = typeNode.get(PROPERTIES_KEY);
@@ -129,7 +129,7 @@ public class IndexMappingTypeRemoval implements TransformationRule<Index> {
 
     private void mergePropertiesFromMappings(ArrayNode mappingsArray, Index index, ObjectNode resolvedProperties) {
         mappingsArray.forEach(typeNodeEntry -> {
-            var typeNode = typeNodeEntry.fields().next().getValue();
+            var typeNode = typeNodeEntry.properties().iterator().next().getValue();
             if (typeNode.has(PROPERTIES_KEY)) {
                 var propertiesNode = typeNode.get(PROPERTIES_KEY);
                 mergePropertiesCheckingConflicts(index, resolvedProperties, typeNode.textValue(), propertiesNode);
@@ -137,7 +137,7 @@ public class IndexMappingTypeRemoval implements TransformationRule<Index> {
         });
     }
 
-    private void mergePropertiesCheckingConflicts(final Index index, ObjectNode resolvedProperties, String type, JsonNode properties) {
+    protected void mergePropertiesCheckingConflicts(final Index index, ObjectNode resolvedProperties, String type, JsonNode properties) {
         properties.properties().forEach(propertyEntry -> {
             var fieldName = propertyEntry.getKey();
             var fieldType = propertyEntry.getValue();
@@ -157,7 +157,7 @@ public class IndexMappingTypeRemoval implements TransformationRule<Index> {
                             .addArgument(fieldType)
                             .log();
                     throw new IllegalArgumentException("Conflicting definitions for property during union "
-                    + fieldName + " (" + existingFieldType + " and " + fieldType + ")" );
+                        + fieldName + " (" + existingFieldType + " and " + fieldType + ")");
                 }
             } else {
                 resolvedProperties.set(fieldName, fieldType);

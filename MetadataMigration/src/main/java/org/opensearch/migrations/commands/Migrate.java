@@ -25,20 +25,20 @@ public class Migrate extends MigratorEvaluatorBase {
             migrateResult.clusters(clusters);
 
             var transformer = selectTransformer(clusters);
+            migrateResult.transformations(transformer);
 
-            var items = migrateAllItems(migrationMode, clusters, transformer, context);
+            var items = migrateAllItems(migrationMode, clusters, transformer.getTransformer(), context);
             migrateResult.items(items);
         } catch (ParameterException pe) {
             log.atError().setCause(pe).setMessage("Invalid parameter").log();
-            migrateResult
-                .exitCode(INVALID_PARAMETER_CODE)
+            migrateResult.exitCode(INVALID_PARAMETER_CODE)
                 .errorMessage("Invalid parameter: " + pe.getMessage())
                 .build();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             log.atError().setCause(e).setMessage("Unexpected failure").log();
             migrateResult
                 .exitCode(UNEXPECTED_FAILURE_CODE)
-                .errorMessage("Unexpected failure: " + e.getMessage())
+                .errorMessage(createUnexpectedErrorMessage(e))
                 .build();
         }
 

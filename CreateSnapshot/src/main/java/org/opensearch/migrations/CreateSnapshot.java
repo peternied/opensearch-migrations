@@ -2,6 +2,8 @@ package org.opensearch.migrations;
 
 import java.util.List;
 
+import org.opensearch.migrations.arguments.ArgLogUtils;
+import org.opensearch.migrations.arguments.ArgNameConstants;
 import org.opensearch.migrations.bulkload.common.FileSystemSnapshotCreator;
 import org.opensearch.migrations.bulkload.common.OpenSearchClientFactory;
 import org.opensearch.migrations.bulkload.common.S3SnapshotCreator;
@@ -41,6 +43,12 @@ public class CreateSnapshot {
         public String snapshotName;
 
         @Parameter(
+                names = { "--snapshot-repo-name" },
+                required = true,
+                description = "The name of the snapshot repository")
+        public String snapshotRepoName;
+
+        @Parameter(
                 names = {"--file-system-repo-path" },
                 required = false,
                 description = "The full path to the snapshot repo on the file system.")
@@ -57,6 +65,12 @@ public class CreateSnapshot {
                 required = false,
                 description = "The AWS Region the S3 bucket is in, like: us-east-2")
         public String s3Region;
+
+        @Parameter(
+                names = {"--s3-endpoint" },
+                required = false,
+                description = "The S3 endpoint setting to specify when creating a snapshot repository")
+        public String s3Endpoint;
 
         @ParametersDelegate
         public ConnectionContext.SourceArgs sourceArgs = new ConnectionContext.SourceArgs();
@@ -101,7 +115,7 @@ public class CreateSnapshot {
     }
 
     public static void main(String[] args) throws Exception {
-        // TODO: Add back arg printing after not consuming plaintext password MIGRATIONS-1915
+        System.err.println("Starting program with: " + String.join(" ", ArgLogUtils.getRedactedArgs(args, ArgNameConstants.CENSORED_SOURCE_ARGS)));
         Args arguments = new Args();
         JCommander jCommander = JCommander.newBuilder().addObject(arguments).build();
         jCommander.parse(args);
@@ -141,6 +155,7 @@ public class CreateSnapshot {
         if (arguments.fileSystemRepoPath != null) {
             snapshotCreator = new FileSystemSnapshotCreator(
                     arguments.snapshotName,
+                    arguments.snapshotRepoName,
                     client,
                     arguments.fileSystemRepoPath,
                     arguments.indexAllowlist,
@@ -149,9 +164,11 @@ public class CreateSnapshot {
         } else {
             snapshotCreator = new S3SnapshotCreator(
                 arguments.snapshotName,
+                arguments.snapshotRepoName,
                 client,
                 arguments.s3RepoUri,
                 arguments.s3Region,
+                arguments.s3Endpoint,
                 arguments.indexAllowlist,
                 arguments.maxSnapshotRateMBPerNode,
                 arguments.s3RoleArn,

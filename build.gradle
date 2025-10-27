@@ -1,15 +1,19 @@
+import com.google.cloud.tools.jib.gradle.JibTask
 import groovy.json.JsonOutput
 
 plugins {
 //    Observing higher memory usage with task-tree plugin. Disabling except if needed
-//    id "com.dorongold.task-tree" version "2.1.1"
-    id "com.diffplug.spotless" version '7.0.2'
-    id 'io.freefair.lombok' version '8.13' apply false
-    id 'jacoco'
+//    id "com.dorongold.task-tree" version "4.0.1"
+    id "com.diffplug.spotless" version '8.0.0'
+    id 'io.freefair.lombok' version '9.0.0' apply false
     id 'me.champeau.jmh' version '0.7.3' apply false
-    id 'com.gradleup.shadow' version '8.3.6' apply false
+    id 'com.gradleup.shadow' version '8.3.8' apply false
     id 'com.avast.gradle.docker-compose' version "0.17.12" apply false
-    id 'com.google.protobuf' version "0.9.4" apply false
+    id 'com.google.protobuf' version "0.9.5" apply false
+    id 'com.google.cloud.tools.jib' version '3.4.5' apply false
+
+    // Used in top level build.gradle
+    id 'jacoco' apply true
 }
 
 allprojects {
@@ -70,11 +74,17 @@ allprojects {
 }
 
 task buildDockerImages() {
+    dependsOn(':frontend:buildDockerImage')
     dependsOn(':TrafficCapture:dockerSolution:buildDockerImages')
     dependsOn(':DocumentsFromSnapshotMigration:buildDockerImages')
 }
 
-def commonExclusions = ['**/build/**', '**/node_modules/**', '**/opensearch-cluster-cdk/**', '**/cdk.out/**']
+def commonExclusions = ['**/build/**',
+                        '**/node_modules/**',
+                        '**/opensearch-cluster-cdk/**',
+                        '**/cdk.out/**',
+                        '**/transformation/standardJavascriptTransforms/node_modules/**',
+                        '**/frontend/**']
 spotless {
     format 'misc', {
         target fileTree('.') {
@@ -108,34 +118,7 @@ spotless {
 subprojects {
     apply plugin: "com.diffplug.spotless"
     apply plugin: 'jacoco'
-    apply plugin: 'java'
     apply plugin: 'maven-publish'
-
-    configurations.all {
-        resolutionStrategy {
-            // Force specific versions of transitive dependencies to handle CVEs
-            force 'net.minidev:json-smart:2.5.2'
-            force 'xalan:xalan:2.7.3'
-            force 'com.thoughtworks.xstream:xstream:1.4.21'
-            force 'commons-net:commons-net:3.11.1'
-            force 'org.jsoup:jsoup:1.19.1'
-            force 'org.apache.tika:tika-core:3.1.0'
-            force 'com.jayway.jsonpath:json-path:2.9.0'
-            force 'dnsjava:dnsjava:3.6.3'
-            force 'org.xerial.snappy:snappy-java:1.1.10.7'
-            force 'org.glassfish.jersey.core:jersey-common:3.1.10'
-            force 'org.apache.httpcomponents:httpclient:4.5.14'
-
-            preferProjectModules()
-        }
-    }
-
-    java {
-        toolchain {
-            languageVersion.set(JavaLanguageVersion.of(17))
-            vendor.set(JvmVendorSpec.AMAZON)
-        }
-    }
 
     // See https://github.com/diffplug/spotless/tree/main/plugin-gradle#java for some documentation,
     // though what '#' does is still undocumented from what I can tell
@@ -155,202 +138,222 @@ subprojects {
         }
     }
 
-    tasks.withType(Test) {
-        // Getting javadoc to compile is part of the test suite to ensure we are able to publish our artifacts
-        dependsOn project.javadoc
+    plugins.withId('com.google.cloud.tools.jib') {
+        tasks.withType(JibTask).configureEach {
+            notCompatibleWithConfigurationCache("because https://github.com/GoogleContainerTools/jib/issues/3132")
+        }
     }
-    if (!sourceSets.test.allSource.files.isEmpty()) {
+
+    tasks.withType(Javadoc).configureEach {
+        options.addStringOption('Xdoclint:none', '-quiet')
+    }
+
+    plugins.withId('java') {
+
+        java {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(17))
+                vendor.set(JvmVendorSpec.AMAZON)
+            }
+        }
+
         tasks.withType(Test) {
-            testLogging {
-                events "passed", "skipped", "failed"
-                exceptionFormat "full"
-                showExceptions true
-                showCauses true
-                showStackTraces true
-            }
-            maxParallelForks = gradle.startParameter.maxWorkerCount
-
-            // Provide way to exclude particular tests from CLI
-            // e.g. ../gradlew test -PexcludeTests=**/KafkaProtobufConsumerLongTermTest*
-            if (project.hasProperty('excludeTests')) {
-                exclude project.property('excludeTests')
-            }
-
-            useJUnitPlatform()
-            //  Disable parallel test execution, see MIGRATIONS-1666
-            systemProperty 'junit.jupiter.execution.parallel.enabled', 'false'
-            systemProperty 'log4j2.contextSelector', 'org.apache.logging.log4j.core.selector.BasicContextSelector'
-
-            // Register BucketTestExtension for all tests to enable test striping
-            // Test striping allows distributing test execution across multiple runs
-            // Usage: ./gradlew test -Dtest.striping.total=N -Dtest.striping.index=I
-            //   where N is the total number of buckets (e.g., 3)
-            //   and I is the current bucket index (0 to N-1)
-            // Example: To run 1/3 of tests in first bucket:
-            //   ./gradlew test -Dtest.striping.total=3 -Dtest.striping.index=0
-            def total = System.getProperty("test.striping.total")
-            def index = System.getProperty("test.striping.index")
-
-            if (total != null) {
-                systemProperty "test.striping.total", total
-            }
-            if (index != null) {
-                systemProperty "test.striping.index", index
-            }
-
-            systemProperty 'junit.jupiter.extensions.autodetection.enabled', true
-            // Verify assertions in tests
-            jvmArgs = ['-ea', '-XX:+HeapDumpOnOutOfMemoryError']
-            systemProperty "junit.jupiter.execution.timeout.default", "5m"
-            jacoco {
-                enabled = true
-                def stripingSuffix = (total != null && index != null) ? "-${index}-of-${total}" : ""
-                destinationFile = layout.buildDirectory.file("jacoco/${project.name}-${name}${stripingSuffix}.exec").get().asFile
-            }
+            // Getting javadoc to compile is part of the test suite to ensure we are able to publish our artifacts
+            dependsOn project.javadoc
         }
-        // Mutually exclusive tests to avoid duplication
-        tasks.named('test') {
-            systemProperty 'migrationLogLevel', 'TRACE'
-            useJUnitPlatform {
-                excludeTags('longTest', 'isolatedTest')
-            }
-        }
+        if (!sourceSets.test.allSource.files.isEmpty()) {
+            tasks.withType(Test) {
+                testLogging {
+                    events = ["passed", "skipped", "failed"]
+                    exceptionFormat = "full"
+                    showExceptions = true
+                    showCauses = true
+                    showStackTraces = true
+                }
+                maxParallelForks = gradle.startParameter.maxWorkerCount
 
-        tasks.register('slowTest', Test) {
-            systemProperty 'migrationLogLevel', 'DEBUG'
-            useJUnitPlatform {
-                includeTags 'longTest'
-                excludeTags 'isolatedTest'
-            }
-        }
+                // Provide way to exclude particular tests from CLI
+                // e.g. ../gradlew test -PexcludeTests=**/KafkaProtobufConsumerLongTermTest*
+                if (project.hasProperty('excludeTests')) {
+                    exclude project.property('excludeTests')
+                }
 
-                tasks.register('isolatedTest', Test) {
-            maxParallelForks = 1
-            useJUnitPlatform {
-                includeTags 'isolatedTest'
-            }
-        }
+                useJUnitPlatform()
+                //  Disable parallel test execution, see MIGRATIONS-1666
+                systemProperty 'junit.jupiter.execution.parallel.enabled', 'false'
+                systemProperty 'log4j2.contextSelector', 'org.apache.logging.log4j.core.selector.BasicContextSelector'
 
-        tasks.register('fullTest') {
-            dependsOn test
-            dependsOn slowTest
-            dependsOn isolatedTest
-        }
-    } else {
-        tasks.withType(Test) {
-            jacoco {
-                enabled = false
-            }
-        }
-    }
+                // Register BucketTestExtension for all tests to enable test striping
+                // Test striping allows distributing test execution across multiple runs
+                // Usage: ./gradlew test -Dtest.striping.total=N -Dtest.striping.index=I
+                //   where N is the total number of buckets (e.g., 3)
+                //   and I is the current bucket index (0 to N-1)
+                // Example: To run 1/3 of tests in first bucket:
+                //   ./gradlew test -Dtest.striping.total=3 -Dtest.striping.index=0
+                def total = System.getProperty("test.striping.total")
+                def index = System.getProperty("test.striping.index")
 
-    task javadocJar(type: Jar, dependsOn: javadoc) {
-        archiveClassifier.set('javadoc')
-        from javadoc.destinationDir
-    }
+                if (total != null) {
+                    systemProperty "test.striping.total", total
+                }
+                if (index != null) {
+                    systemProperty "test.striping.index", index
+                }
 
-    task sourcesJar(type: Jar) {
-        archiveClassifier.set('sources')
-        from sourceSets.main.allSource
-        duplicatesStrategy = DuplicatesStrategy.WARN
-    }
-
-    def excludedProjectPaths = [
-            ':RFS',
-            ':TrafficCapture',
-            ':TrafficCapture:dockerSolution',
-    ]
-    if (!(project.path in excludedProjectPaths)) {
-        publishing {
-            publications {
-                mavenJava(MavenPublication) {
-                    versionMapping {
-                        allVariants {
-                            // Test fixtures are published as a separate jar in maven
-                            // This ensures dependencies that are only declared in test
-                            // fixtures have a version number in the pom
-                            if (project.plugins.hasPlugin('java-test-fixtures')) {
-                                fromResolutionOf('testFixturesRuntimeClasspath')
-                            }
-                            fromResolutionResult()
-                        }
-                    }
-
-                    from components.java
-                    artifact javadocJar
-                    artifact sourcesJar
-
-                    pom {
-                        name = project.name
-                        description = 'Everything opensearch migrations'
-                        url = 'http://github.com/opensearch-project/opensearch-migrations'
-
-                        licenses {
-                            license {
-                                name = 'The Apache License, Version 2.0'
-                                url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                            }
-                        }
-                        developers {
-                            developer {
-                                name = "OpenSearch"
-                                url = "https://github.com/opensearch-project/opensearch-migrations"
-                            }
-                        }
-                        scm {
-                            connection = "scm:git@github.com:opensearch-project/opensearch-migrations.git"
-                            developerConnection = "scm:git@github.com:opensearch-project/opensearch-migrations.git"
-                            url = "git@github.com:opensearch-project/opensearch-migrations.git"
-                        }
-                    }
-
-                    pom.withXml {
-                        def pomFile = asNode()
-
-                        // Find all dependencies in the POM file
-                        def dependencies = pomFile.dependencies.dependency
-
-                        // Iterate over each dependency and check if the version is missing
-                        dependencies.each { dependency ->
-                            def version = dependency.version.text()
-
-                            if (version == null || version.trim().isEmpty() || version.trim() == 'unspecified') {
-                                def groupId = dependency.groupId.text()
-                                def artifactId = dependency.artifactId.text()
-                                throw new GradleException("Dependency ${groupId}:${artifactId} is missing a version in the pom.xml")
-                            }
-                        }
-                    }
-
-                    // Suppress POM metadata warnings for test fixtures
-                    suppressPomMetadataWarningsFor('testFixturesApiElements')
-                    suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
+                systemProperty 'junit.jupiter.extensions.autodetection.enabled', true
+                // Verify assertions in tests
+                jvmArgs += ['-ea', '-XX:+HeapDumpOnOutOfMemoryError', '-Xmx2g']
+                systemProperty "junit.jupiter.execution.timeout.default", "5m"
+                jacoco {
+                    enabled = true
+                    def stripingSuffix = (total != null && index != null) ? "-${index}-of-${total}" : ""
+                    destinationFile = layout.buildDirectory.file("jacoco/${project.name}-${name}${stripingSuffix}.exec").get().asFile
                 }
             }
-            repositories {
-                maven { url = "${rootProject.buildDir}/repository"}
-                maven {
-                    url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
-                    name = 'staging'
+
+            // Mutually exclusive tests to avoid duplication
+            tasks.named('test') {
+                systemProperty 'migrationLogLevel', 'TRACE'
+                useJUnitPlatform {
+                    excludeTags('longTest', 'isolatedTest')
+                }
+            }
+
+            tasks.register('slowTest', Test) {
+                systemProperty 'migrationLogLevel', 'DEBUG'
+                useJUnitPlatform {
+                    includeTags 'longTest'
+                    excludeTags 'isolatedTest'
+                }
+            }
+
+            tasks.register('isolatedTest', Test) {
+                maxParallelForks = 1
+                useJUnitPlatform {
+                    includeTags 'isolatedTest'
+                }
+            }
+
+            tasks.register('fullTest') {
+                dependsOn test
+                dependsOn slowTest
+                dependsOn isolatedTest
+            }
+        } else {
+            tasks.withType(Test) {
+                jacoco {
+                    enabled = false
                 }
             }
         }
-    }
 
-    // Utility task to allow copying required libraries into a 'dependencies' folder for security scanning
-    tasks.register('copyDependencies', Sync) {
-        duplicatesStrategy = DuplicatesStrategy.WARN
+        task javadocJar(type: Jar, dependsOn: javadoc) {
+            archiveClassifier.set('javadoc')
+            from javadoc.destinationDir
+        }
 
-        from configurations.runtimeClasspath
-        into "${buildDir}/dependencies"
-    }
+        task sourcesJar(type: Jar) {
+            archiveClassifier.set('sources')
+            from sourceSets.main.allSource
+            duplicatesStrategy = DuplicatesStrategy.WARN
+        }
 
-    def testsWithJacoco = project.tasks.withType(Test).matching { it.jacoco && it.jacoco.enabled }
-    jacocoTestReport {
-        dependsOn = testsWithJacoco
-        executionData.from testsWithJacoco*.jacoco.destinationFile
-        reports {
-            xml.required = true
+        def excludedProjectPaths = [
+                ':TrafficCapture',
+                ':TrafficCapture:dockerSolution',
+        ]
+        if (!(project.path in excludedProjectPaths)) {
+            publishing {
+                publications {
+                    mavenJava(MavenPublication) {
+                        versionMapping {
+                            allVariants {
+                                // Test fixtures are published as a separate jar in maven
+                                // This ensures dependencies that are only declared in test
+                                // fixtures have a version number in the pom
+                                if (project.plugins.hasPlugin('java-test-fixtures')) {
+                                    fromResolutionOf('testFixturesRuntimeClasspath')
+                                }
+                                fromResolutionResult()
+                            }
+                        }
+
+                        from components.java
+                        artifact javadocJar
+                        artifact sourcesJar
+
+                        pom {
+                            name = project.name
+                            description = 'Everything opensearch migrations'
+                            url = 'http://github.com/opensearch-project/opensearch-migrations'
+
+                            licenses {
+                                license {
+                                    name = 'The Apache License, Version 2.0'
+                                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                                }
+                            }
+                            developers {
+                                developer {
+                                    name = "OpenSearch"
+                                    url = "https://github.com/opensearch-project/opensearch-migrations"
+                                }
+                            }
+                            scm {
+                                connection = "scm:git@github.com:opensearch-project/opensearch-migrations.git"
+                                developerConnection = "scm:git@github.com:opensearch-project/opensearch-migrations.git"
+                                url = "git@github.com:opensearch-project/opensearch-migrations.git"
+                            }
+                        }
+
+                        pom.withXml {
+                            def pomFile = asNode()
+
+                            // Find all dependencies in the POM file
+                            def dependencies = pomFile.dependencies.dependency
+
+                            // Iterate over each dependency and check if the version is missing
+                            dependencies.each { dependency ->
+                                def version = dependency.version.text()
+
+                                if (version == null || version.trim().isEmpty() || version.trim() == 'unspecified') {
+                                    def groupId = dependency.groupId.text()
+                                    def artifactId = dependency.artifactId.text()
+                                    throw new GradleException("Dependency ${groupId}:${artifactId} is missing a version in the pom.xml")
+                                }
+                            }
+                        }
+
+                        // Suppress POM metadata warnings for test fixtures
+                        suppressPomMetadataWarningsFor('testFixturesApiElements')
+                        suppressPomMetadataWarningsFor('testFixturesRuntimeElements')
+                    }
+                }
+                repositories {
+                    maven { url = "${rootProject.buildDir}/repository" }
+                    maven {
+                        url = "https://aws.oss.sonatype.org/content/repositories/snapshots"
+                        name = 'staging'
+                    }
+                }
+            }
+        }
+
+        def testsWithJacoco = project.tasks.withType(Test).matching { it.jacoco && it.jacoco.enabled }
+        jacocoTestReport {
+            dependsOn = testsWithJacoco
+            executionData.from testsWithJacoco*.jacoco.destinationFile
+            reports {
+                xml.required = true
+            }
+        }
+
+        // Utility task to allow copying required libraries into a 'dependencies' folder for security scanning
+        tasks.register('copyDependencies', Sync) {
+            duplicatesStrategy = DuplicatesStrategy.WARN
+
+            from configurations.runtimeClasspath
+            into "${buildDir}/dependencies"
         }
     }
 }
@@ -371,8 +374,7 @@ tasks.register('jacocoAggregateReport', JacocoReport) {
     classDirectories.setFrom(
             files(javaProjects.collect { project ->
                 project.sourceSets.main.output.classesDirs.filter { dir ->
-                    !dir.path.contains('captureProtobufs') &&
-                            !dir.path.contains('trafficCaptureProxyServerTest')
+                    !dir.path.contains('captureProtobufs')
                 }
             })
     )
@@ -390,12 +392,50 @@ tasks.register('jacocoAggregateReport', JacocoReport) {
         html.required = true
         html.destination file("${buildDir}/reports/jacoco/mergedReport/html")
     }
+
+    doLast {
+        File xmlFile = reports.xml.outputLocation.get().asFile
+        // Doctype's are not allowed by the XmlParser, so remove them
+        String xmlText = xmlFile.text.replaceAll(/(?m)<!DOCTYPE[^>]*>/, "")
+        def reportXml = new XmlParser().parseText(xmlText)
+
+        List<String> summaryLines = []
+        summaryLines << "### Code Coverage Summary"
+        reportXml.counter.each { c ->
+            int missed  = c.@missed  as int
+            int covered = c.@covered as int
+            int total   = missed + covered
+            double percent  = total ? (covered / total * 100) : 0
+            // Looks like: "LINE       : 85.4% (123/144)"
+            summaryLines <<  String.format(
+                "%-12s : %6.1f%% (%d/%d)",
+                c.@type, percent, covered, total
+            )
+        }
+
+        // Print to the console logger
+        summaryLines.each { line ->
+            logger.lifecycle(line)
+        }
+
+        // If running in a github action, print into that file
+        def summaryPath = System.getenv('GITHUB_STEP_SUMMARY')
+        if (summaryPath) {
+            def ghaSummary = new File(summaryPath)
+            ghaSummary.parentFile?.mkdirs()
+            ghaSummary.withWriterAppend { w ->
+                summaryLines.each { w.println(it) }
+            }
+        }
+    }
 }
 
 gradle.projectsEvaluated {
-    List<Task> isolatedTestsTasks = []
-    List<Task> sharedProcessTestsTasks = []
+    Set<Task> isolatedTestsTasks = [] as Set
+    Set<Task> sharedProcessTestsTasks = [] as Set
+
     subprojects { subproject ->
+        // Collect all Test type tasks
         subproject.tasks.withType(Test).all { task ->
             if (task.name == "isolatedTest") {
                 isolatedTestsTasks.add(task)
@@ -403,17 +443,24 @@ gradle.projectsEvaluated {
                 sharedProcessTestsTasks.add(task)
             }
         }
+
+        // Collect tasks named 'test' (no need to check for duplicates with Sets)
+        subproject.tasks.matching { task ->
+            task.name == 'test' && !(task instanceof Test)
+        }.configureEach { task ->
+            println "adding task named 'test' = ${task}"
+            sharedProcessTestsTasks.add(task)
+        }
     }
-    isolatedTestsTasks.sort { task -> task.project.name }
 
     // Create a sequential dependency chain
     Task previousTask = null
-    isolatedTestsTasks.each { task ->
+    isolatedTestsTasks.toList().sort { task -> task.project.name }.each { task ->
         sharedProcessTestsTasks.forEach {task.mustRunAfter(it) }
         if (previousTask != null) {
             task.mustRunAfter(previousTask)
         }
-        previousTask = task
+        previousTask = task as Task
     }
 
     tasks.register("allTests") {
@@ -422,61 +469,79 @@ gradle.projectsEvaluated {
     }
 }
 
-task mergeJacocoReports {
-    def jacocoReportTasks = subprojects.collect { it.tasks.withType(JacocoReport).matching { it.name == "jacocoTestReport" } }.flatten()
-    dependsOn jacocoReportTasks
-
-    // Create a Sync task to collect all exec files
-    def syncJacocoExecFiles = tasks.create("syncJacocoExecFiles", Sync) {
-        from jacocoReportTasks.collect { it.executionData }
-        into "${buildDir}/jacocoMerged/"
-        duplicatesStrategy = DuplicatesStrategy.FAIL
-    }
-
-    // Make sure sync task runs after all report tasks
-    syncJacocoExecFiles.mustRunAfter jacocoReportTasks
-    dependsOn syncJacocoExecFiles
-
-    // Finalize with jacocoAggregateReport
-    finalizedBy jacocoAggregateReport
-}
-
-task listPublishedArtifacts {
-    doLast {
-        subprojects.each { proj ->
-            def publishingExtension = proj.extensions.findByType(PublishingExtension)
-            if (publishingExtension) {
-                publishingExtension.publications.each { publication ->
-                    if (publication instanceof MavenPublication) {
-                        println "${publication.groupId}.${publication.artifactId}"
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Define a provider for test tasks list
-def testTasksProvider = provider {
-    def testTasks = []
+def jacocoExecFilesProvider = provider {
+    def execFiles = []
     rootProject.subprojects.each { subproject ->
-        def projectPath = subproject.path
-
         subproject.tasks.withType(Test).configureEach { testTask ->
             def jacocoExtension = testTask.extensions.findByType(JacocoTaskExtension)
-            if (!(jacocoExtension?.enabled ?: false)) {
-                testTasks << "${projectPath}:${testTask.name}"
+            if (jacocoExtension?.enabled) {
+                execFiles << jacocoExtension.destinationFile
             }
         }
+    }
+    return execFiles
+}
 
-        if (subproject.tasks.withType(Test).any { testTask ->
+def jacocoTestTasksProvider = provider {
+    def testTasks = []
+    rootProject.subprojects.each { subproject ->
+        subproject.tasks.withType(Test).configureEach { testTask ->
             def jacocoExtension = testTask.extensions.findByType(JacocoTaskExtension)
-            jacocoExtension?.enabled ?: false
-        }) {
-            testTasks << "${projectPath}:jacocoTestReport"
+            if (jacocoExtension?.enabled) {
+                testTasks << testTask
+            }
+        }
+        // Add jacocoTestReport tasks if they exist
+        if (subproject.tasks.findByName('jacocoTestReport')) {
+            testTasks << subproject.tasks.jacocoTestReport
         }
     }
     return testTasks
+}
+
+def syncJacocoExecFiles = tasks.register("syncJacocoExecFiles", Sync) {
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    into layout.buildDirectory.dir("jacocoMerged")
+
+    from jacocoExecFilesProvider
+    dependsOn jacocoTestTasksProvider
+}
+
+tasks.register('gatherJacocoExecForMerging', Copy) {
+    description = 'Local troubleshooting, gathers coverage all exec files in build/jacocoMerged/*.exec into to be consumed by jacocoAggregateReport'
+
+    from subprojects.collect { proj ->
+        fileTree(dir: proj.buildDir, include: 'jacoco/*.exec')
+    }
+    into "$buildDir/jacocoMerged"
+}
+
+tasks.register('mergeJacocoReports') {
+    dependsOn syncJacocoExecFiles
+    finalizedBy jacocoAggregateReport
+
+    doLast {
+        def execFiles = jacocoExecFilesProvider.get()
+        if (execFiles.isEmpty()) {
+            throw new GradleException("No Jacoco exec files found in subprojects.")
+        }
+        println "Merged ${execFiles.size()} Jacoco execution files"
+    }
+}
+
+def publishedArtifacts = []
+subprojects.each { proj ->
+    def publishingExtension = proj.extensions.findByType(PublishingExtension)
+    if (publishingExtension) {
+        publishingExtension.publications.withType(MavenPublication).all { publication ->
+            publishedArtifacts << "${publication.groupId}.${publication.artifactId}"
+        }
+    }
+}
+tasks.register('listPublishedArtifacts') {
+    doLast {
+        publishedArtifacts.each { println it }
+    }
 }
 
 tasks.register("listTestTasksAsJson") {

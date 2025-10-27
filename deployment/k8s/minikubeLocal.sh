@@ -15,11 +15,34 @@ kill_minikube_processes() {
 }
 
 start() {
-  helm repo add opensearch-operator https://opensearch-project.github.io/opensearch-k8s-operator/
-  helm repo add strimzi https://strimzi.io/charts/
+  # Development setup to allow using an insecure registry
+  TMP_OUTPUT=$(mktemp)
 
-  minikube start
+  minikube start --insecure-registry="0.0.0.0/0" 2>&1 | tee "$TMP_OUTPUT"
+  EXIT_CODE=${PIPESTATUS[0]}
+
+  if [[ $EXIT_CODE -ne 0 ]]; then
+      if grep -qE "can't create with that IP, address already in use|apiserver process never appeared" "$TMP_OUTPUT"; then
+          echo ""
+          echo "🔧  Minikube network may not have been completely cleaned up. You may need to run:"
+          echo "    ./minikubeLocal.sh --delete"
+      fi
+
+      echo ""
+      echo "❌  Minikube failed to start. Check the output above for details."
+      rm -f "$TMP_OUTPUT"
+      exit "$EXIT_CODE"
+  fi
+
+  rm -f "$TMP_OUTPUT"
+  echo "✅  Minikube started successfully!"
+
   minikube mount .:/opensearch-migrations > /dev/null 2>&1 &
+  if ! docker network inspect minikube --format '{{range .Containers}}{{.Name}} {{end}}' | grep -qw docker-registry; then
+    docker network connect minikube docker-registry 2>/dev/null || echo "⚠️  Warning: Could not connect docker-registry to minikube network"
+  else
+    echo "ℹ️  docker-registry is already connected to minikube network"
+  fi
 }
 
 pause() {
@@ -29,6 +52,11 @@ pause() {
 
 delete() {
   kill_minikube_processes
+  if docker network inspect minikube --format '{{range .Containers}}{{.Name}} {{end}}' | grep -qw docker-registry; then
+    docker network disconnect minikube docker-registry 2>/dev/null || echo "⚠️  Warning: Could not disconnect docker-registry from minikube network"
+  else
+    echo "ℹ️  docker-registry is not connected to minikube network"
+  fi
   minikube delete
 }
 

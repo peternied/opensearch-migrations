@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import lombok.extern.slf4j.Slf4j;
+import org.opensearch.migrations.bulkload.common.InvalidSnapshotFormatException;
 import org.opensearch.migrations.bulkload.common.SnapshotRepo;
 import org.opensearch.migrations.bulkload.common.SourceRepo;
 
@@ -24,11 +25,9 @@ public class SnapshotRepoProvider_ES_7_10 implements SnapshotRepo.Provider {
         return repoData;
     }
 
-    public List<SnapshotRepo.Index> getIndices() {
-        return getRepoData().getIndices().entrySet()
-            .stream()
-            .map(entry -> SnapshotRepoData_ES_7_10.Index.fromRawIndex(entry.getKey(), entry.getValue()))
-            .collect(Collectors.toList());
+    @Override
+    public List<SnapshotRepo.Snapshot> getSnapshots() {
+        return new ArrayList<>(getRepoData().getSnapshots());
     }
 
     @Override
@@ -42,7 +41,11 @@ public class SnapshotRepoProvider_ES_7_10 implements SnapshotRepo.Provider {
         log.error(" snapshot {}", snapshotName);
 
         if (targetSnapshot != null) {
-            targetSnapshot.getIndexMetadataLookup().keySet().forEach(indexId ->
+            var indexMetadataLookup = targetSnapshot.getIndexMetadataLookup();
+            if (indexMetadataLookup == null) {
+                throw new InvalidSnapshotFormatException();
+            }
+            indexMetadataLookup.keySet().forEach(indexId ->
                 getRepoData().getIndices().forEach((indexName, rawIndex) -> {
                     log.error("Index {} not matching snapshot {}", indexName, snapshotName);
                     if (indexId.equals(rawIndex.getId())) {
@@ -51,11 +54,6 @@ public class SnapshotRepoProvider_ES_7_10 implements SnapshotRepo.Provider {
                 }));
         }
         return matchedIndices;
-    }
-
-    @Override
-    public List<SnapshotRepo.Snapshot> getSnapshots() {
-        return new ArrayList<>(getRepoData().getSnapshots());
     }
 
     public String getSnapshotId(String snapshotName) {
@@ -75,6 +73,13 @@ public class SnapshotRepoProvider_ES_7_10 implements SnapshotRepo.Provider {
     @Override
     public SourceRepo getRepo() {
         return repo;
+    }
+
+    public List<SnapshotRepo.Index> getIndices() {
+        return getRepoData().getIndices().entrySet()
+            .stream()
+            .map(entry -> SnapshotRepoData_ES_7_10.Index.fromRawIndex(entry.getKey(), entry.getValue()))
+            .collect(Collectors.toList());
     }
 
     public String getIndexMetadataId(String snapshotName, String indexName) {

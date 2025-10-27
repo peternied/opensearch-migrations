@@ -51,9 +51,8 @@ describe('OpenSearch Domain Stack Tests', () => {
       nodeToNodeEncryptionEnabled: true,
       vpcEnabled: true,
       vpcId: "vpc-123456789abcdefgh",
-      vpcSubnetIds: ["subnet-123456789abcdefgh", "subnet-223456789abcdefgh"],
       vpcSecurityGroupIds: ["sg-123456789abcdefgh", "sg-223456789abcdefgh"],
-      domainAZCount: 3,
+      vpcAZCount: 3,
       domainRemovalPolicy: "DESTROY",
       sourceCluster: {
         "endpoint": "https://test-cluster",
@@ -108,9 +107,8 @@ describe('OpenSearch Domain Stack Tests', () => {
       nodeToNodeEncryptionEnabled: "true",
       vpcEnabled: "true",
       vpcId: "vpc-123456789abcdefgh",
-      vpcSubnetIds: "[\"subnet-123456789abcdefgh\", \"subnet-223456789abcdefgh\"]",
       vpcSecurityGroupIds: "[\"sg-123456789abcdefgh\", \"sg-223456789abcdefgh\"]",
-      domainAZCount: "3",
+      vpcAZCount: "3",
       domainRemovalPolicy: "DESTROY",
       sourceCluster: {
         "endpoint": "https://test-cluster",
@@ -143,8 +141,7 @@ describe('OpenSearch Domain Stack Tests', () => {
     // The cdk.context.json and default-values.json files allow multiple data types
     const contextOptions = {
       useUnsignedBasicAuth: true,
-      fineGrainedManagerUserName: "admin",
-      fineGrainedManagerUserSecretManagerKeyARN: "arn:aws:secretsmanager:us-east-1:12345678912:secret:master-user-os-pass-123abc",
+      fineGrainedManagerUserSecretARN: "arn:aws:secretsmanager:us-east-1:12345678912:secret:master-user-os-pass-123abc",
       // Fine-grained access requires enforceHTTPS, encryptionAtRest, and nodeToNodeEncryption to be enabled
       enforceHTTPS: true,
       encryptionAtRestEnabled: true,
@@ -167,8 +164,7 @@ describe('OpenSearch Domain Stack Tests', () => {
     // CDK CLI commands pass all context values as strings
     const contextOptions = {
       useUnsignedBasicAuth: "true",
-      fineGrainedManagerUserName: "admin",
-      fineGrainedManagerUserSecretManagerKeyARN: "arn:aws:secretsmanager:us-east-1:12345678912:secret:master-user-os-pass-123abc",
+      fineGrainedManagerUserSecretARN: "arn:aws:secretsmanager:us-east-1:12345678912:secret:master-user-os-pass-123abc",
       // Fine-grained access requires enforceHTTPS, encryptionAtRest, and nodeToNodeEncryption to be enabled
       enforceHTTPS: "true",
       encryptionAtRestEnabled: "true",
@@ -189,7 +185,12 @@ describe('OpenSearch Domain Stack Tests', () => {
 
   test('Test openAccessPolicy setting creates access policy when enabled', () => {
     const contextOptions = {
-      openAccessPolicyEnabled: true
+      openAccessPolicyEnabled: true,
+      sourceCluster: {
+        "endpoint": "https://test-cluster",
+        "auth": {"type": "none"},
+        "version": "OS_2.19"
+      }
     }
 
     const openSearchStacks = createStackComposer(contextOptions)
@@ -202,7 +203,12 @@ describe('OpenSearch Domain Stack Tests', () => {
 
   test('Test openAccessPolicy setting does not create access policy when disabled', () => {
     const contextOptions = {
-      openAccessPolicyEnabled: false
+      openAccessPolicyEnabled: false,
+      sourceCluster: {
+        "endpoint": "https://test-cluster",
+        "auth": {"type": "none"},
+        "version": "OS_2.19"
+      }
     }
 
     const openSearchStacks = createStackComposer(contextOptions)
@@ -215,7 +221,12 @@ describe('OpenSearch Domain Stack Tests', () => {
 
   test('Test openAccessPolicy setting is mapped with string data type', () => {
     const contextOptions = {
-      openAccessPolicyEnabled: true
+      openAccessPolicyEnabled: true,
+      sourceCluster: {
+        "endpoint": "https://test-cluster",
+        "auth": {"type": "none"},
+        "version": "OS_2.19"
+      }
     }
 
     const openSearchStacks = createStackComposer(contextOptions)
@@ -237,8 +248,6 @@ describe('OpenSearch Domain Stack Tests', () => {
       accessPolicies: "",
       useUnsignedBasicAuth: "",
       fineGrainedManagerUserARN: "",
-      fineGrainedManagerUserName: "",
-      fineGrainedManagerUserSecretManagerKeyARN: "",
       enforceHTTPS: "",
       tlsSecurityPolicy: "",
       ebsEnabled: "",
@@ -254,9 +263,14 @@ describe('OpenSearch Domain Stack Tests', () => {
       vpcId: "",
       vpcSubnetIds: "",
       vpcSecurityGroupIds: "",
-      domainAZCount: "",
+      vpcAZCount: "",
       openAccessPolicyEnabled: "",
-      domainRemovalPolicy: ""
+      domainRemovalPolicy: "",
+      sourceCluster: {
+        "endpoint": "https://test-cluster",
+        "auth": {"type": "none"},
+        "version": "OS_2.19"
+      }
     }
 
     const openSearchStacks = createStackComposer(contextOptions)
@@ -267,7 +281,13 @@ describe('OpenSearch Domain Stack Tests', () => {
   })
 
   test('Test targetClusterYaml is populated', () => {
-    const contextOptions = {}
+    const contextOptions = {
+      sourceCluster: {
+        "endpoint": "https://test-cluster",
+        "auth": {"type": "none"},
+        "version": "OS_2.19"
+      }
+    }
     const openSearchStacks = createStackComposer(contextOptions)
 
     const domainStack = openSearchStacks.stacks.filter((s) => s instanceof OpenSearchDomainStack)[0] as OpenSearchDomainStack
@@ -357,8 +377,8 @@ function assertAlternateDomainStackTemplate(template: Template) {
         AdvancedSecurityOptions: {
             Enabled: true,
             MasterUserOptions: {
-                MasterUserName: "admin",
-                MasterUserPassword: "{{resolve:secretsmanager:arn:aws:secretsmanager:us-east-1:12345678912:secret:master-user-os-pass-123abc:SecretString:::}}"
+                MasterUserName: "{{resolve:secretsmanager:arn:aws:secretsmanager:us-east-1:12345678912:secret:master-user-os-pass-123abc:SecretString:username::}}",
+                MasterUserPassword: "{{resolve:secretsmanager:arn:aws:secretsmanager:us-east-1:12345678912:secret:master-user-os-pass-123abc:SecretString:password::}}"
             }
         }
     })

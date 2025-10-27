@@ -50,6 +50,8 @@ def initialize(request):
     replayer: Replayer = pytest.console_env.replay
     assert replayer is not None
     kafka: Kafka = pytest.console_env.kafka
+    snapshot: Snapshot = pytest.console_env.snapshot
+    assert snapshot is not None
 
     # Confirm source and target connection
     source_con_result: ConnectionResult = connection_check(source_cluster)
@@ -58,7 +60,7 @@ def initialize(request):
     assert target_con_result.connection_established is True
 
     # Clear Cluster
-    clear_cluster(source_cluster)
+    clear_cluster(source_cluster, snapshot)
     clear_cluster(target_cluster)
 
     # Delete existing Kafka topic to clear records
@@ -113,8 +115,8 @@ class E2ETests(unittest.TestCase):
 
         backfill.create()
         snapshot: Snapshot = pytest.console_env.snapshot
-        snapshot_result: CommandResult = snapshot.create(wait=True)
-        assert snapshot_result.success
+        snapshot_result = snapshot.create(wait=True)
+        assert "creation initiated successfully" in snapshot_result
 
         # Perform metadata migration with a transform to index name
         index_name_transform = ops.get_index_name_transformation(existing_index_name=index_name,

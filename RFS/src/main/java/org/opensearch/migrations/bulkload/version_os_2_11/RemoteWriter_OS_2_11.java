@@ -1,5 +1,7 @@
 package org.opensearch.migrations.bulkload.version_os_2_11;
 
+import org.opensearch.migrations.AwarenessAttributeSettings;
+import org.opensearch.migrations.UnboundVersionMatchers;
 import org.opensearch.migrations.Version;
 import org.opensearch.migrations.VersionMatchers;
 import org.opensearch.migrations.bulkload.common.OpenSearchClient;
@@ -22,8 +24,14 @@ public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
 
     @Override
     public boolean compatibleWith(Version version) {
-        return VersionMatchers.isOS_2_X.or
-            (VersionMatchers.isOS_1_X)
+        return VersionMatchers.anyOS
+            .test(version);
+    }
+
+    @Override
+    public boolean looseCompatibleWith(Version version) {
+        return UnboundVersionMatchers.anyOS
+            .or(VersionMatchers.isES_7_X)
             .test(version);
     }
 
@@ -70,6 +78,11 @@ public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
         return version;
     }
 
+    @Override
+    public AwarenessAttributeSettings getAwarenessAttributeSettings() {
+        return getClient().getAwarenessAttributeSettings();
+    }
+
     public String toString() {
         // These values could be null, don't want to crash during toString
         return String.format("Remote Cluster: %s %s", version, connection);
@@ -83,7 +96,7 @@ public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
         return client;
     }
 
-    private ConnectionContext getConnection() {
+    public ConnectionContext getConnection() {
         if (connection == null) {
             throw new UnsupportedOperationException("initialize(...) must be called");
         }
@@ -95,5 +108,10 @@ public class RemoteWriter_OS_2_11 implements RemoteCluster, ClusterWriter {
             throw new UnsupportedOperationException("initialize(...) must be called");
         }
         return dataFilterArgs;
-    } 
+    }
+
+    @Override
+    public String getFriendlyTypeName() {
+        return "Remote Cluster";
+    }
 }

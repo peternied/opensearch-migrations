@@ -1,29 +1,24 @@
 import {Construct} from "constructs";
-import {
-  EbsDeviceVolumeType,
-  ISecurityGroup,
-  IVpc,
-  SecurityGroup,
-  SubnetFilter,
-  SubnetSelection
-} from "aws-cdk-lib/aws-ec2";
+import {VpcDetails} from "./network-stack";
+import {EbsDeviceVolumeType, ISecurityGroup, SecurityGroup, SubnetSelection} from "aws-cdk-lib/aws-ec2";
 import {Domain, EngineVersion, TLSSecurityPolicy, ZoneAwarenessConfig} from "aws-cdk-lib/aws-opensearchservice";
-import {RemovalPolicy, SecretValue, Stack} from "aws-cdk-lib";
+import {RemovalPolicy, Stack} from "aws-cdk-lib";
 import {IKey, Key} from "aws-cdk-lib/aws-kms";
 import {AnyPrincipal, Effect, PolicyStatement} from "aws-cdk-lib/aws-iam";
 import {ILogGroup, LogGroup} from "aws-cdk-lib/aws-logs";
 import {ISecret, Secret} from "aws-cdk-lib/aws-secretsmanager";
 import {StackPropsExt} from "./stack-composer";
-import { ClusterYaml } from "./migration-services-yaml";
+import {ClusterYaml} from "./migration-services-yaml";
 import {
   ClusterAuth,
   ClusterBasicAuth,
   ClusterNoAuth,
-  MigrationSSMParameter,
+  ClusterType,
+  createBasicAuthSecret,
   createMigrationStringParameter,
-  getMigrationStringParameterValue
+  getMigrationStringParameterValue,
+  MigrationSSMParameter
 } from "./common-utilities";
-import { CdkLogger } from "./cdk-logger";
 
 
 export interface OpensearchDomainStackProps extends StackPropsExt {
@@ -39,8 +34,7 @@ export interface OpensearchDomainStackProps extends StackPropsExt {
   readonly openAccessPolicyEnabled?: boolean
   readonly useUnsignedBasicAuth?: boolean,
   readonly fineGrainedManagerUserARN?: string,
-  readonly fineGrainedManagerUserName?: string,
-  readonly fineGrainedManagerUserSecretManagerKeyARN?: string,
+  readonly fineGrainedManagerUserSecretARN?: string,
   readonly enableDemoAdmin?: boolean,
   readonly enforceHTTPS?: boolean,
   readonly tlsSecurityPolicy?: TLSSecurityPolicy,
@@ -53,10 +47,8 @@ export interface OpensearchDomainStackProps extends StackPropsExt {
   readonly appLogEnabled?: boolean,
   readonly appLogGroup?: string,
   readonly nodeToNodeEncryptionEnabled?: boolean,
-  readonly vpc?: IVpc,
-  readonly vpcSubnetIds?: string[],
+  readonly vpcDetails?: VpcDetails,
   readonly vpcSecurityGroupIds?: string[],
-  readonly domainAZCount?: number,
   readonly domainRemovalPolicy?: RemovalPolicy,
   readonly domainAccessSecurityGroupParameter?: string
 
@@ -104,38 +96,29 @@ export class OpenSearchDomainStack extends Stack {
     return accessPolicies
   }
 
-  createSSMParameters(domain: Domain, adminUserName: string|undefined, adminUserSecret: ISecret|undefined, stage: string, deployId: string) {
+  createSSMParameters(domain: Domain, stage: string, deployId: string) {
     createMigrationStringParameter(this, `https://${domain.domainEndpoint}:443`, {
       parameter: MigrationSSMParameter.OS_CLUSTER_ENDPOINT,
       defaultDeployId: deployId,
       stage,
     });
-    if (domain.masterUserPassword && !adminUserSecret) {
-      CdkLogger.info(`An OpenSearch domain fine-grained access control user was configured without an existing Secrets Manager secret, will not create SSM Parameter: /migration/${stage}/${deployId}/osUserAndSecret`)
-    } else if (domain.masterUserPassword && adminUserSecret) {
-      createMigrationStringParameter(this, `${adminUserName} ${adminUserSecret.secretArn}`, {
-          parameter: MigrationSSMParameter.OS_USER_AND_SECRET_ARN,
-          defaultDeployId: deployId,
-          stage,
-      });
-    }
   }
 
-  generateTargetClusterYaml(domain: Domain, adminUserName: string | undefined, adminUserSecret: ISecret|undefined, version: EngineVersion) {
+  generateTargetClusterYaml(domain: Domain, adminUserSecret: ISecret|undefined, version: EngineVersion) {
     const clusterAuth = new ClusterAuth({});
-    if (adminUserName) {
-      clusterAuth.basicAuth = new ClusterBasicAuth({ username: adminUserName, password_from_secret_arn: adminUserSecret?.secretArn })
+    if (adminUserSecret) {
+      clusterAuth.basicAuth = new ClusterBasicAuth(adminUserSecret.secretArn)
     } else {
       clusterAuth.noAuth = new ClusterNoAuth();
     }
-     this.targetClusterYaml = new ClusterYaml({endpoint: `https://${domain.domainEndpoint}:443`, auth: clusterAuth, version: version.toString()})
+     this.targetClusterYaml = new ClusterYaml({endpoint: `https://${domain.domainEndpoint}:443`, auth: clusterAuth, version: version.version})
 
   }
 
   constructor(scope: Construct, id: string, props: OpensearchDomainStackProps) {
     super(scope, id, props);
 
-    const deployId = props.addOnMigrationDeployId ? props.addOnMigrationDeployId : props.defaultDeployId
+    const deployId = props.addOnMigrationDeployId ?? props.defaultDeployId
     // Retrieve existing account resources if defined
     const earKmsKey: IKey|undefined = props.encryptionAtRestKmsKeyARN && props.encryptionAtRestEnabled ?
         Key.fromKeyArn(this, "earKey", props.encryptionAtRestKmsKeyARN) : undefined
@@ -148,29 +131,19 @@ export class OpenSearchDomainStack extends Stack {
         parameter: MigrationSSMParameter.OS_ACCESS_SECURITY_GROUP_ID,
     }));
 
-    let adminUserSecret: ISecret|undefined = props.fineGrainedManagerUserSecretManagerKeyARN ?
-        Secret.fromSecretCompleteArn(this, "managerSecret", props.fineGrainedManagerUserSecretManagerKeyARN) : undefined
-    // Map objects from props
-    let adminUserName: string|undefined = props.fineGrainedManagerUserName
+    let adminUserSecret: ISecret|undefined = props.fineGrainedManagerUserSecretARN ?
+        Secret.fromSecretCompleteArn(this, "managerSecret", props.fineGrainedManagerUserSecretARN) : undefined
     if (props.enableDemoAdmin) { // Enable demo mode setting
-      adminUserName = "admin"
-      adminUserSecret = new Secret(this, "demoUserSecret", {
-        secretName: `demo-user-secret-${props.stage}-${deployId}`,
-        // This is unsafe and strictly for ease of use in a demo mode setup
-        secretStringValue: SecretValue.unsafePlainText("myStrongPassword123!")
-      })
+      adminUserSecret = createBasicAuthSecret("admin", "myStrongPassword123!", ClusterType.TARGET, this, props.stage, deployId)
     }
-    const zoneAwarenessConfig: ZoneAwarenessConfig|undefined = props.domainAZCount && props.domainAZCount > 1 ?
-        {enabled: true, availabilityZoneCount: props.domainAZCount} : undefined
+    const zoneAwarenessConfig: ZoneAwarenessConfig|undefined = props.vpcDetails?.azCount && props.vpcDetails.azCount > 1 ?
+        {enabled: true, availabilityZoneCount: props.vpcDetails.azCount} : undefined;
 
     // If specified, these subnets will be selected to place the Domain nodes in. Otherwise, this is not provided
     // to the Domain as it has existing behavior to select private subnets from a given VPC
     let domainSubnets: SubnetSelection[]|undefined;
-    if (props.vpc && props.vpcSubnetIds) {
-      const selectSubnets = props.vpc.selectSubnets({
-        subnetFilters: [SubnetFilter.byIds(props.vpcSubnetIds)]
-      })
-      domainSubnets = [selectSubnets]
+    if (props.vpcDetails) {
+      domainSubnets = [props.vpcDetails.subnetSelection]
     }
 
     // Retrieve existing SGs to apply to VPC Domain endpoints
@@ -206,8 +179,8 @@ export class OpenSearchDomainStack extends Stack {
       },
       fineGrainedAccessControl: {
         masterUserArn: props.fineGrainedManagerUserARN,
-        masterUserName: adminUserName,
-        masterUserPassword: adminUserSecret ? adminUserSecret.secretValue : undefined
+        masterUserName: adminUserSecret ? adminUserSecret.secretValueFromJson('username').toString() : undefined,
+        masterUserPassword: adminUserSecret ? adminUserSecret.secretValueFromJson('password') : undefined,
       },
       nodeToNodeEncryption: props.nodeToNodeEncryptionEnabled,
       encryptionAtRest: {
@@ -226,14 +199,14 @@ export class OpenSearchDomainStack extends Stack {
         appLogEnabled: props.appLogEnabled,
         appLogGroup: appLG
       },
-      vpc: props.vpc,
+      vpc: props.vpcDetails?.vpc,
       vpcSubnets: domainSubnets,
       securityGroups: securityGroups,
       zoneAwareness: zoneAwarenessConfig,
       removalPolicy: props.domainRemovalPolicy
     });
 
-    this.createSSMParameters(domain, adminUserName, adminUserSecret, props.stage, deployId)
-    this.generateTargetClusterYaml(domain, adminUserName, adminUserSecret, props.version)
+    this.createSSMParameters(domain, props.stage, deployId)
+    this.generateTargetClusterYaml(domain, adminUserSecret, props.version)
   }
 }

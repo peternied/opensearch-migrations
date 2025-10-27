@@ -9,6 +9,7 @@ import pytest
 
 from console_link.environment import Environment
 from console_link.models.cluster import Cluster, HttpMethod
+from console_link.models.utils import DEFAULT_SNAPSHOT_REPO_NAME
 from tests.search_containers import SearchContainer, Version, CLUSTER_SNAPSHOT_DIR
 import console_link.middleware.clusters as clusters_
 import console_link.middleware.snapshot as snapshot_
@@ -46,10 +47,10 @@ def seed_data_with_types(cluster: Cluster, doc_count):
 
 def setup_snapshot_repo_and_snapshot(cluster: Cluster):
     # Register repo
-    cluster.call_api("/_snapshot/migration_assistant_repo", HttpMethod.PUT,
+    cluster.call_api(f"/_snapshot/{DEFAULT_SNAPSHOT_REPO_NAME}", HttpMethod.PUT,
                      data=json.dumps({"type": "fs", "settings": {"location": CLUSTER_SNAPSHOT_DIR}}),
                      headers={"Content-Type": "application/json"})
-    cluster.call_api(f"/_snapshot/migration_assistant_repo/{SNAPSHOT_NAME}", HttpMethod.POST)
+    cluster.call_api(f"/_snapshot/{DEFAULT_SNAPSHOT_REPO_NAME}/{SNAPSHOT_NAME}", HttpMethod.POST)
 
 
 @pytest.fixture()
@@ -86,7 +87,7 @@ def env_with_source_container(request):
 
     logging.basicConfig(level=logging.INFO)
 
-    env = Environment(temp_config_path)
+    env = Environment(config_file=temp_config_path)
     if version.flavor == "ELASTICSEARCH" and version.major_version == 5:
         seed_data_with_types(env.source_cluster, DOC_COUNT)
     else:

@@ -7,6 +7,11 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.opensearch.migrations.Version;
+import org.opensearch.migrations.bulkload.common.bulk.BulkOperationSpec;
+import org.opensearch.migrations.bulkload.common.bulk.IndexOp;
+import org.opensearch.migrations.bulkload.common.bulk.enums.OperationType;
+import org.opensearch.migrations.bulkload.common.bulk.operations.IndexOperationMeta;
+import org.opensearch.migrations.bulkload.common.http.CompressionMode;
 import org.opensearch.migrations.bulkload.common.http.ConnectionContext;
 import org.opensearch.migrations.bulkload.common.http.HttpResponse;
 import org.opensearch.migrations.bulkload.http.BulkRequestGenerator;
@@ -15,6 +20,7 @@ import org.opensearch.migrations.bulkload.tracing.IRfsContexts;
 import org.opensearch.migrations.bulkload.tracing.IRfsContexts.ICheckedIdempotentPutRequestContext;
 import org.opensearch.migrations.bulkload.version_os_2_11.OpenSearchClient_OS_2_11;
 import org.opensearch.migrations.reindexer.FailedRequestsLogger;
+import org.opensearch.migrations.testutils.CloseableLogSetup;
 
 import com.fasterxml.jackson.core.StreamReadFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,6 +41,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -71,7 +78,7 @@ class OpenSearchClientTest {
     void beforeTest() {
         when(connectionContext.getUri()).thenReturn(URI.create("http://localhost/"));
         when(restClient.getConnectionContext()).thenReturn(connectionContext);
-        openSearchClient = spy(new OpenSearchClient_OS_2_11(restClient, failedRequestLogger, Version.fromString("OS 2.11")));
+        openSearchClient = spy(new OpenSearchClient_OS_2_11(restClient, failedRequestLogger, Version.fromString("OS 2.11"), CompressionMode.UNCOMPRESSED));
     }
 
     @Test
@@ -225,10 +232,14 @@ class OpenSearchClientTest {
         return new HttpResponse(200, "", null, responseBody);
     }
 
-    private BulkDocSection createBulkDoc(String docId) {
-        var bulkDoc = mock(BulkDocSection.class, withSettings().strictness(org.mockito.quality.Strictness.LENIENT));
-        when(bulkDoc.getDocId()).thenReturn(docId);
-        when(bulkDoc.asBulkIndexString()).thenReturn("BULK-INDEX\nBULK_BODY");
+    private BulkOperationSpec createBulkDoc(String docId) {
+        var bulkDoc = mock(IndexOp.class, withSettings().strictness(org.mockito.quality.Strictness.LENIENT));
+        var operation = mock(IndexOperationMeta.class);
+        when(operation.getId()).thenReturn(docId);
+        when(bulkDoc.getOperation()).thenReturn(operation);
+        when(bulkDoc.getOperationType()).thenReturn(OperationType.INDEX);
+        when(bulkDoc.isIncludeDocument()).thenReturn(true);
+        when(bulkDoc.getDocument()).thenReturn(java.util.Map.of("field", "value"));
         return bulkDoc;
     }
 
@@ -243,8 +254,9 @@ class OpenSearchClientTest {
         var docId = "tt1979320";
         var bulkSuccess = bulkItemResponse(false, List.of(itemEntry(docId)));
 
-        when(restClient.supportsGzipCompression()).thenReturn(true);
         when(restClient.postAsync(any(), any(), any(), any())).thenReturn(Mono.just(bulkSuccess));
+        openSearchClient = spy(new OpenSearchClient_OS_2_11(restClient, failedRequestLogger, Version.fromString("OS 2.11"),
+                CompressionMode.GZIP_BODY_COMPRESSION));
 
         var bulkDoc = createBulkDoc(docId);
         var indexName = "testIndex";
@@ -270,7 +282,8 @@ class OpenSearchClientTest {
         var docId = "tt1979320";
         var bulkSuccess = bulkItemResponse(false, List.of(itemEntry(docId)));
 
-        when(restClient.supportsGzipCompression()).thenReturn(false);
+        openSearchClient = spy(new OpenSearchClient_OS_2_11(restClient, failedRequestLogger, Version.fromString("OS 2.11"),
+                CompressionMode.UNCOMPRESSED));
         when(restClient.postAsync(any(), any(), any(), any())).thenReturn(Mono.just(bulkSuccess));
 
         var bulkDoc = createBulkDoc(docId);
@@ -290,6 +303,83 @@ class OpenSearchClientTest {
         Map<String, List<String>> capturedHeaders = headersCaptor.getValue();
         assertThat(capturedHeaders.get("accept-encoding"), equalTo(null));
         assertThat(capturedHeaders.get("content-encoding"), equalTo(null));
+    }
+
+    @Test
+    void testBulkRequest_warningLogContainsDetails_onError() {
+        try (var logs = new CloseableLogSetup(OpenSearchClient.class.getName())) {
+            var docId1 = "tt1979320";
+            var docFails = bulkItemResponse(true, List.of(itemEntryFailure(docId1)));
+
+            when(restClient.postAsync(any(), any(), any(), any())).thenReturn(Mono.just(docFails));
+
+            var maxRetries = 1;
+            doReturn(Retry.fixedDelay(maxRetries, Duration.ofMillis(10))).when(openSearchClient).getBulkRetryStrategy();
+
+            var bulkDoc = createBulkDoc(docId1);
+            var indexName = "alwaysFailingIndexName";
+
+            // Action
+            var responseMono = openSearchClient.sendBulkRequest(
+                    indexName,
+                    List.of(bulkDoc),
+                    mock(IRfsContexts.IRequestContext.class)
+            );
+            assertThrows(Exception.class, responseMono::block);
+
+            // Verify the logs
+            List<String> bulkErrorWarnLogs = logs.getLogEvents().stream()
+                    .filter(log -> log.contains("After bulk request attempt")).toList();
+            for (String bulkErrorWarnLog : bulkErrorWarnLogs) {
+                // Add buffer for additional log line characters
+                assertThat(bulkErrorWarnLog.length(), lessThan(OpenSearchClient.BULK_TRUNCATED_RESPONSE_MAX_LENGTH + 300));
+                assertThat(bulkErrorWarnLog, containsString("version conflict, document already exists"));
+            }
+        }
+    }
+
+    @Test
+    void testBulkRequest_truncatesLargeLog_onError() {
+        try (var logs = new CloseableLogSetup(OpenSearchClient.class.getName())) {
+            var docId1 = "tt1979320";
+            // Create dummy large response message
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"data\":\"");
+            int desiredStringLength = OpenSearchClient.BULK_TRUNCATED_RESPONSE_MAX_LENGTH + 2000;
+            while (sb.length() < desiredStringLength) {
+                sb.append("a");
+            }
+            sb.append("\"}");
+            String jsonString = sb.toString();
+            var largeResponse = BulkItemResponseEntry.builder().raw(jsonString).build();
+            var docFails = bulkItemResponse(true, List.of(largeResponse));
+
+            when(restClient.postAsync(any(), any(), any(), any())).thenReturn(Mono.just(docFails));
+
+            var maxRetries = 1;
+            doReturn(Retry.fixedDelay(maxRetries, Duration.ofMillis(10))).when(openSearchClient).getBulkRetryStrategy();
+
+            var bulkDoc = createBulkDoc(docId1);
+            var indexName = "alwaysFailingIndexName";
+
+            // Action
+            var responseMono = openSearchClient.sendBulkRequest(
+                    indexName,
+                    List.of(bulkDoc),
+                    mock(IRfsContexts.IRequestContext.class)
+            );
+            assertThrows(Exception.class, responseMono::block);
+
+            // Verify the logs
+            List<String> bulkErrorWarnLogs = logs.getLogEvents().stream()
+                    .filter(log -> log.contains("After bulk request attempt")).toList();
+            for (String bulkErrorWarnLog : bulkErrorWarnLogs) {
+                // Add buffer for additional log line characters
+                assertThat(bulkErrorWarnLog.length(), lessThan(OpenSearchClient.BULK_TRUNCATED_RESPONSE_MAX_LENGTH + 300));
+                assertThat(bulkErrorWarnLog, containsString("aaaaa... [truncated] ...aaaaa"));
+            }
+
+        }
     }
 
     @Test

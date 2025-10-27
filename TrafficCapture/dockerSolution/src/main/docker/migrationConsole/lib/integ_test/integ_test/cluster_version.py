@@ -11,6 +11,7 @@ class ClusterVersion:
                              f"OS_x.y, where y is a number or 'x' for any minor version.")
 
         self.cluster_type = match.group(1)
+        self.full_cluster_type = "elasticsearch" if self.cluster_type == "ES" else "opensearch"
         self.major_version = int(match.group(2))
 
         minor_version = match.group(3)
@@ -23,11 +24,15 @@ class ClusterVersion:
         return f"{self.cluster_type}_{self.major_version}.{self.minor_version}"
 
 
+ElasticsearchV1_X = ClusterVersion("ES_1.x")
+ElasticsearchV2_X = ClusterVersion("ES_2.x")
 ElasticsearchV5_X = ClusterVersion("ES_5.x")
 ElasticsearchV6_X = ClusterVersion("ES_6.x")
 ElasticsearchV7_X = ClusterVersion("ES_7.x")
+ElasticsearchV8_X = ClusterVersion("ES_8.x")
 OpensearchV1_X = ClusterVersion("OS_1.x")
 OpensearchV2_X = ClusterVersion("OS_2.x")
+OpensearchV3_X = ClusterVersion("OS_3.x")
 
 
 def is_incoming_version_supported(limiting_version: ClusterVersion, incoming_version: ClusterVersion):

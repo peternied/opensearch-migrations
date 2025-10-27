@@ -11,6 +11,11 @@ pyyaml = "*"
 Click = "*"
 cerberus = "*"
 awscli = "*"
+pydantic = "==2.12.2"
+gunicorn = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+tinydb = "*"
+fastapi = {extras = ["standard"], version = "==0.118.0"}
 
 [dev-packages]
 pytest = "*"
@@ -18,7 +23,8 @@ pytest-mock = "*"
 requests-mock = "*"
 coverage = "*"
 moto = "*"
-testcontainers = "*"
+testcontainers = {extras = ["k3s"], version = "*"}
+httpx = "*"
 
 [requires]
 python_version = "3.11"
@@ -26,3 +32,4 @@ python_version = "3.11"
 [scripts]
 test = "coverage run -m pytest"
 coverage = "coverage"
+api-dev = "fastapi dev console_link/api/main.py"

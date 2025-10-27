@@ -33,6 +33,10 @@ CLOUDWATCH_SCHEMA = {
             "type": "string",
             "required": False,
         },
+        "qualifier": {
+            "type": "string",
+            "required": True,
+        },
     },
     "nullable": True
 }
@@ -118,6 +122,9 @@ class CloudwatchMetricsSource(MetricsSource):
         self.aws_region = None
         if type(config["cloudwatch"]) is dict and "aws_region" in config["cloudwatch"]:
             self.aws_region = config["cloudwatch"]["aws_region"]
+        if type(config["cloudwatch"]) is dict and "qualifier" in config["cloudwatch"]:
+            self.qualifier = config["cloudwatch"]["qualifier"]
+
         self.client = create_boto3_client(aws_service_name="cloudwatch", region=self.aws_region,
                                           client_options=self.client_options)
 
@@ -131,7 +138,7 @@ class CloudwatchMetricsSource(MetricsSource):
         logger.debug(f"ResponseMetadata from list_metrics: {response['ResponseMetadata']}")
         assert "Metrics" in response
         metrics = [CloudwatchMetricMetadata(m) for m in response["Metrics"]]
-        components = set([m.component for m in metrics])
+        components = {m.component for m in metrics}
         logger.debug(f"Components found in returned metrics: {components}")
         metrics_by_component = {}
         for component in components:
@@ -154,6 +161,7 @@ class CloudwatchMetricsSource(MetricsSource):
                     f"{start_time=}, {period_in_seconds=}, {end_time=}, {dimensions=}")
 
         aws_dimensions = [{"Name": "OTelLib", "Value": component.value}]
+        aws_dimensions += [{"Name": "qualifier", "Value": self.qualifier}]
         if dimensions:
             aws_dimensions += [{"Name": k, "Value": v} for k, v in dimensions.items()]
         logger.debug(f"AWS Dimensions set to: {aws_dimensions}")
@@ -228,9 +236,10 @@ class PrometheusMetricsSource(MetricsSource):
             logger.debug(f"Response status code: {r.status_code}")
             r.raise_for_status()
             assert "data" in r.json() and "result" in r.json()["data"]
-            metrics_by_component[c.value] = list(
-                set(m["metric"]["__name__"] for m in r.json()["data"]["result"])
-            )
+            metrics_by_component[c.value] = {
+                m["metric"]["__name__"]
+                for m in r.json()["data"]["result"]
+            }
         return metrics_by_component
 
     def get_metric_data(

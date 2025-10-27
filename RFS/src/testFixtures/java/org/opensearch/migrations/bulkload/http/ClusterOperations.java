@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 
+import org.opensearch.migrations.UnboundVersionMatchers;
 import org.opensearch.migrations.Version;
 import org.opensearch.migrations.VersionMatchers;
 import org.opensearch.migrations.bulkload.framework.SearchClusterContainer;
@@ -72,14 +73,21 @@ public class ClusterOperations {
         createDocument(index, docId, body, null, null);
     }
 
-    @SneakyThrows
-    public void createDocument(final String index, final String docId, final String body, String routing, String type) {
-        var response = put("/" + index + "/" + docTypePathOrDefault(type) + docId + "?routing=" + routing, body);
+    public void createDocument(final String index, final String docId, final String body, final String routing, final String type) {
+        String path = "/" + index + "/" + docTypePathOrDefault(type) + docId;
+        if (routing != null) {
+            path += "?routing=" + routing;
+        }
+        var response = put(path, body);
         assertThat(response.getValue(), response.getKey(), anyOf(equalTo(201), equalTo(200)));
     }
 
-    public void deleteDocument(final String index, final String docId, final String type) throws IOException {
-        var response = delete("/" + index + "/" + docTypePathOrDefault(type) + docId);
+    public void deleteDocument(final String index, final String docId, final String type) {
+        deleteDocument(index, docId, null, type);
+    }
+
+    public void deleteDocument(final String index, final String docId, final String routing, final String type) {
+        var response = delete("/" + index + "/" + docTypePathOrDefault(type) + docId + "?routing=" + routing);
         assertThat(response.getKey(), equalTo(200));
     }
 
@@ -111,7 +119,66 @@ public class ClusterOperations {
     @SneakyThrows
     public void createIndex(final String index, final String body) {
         var response = put("/" + index, body);
-        assertThat(response.getKey(), anyOf(equalTo(201), equalTo(200)));
+        assertThat("Expected status code 200 or 201 for index creation of " + index + " but got: "
+                + response.getKey() + " " + response.getValue(),
+            response.getKey(), anyOf(equalTo(201), equalTo(200)));
+    }
+
+    @SneakyThrows
+    public void createIndexWithCompletionField(String indexName, int numberOfShards) {
+        boolean useTypedMappings = UnboundVersionMatchers.isBelowES_8_X.test(clusterVersion);
+        boolean needsTypeNameParam = (VersionMatchers.equalOrGreaterThanES_6_7
+                .or(VersionMatchers.isES_7_X))
+                .test(clusterVersion);
+
+        boolean supportsSoftDeletes = VersionMatchers.equalOrGreaterThanES_6_5.test(clusterVersion);
+        String typeName = defaultDocType();
+
+        String mappingsSection = useTypedMappings
+            ? String.format(
+            "{\n" +
+            "  \"%s\": {\n" +
+            "    \"properties\": {\n" +
+            "      \"completion\": {\n" +
+            "        \"type\": \"completion\",\n" +
+            "        \"analyzer\": \"simple\",\n" +
+            "        \"preserve_separators\": true,\n" +
+            "        \"preserve_position_increments\": true,\n" +
+            "        \"max_input_length\": 50\n" +
+            "      }\n" +
+            "    }\n" +
+            "  }\n" +
+            "}", typeName)
+            : "{\n" +
+            "  \"properties\": {\n" +
+            "    \"completion\": {\n" +
+            "      \"type\": \"completion\",\n" +
+            "      \"analyzer\": \"simple\",\n" +
+            "      \"preserve_separators\": true,\n" +
+            "      \"preserve_position_increments\": true,\n" +
+            "      \"max_input_length\": 50\n" +
+            "    }\n" +
+            "  }\n" +
+            "}";
+
+        String body = String.format(
+            "{\n" +
+                    "  \"settings\": {\n" +
+                    "    \"number_of_shards\": %d,\n" +
+                    "    \"number_of_replicas\": 0,%s\n" +
+                    "    \"refresh_interval\": -1\n" +
+                    "  },\n" +
+                    "  \"mappings\": %s\n" +
+                    "}",
+            numberOfShards,
+            supportsSoftDeletes ? "\n    \"index.soft_deletes.enabled\": true," : "",
+            mappingsSection
+        );
+
+        String path = "/"+indexName + (needsTypeNameParam ? "?include_type_name=true" : "");
+        var response = put(path, body);
+
+        assertThat("Failed to create index with completion field", response.getKey(), equalTo(200));
     }
 
     @SneakyThrows
@@ -123,17 +190,27 @@ public class ClusterOperations {
         }
         try (var response = httpClient.execute(postRequest)) {
             var responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
-            log.atInfo()
-                .setMessage("{} {}\n{}\nResponse: {}\n{}")
-                .addArgument("POST")
-                .addArgument(path)
-                .addArgument(body)
-                .addArgument(response.getCode())
-                .addArgument(responseBody)
-                .log();
+            logHttpRequestResponse("POST", path, response.getCode(), responseBody, null);
             return Map.entry(response.getCode(), responseBody);
         }
     }
+
+    private static String truncate(String input, int maxLength) {
+        return input != null && input.length() > maxLength ? input.substring(0, maxLength) + "..." : input;
+    }
+
+    private static void logHttpRequestResponse(
+            String method, String path, int statusCode, String responseBody, String body) {
+        log.atInfo()
+                .setMessage("{} {}\n{}\nResponse: {}\n{}")
+                .addArgument(method)
+                .addArgument(path)
+                .addArgument(() -> body != null ? truncate(body, 1000) : "")
+                .addArgument(statusCode)
+                .addArgument(() -> truncate(responseBody, 1000))
+                .log();
+    }
+
 
     @SneakyThrows
     public Map.Entry<Integer, String> put(final String path, final String body) {
@@ -144,14 +221,7 @@ public class ClusterOperations {
         }
         try (var response = httpClient.execute(putRequest)) {
             var responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
-            log.atInfo()
-                .setMessage("{} {}\n{}\nResponse: {}\n{}")
-                .addArgument("PUT")
-                .addArgument(path)
-                .addArgument(body)
-                .addArgument(response.getCode())
-                .addArgument(responseBody)
-                .log();
+            logHttpRequestResponse("PUT", path, response.getCode(), responseBody, body);
             return Map.entry(response.getCode(), responseBody);
         }
     }
@@ -162,13 +232,7 @@ public class ClusterOperations {
 
         try (var response = httpClient.execute(getRequest)) {
             var responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
-            log.atInfo()
-                .setMessage("{} {}\nResponse: {}\n{}")
-                .addArgument("GET")
-                .addArgument(path)
-                .addArgument(response.getCode())
-                .addArgument(responseBody)
-                .log();
+            logHttpRequestResponse("GET", path, response.getCode(), responseBody, null);
             return Map.entry(response.getCode(), responseBody);
         }
     }
@@ -179,13 +243,7 @@ public class ClusterOperations {
 
         try (var response = httpClient.execute(request)) {
             var responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
-            log.atInfo()
-                .setMessage("{} {}\nResponse: {}\n{}")
-                .addArgument("DELETE")
-                .addArgument(path)
-                .addArgument(response.getCode())
-                .addArgument(responseBody)
-                .log();
+            logHttpRequestResponse("DELETE", path, response.getCode(), responseBody, null);
             return Map.entry(response.getCode(), responseBody);
         }
     }
@@ -208,38 +266,45 @@ public class ClusterOperations {
      */
     @SneakyThrows
     public void createLegacyTemplate(final String templateName, final String pattern) throws IOException {
-        var matchPatternClause = VersionMatchers.isES_5_X.test(clusterVersion)
+        boolean useTypedMappings = UnboundVersionMatchers.isBelowES_8_X.test(clusterVersion);
+
+        var matchPatternClause = (UnboundVersionMatchers.isBelowES_6_X)
+            .test(clusterVersion)
             ? "\"template\":\"" + pattern + "\","
             : "\"index_patterns\": [\r\n" + //
             "    \"" + pattern + "\"\r\n" + //
             "  ],\r\n";
-        final var templateJson = "{\r\n" + //
-            "  " + matchPatternClause + //
-            "  \"settings\": {\r\n" + //
-            "    \"number_of_shards\": 1\r\n" + //
-            "  },\r\n" + //
-            "  \"aliases\": {\r\n" + //
-            "    \"alias_legacy\": {}\r\n" + //
-            "  },\r\n" + //
-            "  \"mappings\": {\r\n" + //
-            "    \"" + defaultDocType() + "\": {\r\n" + //
-            "      \"_source\": {\r\n" + //
-            "        \"enabled\": true\r\n" + //
-            "      },\r\n" + //
-            "      \"properties\": {\r\n" + //
-            "        \"host_name\": {\r\n" + //
-            "          \"type\": \"keyword\"\r\n" + //
-            "        },\r\n" + //
-            "        \"created_at\": {\r\n" + //
-            "          \"type\": \"date\",\r\n" + //
-            "          \"format\": \"EEE MMM dd HH:mm:ss Z yyyy\"\r\n" + //
-            "        }\r\n" + //
-            "      }\r\n" + //
-            "    }\r\n" + //
-            "  }\r\n" + //
+        
+        final var templateJson = "{\r\n" +
+            "  " + matchPatternClause +
+            "  \"settings\": {\r\n" +
+            "    \"number_of_shards\": 1\r\n" +
+            "  },\r\n" +
+            "  \"aliases\": {\r\n" +
+            "    \"alias_legacy\": {}\r\n" +
+            "  },\r\n" +
+            "  \"mappings\": " + (useTypedMappings ? "{\r\n" + //
+            "    \"" + defaultDocType() + "\": {\r\n" : "{\r\n") + //
+            "      \"_source\": {\r\n" +
+            "        \"enabled\": true\r\n" +
+            "      },\r\n" +
+            "      \"properties\": {\r\n" +
+            "        \"age\": {\r\n" +
+            "          \"type\": \"integer\"\r\n" +
+            "        },\r\n" +
+            "        \"is_active\": {\r\n" +
+            "          \"type\": \"boolean\"\r\n" +
+            "        }\r\n" +
+            "      }\r\n" +
+            (useTypedMappings ? "    }\r\n" : "") +
+            "  }\r\n" +
             "}";
 
-        var extraParameters = VersionMatchers.isES_5_X.test(clusterVersion) ? "" : "?include_type_name=true";
+        boolean needsTypeName = (
+                VersionMatchers.equalOrGreaterThanES_6_7
+                .or(VersionMatchers.isES_7_X)
+            ).test(clusterVersion);
+        var extraParameters = needsTypeName ? "?include_type_name=true" : "";
         var response = put("/_template/" + templateName + extraParameters, templateJson);
 
         assertThat(response.getKey(), equalTo(200));
@@ -358,8 +423,10 @@ public class ClusterOperations {
         assertThat(response.getKey(), equalTo(200));
     }
 
-    private String defaultDocType() {
-        if (VersionMatchers.isES_5_X.or(VersionMatchers.isES_2_X).test(clusterVersion)) {
+    public String defaultDocType() {
+        if (UnboundVersionMatchers.isBelowES_6_X
+            .or(VersionMatchers.equalOrBetween_ES_6_0_and_6_1)
+            .test(clusterVersion)) {
             return "doc";
         }
         return "_doc";
@@ -367,7 +434,7 @@ public class ClusterOperations {
 
     private String docTypePathOrDefault(final String typeOverride) {
         var defaultDocType = defaultDocType();
-        if (VersionMatchers.isES_5_X.or(VersionMatchers.isES_2_X).test(clusterVersion)) {
+        if (UnboundVersionMatchers.isBelowES_6_X.test(clusterVersion)) {
             return Optional.ofNullable(typeOverride).orElse(defaultDocType) + "/";
         } else {
             return defaultDocType + "/";
