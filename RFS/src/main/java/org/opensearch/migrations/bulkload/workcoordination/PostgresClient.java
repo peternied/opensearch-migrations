@@ -1,12 +1,12 @@
 package org.opensearch.migrations.bulkload.workcoordination;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class PostgresClient implements AbstractedDatabaseClient {
     private final HikariDataSource dataSource;

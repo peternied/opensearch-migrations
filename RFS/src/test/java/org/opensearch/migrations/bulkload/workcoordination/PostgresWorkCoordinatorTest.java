@@ -1,14 +1,14 @@
 package org.opensearch.migrations.bulkload.workcoordination;
 
+import java.time.Clock;
+import java.time.Duration;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.time.Clock;
-import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 

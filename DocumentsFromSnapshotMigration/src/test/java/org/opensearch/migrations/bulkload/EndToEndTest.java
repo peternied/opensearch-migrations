@@ -9,22 +9,20 @@ import org.opensearch.migrations.Version;
 import org.opensearch.migrations.bulkload.common.FileSystemRepo;
 import org.opensearch.migrations.bulkload.common.FileSystemSnapshotCreator;
 import org.opensearch.migrations.bulkload.common.OpenSearchClientFactory;
-import org.opensearch.migrations.bulkload.common.RestClient;
 import org.opensearch.migrations.bulkload.common.http.ConnectionContextTestParams;
 import org.opensearch.migrations.bulkload.framework.SearchClusterContainer;
 import org.opensearch.migrations.bulkload.http.ClusterOperations;
-import org.opensearch.migrations.bulkload.worker.SnapshotRunner;
 import org.opensearch.migrations.bulkload.workcoordination.PostgresConfig;
+import org.opensearch.migrations.bulkload.worker.SnapshotRunner;
 import org.opensearch.migrations.cluster.ClusterProviderRegistry;
 import org.opensearch.migrations.reindexer.tracing.DocumentMigrationTestContext;
 import org.opensearch.migrations.snapshot.creation.tracing.SnapshotTestContext;
 
 import lombok.SneakyThrows;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -46,7 +44,9 @@ public class EndToEndTest extends SourceTestBase {
     
     private PostgresConfig postgresConfig;
     
-    private static final String SERVERLESS_ENDPOINT = "https://aurfb38nmcwqqqf7zmxj.eu-west-1.aoss.amazonaws.com";
+    private static final String SERVERLESS_SEARCH_ENDPOINT = "https://aurfb38nmcwqqqf7zmxj.eu-west-1.aoss.amazonaws.com";
+    private static final String SERVERLESS_TIMESERIES_ENDPOINT = "https://cefo1oaekfyafv03adie.eu-west-1.aoss.amazonaws.com";
+    private static final String SERVERLESS_VECTOR_ENDPOINT = "https://55ad9bepur11tcus3g5e.eu-west-1.aoss.amazonaws.com";
     
     @BeforeEach
     void setUp() {
@@ -58,14 +58,28 @@ public class EndToEndTest extends SourceTestBase {
     }
 
     @Test
-    public void migrationToServerless() {
+    public void migrationToServerlessSearch() {
         try (final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_19_1)) {
-            migrationDocumentsWithClusters(sourceCluster);
+            migrationDocumentsWithClusters(sourceCluster, SERVERLESS_SEARCH_ENDPOINT);
+        }
+    }
+
+    @Test
+    public void migrationToServerlessTimeseries() {
+        try (final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_19_1)) {
+            migrationDocumentsWithClusters(sourceCluster, SERVERLESS_TIMESERIES_ENDPOINT);
+        }
+    }
+
+    @Test
+    public void migrationToServerlessVector() {
+        try (final var sourceCluster = new SearchClusterContainer(SearchClusterContainer.OS_V2_19_1)) {
+            migrationDocumentsWithClusters(sourceCluster, SERVERLESS_VECTOR_ENDPOINT);
         }
     }
 
     @SneakyThrows
-    private void migrationDocumentsWithClusters(final SearchClusterContainer sourceCluster) {
+    private void migrationDocumentsWithClusters(final SearchClusterContainer sourceCluster, String serverlessEndpoint) {
         final var snapshotContext = SnapshotTestContext.factory().noOtelTracking();
         final var testDocMigrationContext = DocumentMigrationTestContext.factory().noOtelTracking();
 
@@ -79,7 +93,7 @@ public class EndToEndTest extends SourceTestBase {
             
             // Create mock target cluster for migration
             var mockTargetCluster = Mockito.mock(SearchClusterContainer.class);
-            Mockito.when(mockTargetCluster.getUrl()).thenReturn(SERVERLESS_ENDPOINT);
+            Mockito.when(mockTargetCluster.getUrl()).thenReturn(serverlessEndpoint);
             Mockito.when(mockTargetCluster.getContainerVersion()).thenReturn(SearchClusterContainer.OS_V2_19_1);
 
             // Create simple index for source cluster
@@ -242,7 +256,7 @@ public class EndToEndTest extends SourceTestBase {
                 var clientFactory = new OpenSearchClientFactory(connectionContext);
                 return org.opensearch.migrations.RfsMigrateDocuments.run(
                     readerFactory,
-                    new org.opensearch.migrations.bulkload.common.DocumentReindexer(clientFactory.determineVersionAndCreate(), 1000, Long.MAX_VALUE, 1, () -> docTransformer),
+                    new org.opensearch.migrations.bulkload.common.DocumentReindexer(clientFactory.determineVersionAndCreate(), 1000, Long.MAX_VALUE, 1, () -> docTransformer, true),
                     progressCursor,
                     workCoordinator,
                     java.time.Duration.ofMinutes(10),

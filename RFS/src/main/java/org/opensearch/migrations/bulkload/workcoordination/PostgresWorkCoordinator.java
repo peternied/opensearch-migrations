@@ -1,14 +1,9 @@
 package org.opensearch.migrations.bulkload.workcoordination;
 
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
-import org.opensearch.migrations.bulkload.tracing.IWorkCoordinationContexts;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.Clock;
@@ -18,6 +13,11 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import org.opensearch.migrations.bulkload.tracing.IWorkCoordinationContexts;
+
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class PostgresWorkCoordinator implements IWorkCoordinator {
