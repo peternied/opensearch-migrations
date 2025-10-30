@@ -124,6 +124,9 @@ dependencies {
     implementation libs.aws.s3
     implementation libs.aws.s3.transfer.manager
 
+    implementation 'org.postgresql:postgresql:42.7.1'
+    implementation 'com.zaxxer:HikariCP:5.1.0'
+
     testImplementation libs.docker.java.core
     testImplementation libs.docker.java.transport.httpclient5
 
@@ -148,6 +151,7 @@ dependencies {
     testImplementation testFixtures(project(path: ':testHelperFixtures'))
     testImplementation testFixtures(project(path: ':coreUtilities'))
     testImplementation libs.testcontainers
+    testImplementation 'org.testcontainers:postgresql:1.19.3'
     testImplementation libs.hamcrest
     testImplementation libs.junit.jupiter.api
     testRuntimeOnly libs.junit.jupiter.engine

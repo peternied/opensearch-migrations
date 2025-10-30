@@ -70,4 +70,36 @@ public class WorkCoordinatorFactory {
     public String getFinalIndexName() {
         return OpenSearchWorkCoordinator.getFinalIndexName(indexNameSuffix);
     }
+
+    public IWorkCoordinator getPostgres(
+        PostgresConfig config,
+        long tolerableClientServerClockDifferenceSeconds,
+        String workerId
+    ) {
+        return new PostgresWorkCoordinator(
+            new PostgresClient(config.getJdbcUrl(), config.getUsername(), config.getPassword()),
+            config.getTableName(),
+            tolerableClientServerClockDifferenceSeconds,
+            workerId,
+            Clock.systemUTC(),
+            w -> {}
+        );
+    }
+
+    public IWorkCoordinator getPostgres(
+        PostgresConfig config,
+        long tolerableClientServerClockDifferenceSeconds,
+        String workerId,
+        Clock clock,
+        Consumer<WorkItemAndDuration> workItemConsumer
+    ) {
+        return new PostgresWorkCoordinator(
+            new PostgresClient(config.getJdbcUrl(), config.getUsername(), config.getPassword()),
+            config.getTableName(),
+            tolerableClientServerClockDifferenceSeconds,
+            workerId,
+            clock,
+            workItemConsumer
+        );
+    }
 }
