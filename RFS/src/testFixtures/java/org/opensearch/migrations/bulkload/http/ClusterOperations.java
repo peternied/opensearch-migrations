@@ -36,10 +36,12 @@ public class ClusterOperations {
     private final CloseableHttpClient httpClient;
 
     public ClusterOperations(final SearchClusterContainer cluster) {
-        this(cluster.getUrl(), cluster.getContainerVersion().getVersion())
+        this(cluster.getUrl(), cluster.getContainerVersion().getVersion());
     }
 
     public ClusterOperations(final String url, final Version version) {
+        clusterUrl = url;
+        clusterVersion = version;
         httpClient = HttpClients.createDefault();
     }
 

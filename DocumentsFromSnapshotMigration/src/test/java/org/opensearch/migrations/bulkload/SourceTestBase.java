@@ -26,6 +26,7 @@ import java.util.function.UnaryOperator;
 import org.opensearch.migrations.CreateSnapshot;
 import org.opensearch.migrations.RfsMigrateDocuments;
 import org.opensearch.migrations.Version;
+import org.opensearch.migrations.bulkload.SourceTestBase.ExpectedMigrationWorkTerminationException;
 import org.opensearch.migrations.bulkload.common.DefaultSourceRepoAccessor;
 import org.opensearch.migrations.bulkload.common.DeltaMode;
 import org.opensearch.migrations.bulkload.common.DocumentReindexer;
@@ -318,6 +319,8 @@ public class SourceTestBase {
             var coordinatorFactory = new WorkCoordinatorFactory(targetVersion);
             var connectionContext = ConnectionContextTestParams.builder()
                     .host(targetAddress)
+                    .awsRegion("eu-west-1")
+                    .awsServiceSigningName("aoss")
                     .build()
                     .toConnectionContext();
             var workItemRef = new AtomicReference<IWorkCoordinator.WorkItemAndDuration>();
