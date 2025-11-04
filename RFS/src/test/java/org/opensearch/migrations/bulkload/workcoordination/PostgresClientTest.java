@@ -175,7 +175,7 @@ class PostgresClientTest {
                         Thread.currentThread().getName()
                     );
                     return "success";
-                } catch (SQLException e) {
+                } catch (Exception e) {
                     return "failed: " + e.getMessage();
                 }
             }));

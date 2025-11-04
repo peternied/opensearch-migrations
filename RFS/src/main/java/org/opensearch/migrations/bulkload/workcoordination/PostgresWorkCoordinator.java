@@ -163,31 +163,33 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
         }
     }
 
-    private SqlQueryBuilder.AvailableWorkItem findAvailableWork(
+    private AvailableWorkItem findAvailableWork(
         java.sql.Connection conn,
         long nowSeconds,
         IWorkCoordinationContexts.IAcquireNextWorkItemContext ctx
     ) throws SQLException {
         var availableWork = sqlBuilder.selectAvailableWorkItem(conn, nowSeconds);
         if (availableWork.isEmpty()) {
-            ctx.recordNothingAvailable();
+            if (ctx != null) {
+                ctx.recordNothingAvailable();
+            }
             log.debug("Worker {} found no available work", workerId);
             return null;
         }
         return availableWork.get();
     }
 
-    private boolean hasSuccessors(SqlQueryBuilder.AvailableWorkItem work) {
+    private boolean hasSuccessors(AvailableWorkItem work) {
         var successorItems = work.getSuccessorItems();
         return successorItems != null && !successorItems.isEmpty();
     }
 
     private WorkAcquisitionOutcome handleSuccessors(
-        SqlQueryBuilder.AvailableWorkItem work,
+        AvailableWorkItem work,
         Duration leaseDuration,
         Supplier<IWorkCoordinationContexts.IAcquireNextWorkItemContext> contextSupplier,
         IWorkCoordinationContexts.IAcquireNextWorkItemContext ctx
-    ) throws IOException, InterruptedException {
+    ) throws SQLException, IOException, InterruptedException {
         var workItemId = work.getWorkItemId();
         log.debug("Work item {} has successors, creating and retrying", workItemId);
         var successorList = List.of(work.getSuccessorItems().split(","));
@@ -198,7 +200,7 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
 
     private WorkItemAndDuration acquireWork(
         java.sql.Connection conn,
-        SqlQueryBuilder.AvailableWorkItem work,
+        AvailableWorkItem work,
         Duration leaseDuration,
         long nowSeconds,
         IWorkCoordinationContexts.IAcquireNextWorkItemContext ctx
@@ -213,7 +215,9 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
         
         sqlBuilder.updateLease(conn, newExpiration, workerId, workItemId);
         
-        ctx.recordAssigned();
+        if (ctx != null) {
+            ctx.recordAssigned();
+        }
         var workItemAndDuration = new WorkItemAndDuration(
             Instant.ofEpochSecond(newExpiration),
             WorkItemAndDuration.WorkItem.valueFromWorkItemString(workItemId)

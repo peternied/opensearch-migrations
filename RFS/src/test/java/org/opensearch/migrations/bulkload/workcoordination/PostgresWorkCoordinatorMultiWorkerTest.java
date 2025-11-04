@@ -60,7 +60,6 @@ class PostgresWorkCoordinatorMultiWorkerTest {
         var coordinator = new PostgresWorkCoordinator(
             client,
             "work_items",
-            30,
             workerId,
             Clock.systemUTC(),
             w -> {}
@@ -222,6 +221,7 @@ class PostgresWorkCoordinatorMultiWorkerTest {
                     coordinator1.createSuccessorWorkItemsAndMarkComplete(
                         "parent-item",
                         List.of("child-1", "child-2"),
+                        0,
                         () -> null
                     );
                 } catch (Exception e) {

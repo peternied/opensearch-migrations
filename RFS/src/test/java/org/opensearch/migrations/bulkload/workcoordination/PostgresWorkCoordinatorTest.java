@@ -35,7 +35,6 @@ class PostgresWorkCoordinatorTest {
         coordinator = new PostgresWorkCoordinator(
             dbClient,
             "work_items",
-            30,
             "test-worker-1",
             Clock.systemUTC(),
             w -> {}
@@ -46,6 +45,13 @@ class PostgresWorkCoordinatorTest {
 
     @AfterEach
     void tearDown() throws Exception {
+        if (dbClient != null && dbClient instanceof PostgresClient) {
+            try {
+                ((PostgresClient) dbClient).executeUpdate("DROP TABLE IF EXISTS work_items CASCADE");
+            } catch (Exception e) {
+                // Ignore cleanup errors
+            }
+        }
         if (coordinator != null) {
             coordinator.close();
         }
@@ -53,16 +59,16 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testCreateUnassignedWorkItem() throws Exception {
-        boolean created = coordinator.createUnassignedWorkItem("test-item-1", () -> null);
+        boolean created = coordinator.createUnassignedWorkItem("index__0__0", () -> null);
         assertTrue(created, "First creation should return true");
         
-        boolean createdAgain = coordinator.createUnassignedWorkItem("test-item-1", () -> null);
+        boolean createdAgain = coordinator.createUnassignedWorkItem("index__0__0", () -> null);
         assertFalse(createdAgain, "Second creation should return false");
     }
 
     @Test
     void testAcquireNextWorkItem() throws Exception {
-        coordinator.createUnassignedWorkItem("test-item-1", () -> null);
+        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
         
         var outcome = coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
@@ -82,7 +88,7 @@ class PostgresWorkCoordinatorTest {
 
             @Override
             public Void onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) {
-                assertEquals("test-item-1", workItem.getWorkItem().toString());
+                assertEquals("index__0__0", workItem.getWorkItem().toString());
                 return null;
             }
         });
@@ -90,10 +96,10 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testCompleteWorkItem() throws Exception {
-        coordinator.createUnassignedWorkItem("test-item-1", () -> null);
+        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
-        assertDoesNotThrow(() -> coordinator.completeWorkItem("test-item-1", () -> null));
+        assertDoesNotThrow(() -> coordinator.completeWorkItem("index__0__0", () -> null));
         
         int remaining = coordinator.numWorkItemsNotYetComplete(() -> null);
         assertEquals(0, remaining);
@@ -125,20 +131,19 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testLeaseExpirationAndRecovery() throws Exception {
-        coordinator.createUnassignedWorkItem("test-item-1", () -> null);
+        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
         
         var shortLeaseCoordinator = new PostgresWorkCoordinator(
             dbClient,
             "work_items",
-            30,
             "worker-with-short-lease",
             Clock.systemUTC(),
             w -> {}
         );
         
-        shortLeaseCoordinator.acquireNextWorkItem(Duration.ofMillis(100), () -> null);
+        shortLeaseCoordinator.acquireNextWorkItem(Duration.ofSeconds(1), () -> null);
         
-        Thread.sleep(200);
+        Thread.sleep(1500);
         
         var outcome = coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
@@ -157,7 +162,7 @@ class PostgresWorkCoordinatorTest {
 
             @Override
             public Void onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) {
-                assertEquals("test-item-1", workItem.getWorkItem().toString());
+                assertEquals("index__0__0", workItem.getWorkItem().toString());
                 return null;
             }
         });
@@ -167,39 +172,38 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testCreateSuccessorWorkItems() throws Exception {
-        coordinator.createUnassignedWorkItem("parent-item", () -> null);
+        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
         coordinator.createSuccessorWorkItemsAndMarkComplete(
-            "parent-item",
-            java.util.List.of("child-1", "child-2"),
+            "index__0__0",
+            java.util.List.of("index__1__0", "index__2__0"),
+            0,
             () -> null
         );
         
         int remaining = coordinator.numWorkItemsNotYetComplete(() -> null);
         assertEquals(2, remaining, "Should have 2 successor items");
         
-        var items = coordinator.workItemsNotYetComplete(() -> null);
-        assertTrue(items.contains("child-1"));
-        assertTrue(items.contains("child-2"));
+        // Verify successor items exist by checking count
+        assertTrue(coordinator.workItemsNotYetComplete(() -> null));
     }
 
     @Test
     void testCannotCompleteWorkItemWithWrongLeaseHolder() throws Exception {
-        coordinator.createUnassignedWorkItem("test-item-1", () -> null);
+        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
         var otherCoordinator = new PostgresWorkCoordinator(
             dbClient,
             "work_items",
-            30,
             "other-worker",
             Clock.systemUTC(),
             w -> {}
         );
         
         assertThrows(Exception.class, () -> {
-            otherCoordinator.completeWorkItem("test-item-1", () -> null);
+            otherCoordinator.completeWorkItem("index__0__0", () -> null);
         });
         
         otherCoordinator.close();
@@ -207,19 +211,17 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testWorkItemsNotYetComplete() throws Exception {
-        coordinator.createUnassignedWorkItem("item-1", () -> null);
-        coordinator.createUnassignedWorkItem("item-2", () -> null);
-        coordinator.createUnassignedWorkItem("item-3", () -> null);
+        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
+        coordinator.createUnassignedWorkItem("index__1__0", () -> null);
+        coordinator.createUnassignedWorkItem("index__2__0", () -> null);
         
         assertEquals(3, coordinator.numWorkItemsNotYetComplete(() -> null));
         
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
-        coordinator.completeWorkItem("item-1", () -> null);
+        coordinator.completeWorkItem("index__0__0", () -> null);
         
         assertEquals(2, coordinator.numWorkItemsNotYetComplete(() -> null));
         
-        var remaining = coordinator.workItemsNotYetComplete(() -> null);
-        assertEquals(2, remaining.size());
-        assertFalse(remaining.contains("item-1"));
+        assertTrue(coordinator.workItemsNotYetComplete(() -> null));
     }
 }

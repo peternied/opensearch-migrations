@@ -151,6 +151,7 @@ dependencies {
     testImplementation testFixtures(project(path: ':testHelperFixtures'))
     testImplementation testFixtures(project(path: ':coreUtilities'))
     testImplementation libs.testcontainers
+    testImplementation libs.testcontainers.junit.jupiter
     testImplementation 'org.testcontainers:postgresql:1.19.3'
     testImplementation libs.hamcrest
     testImplementation libs.junit.jupiter.api

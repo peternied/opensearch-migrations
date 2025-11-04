@@ -55,7 +55,6 @@ class PostgresWorkCoordinatorPerformanceTest {
         var coordinator = new PostgresWorkCoordinator(
             client,
             "work_items",
-            30,
             workerId,
             Clock.systemUTC(),
             w -> {}
@@ -216,6 +215,7 @@ class PostgresWorkCoordinatorPerformanceTest {
                         coordinator.createSuccessorWorkItemsAndMarkComplete(
                             workItem.getWorkItem().toString(),
                             successors,
+                            0,
                             () -> null
                         );
                     } catch (Exception e) {
