@@ -211,6 +211,13 @@ public class RfsMigrateDocuments {
                 "used to communicate to the target, default 10")
         int maxConnections = 10;
 
+        @Parameter(required = false,
+            names = { "--allow-server-generated-ids", "--allowServerGeneratedIds" },
+            description = "Optional. Allow the target cluster to generate document IDs instead of preserving source IDs. " +
+                "Required for OpenSearch Serverless collections that don't support custom document IDs. " +
+                "WARNING: This will result in different document IDs on the target cluster.")
+        public boolean allowServerGeneratedIds = false;
+
         @Parameter(required = true,
             names = { "--source-version", "--sourceVersion" },
             converter = VersionConverter.class,
@@ -223,6 +230,22 @@ public class RfsMigrateDocuments {
                 "This will be appended to the name of the index that is used for work coordination.",
             validateValueWith = IndexNameValidator.class)
         public String indexNameSuffix = "";
+
+        @Parameter(required = false,
+            names = { "--work-coordination-postgres-url" },
+            description = "PostgreSQL JDBC URL for work coordination (e.g., jdbc:postgresql://host:5432/dbname). " +
+                "If provided, PostgreSQL will be used instead of OpenSearch for work coordination.")
+        public String workCoordinationPostgresUrl = null;
+
+        @Parameter(required = false,
+            names = { "--work-coordination-postgres-username" },
+            description = "PostgreSQL username for work coordination")
+        public String workCoordinationPostgresUsername = null;
+
+        @Parameter(required = false,
+            names = { "--work-coordination-postgres-password" },
+            description = "PostgreSQL password for work coordination")
+        public String workCoordinationPostgresPassword = null;
 
         @ParametersDelegate
         private DocParams docTransformationParams = new DocParams();
@@ -388,12 +411,33 @@ public class RfsMigrateDocuments {
         var coordinatorFactory = new WorkCoordinatorFactory(targetVersion, arguments.indexNameSuffix);
         var cleanShutdownCompleted = new AtomicBoolean(false);
 
-        try (var workCoordinator = coordinatorFactory.get(
-                 new CoordinateWorkHttpClient(connectionContext),
-                 TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS,
-                 workerId,
+        IWorkCoordinator workCoordinator;
+        if (arguments.workCoordinationPostgresUrl != null) {
+            log.info("Using PostgreSQL for work coordination: {}", arguments.workCoordinationPostgresUrl);
+            var postgresConfig = new org.opensearch.migrations.bulkload.workcoordination.PostgresConfig(
+                arguments.workCoordinationPostgresUrl,
+                arguments.workCoordinationPostgresUsername,
+                arguments.workCoordinationPostgresPassword
+            );
+            workCoordinator = coordinatorFactory.getPostgres(
+                postgresConfig,
+                TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS,
+                workerId,
                 Clock.systemUTC(),
-                workItemRef::set);
+                workItemRef::set
+            );
+        } else {
+            log.info("Using OpenSearch for work coordination");
+            workCoordinator = coordinatorFactory.get(
+                new CoordinateWorkHttpClient(connectionContext),
+                TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS,
+                workerId,
+                Clock.systemUTC(),
+                workItemRef::set
+            );
+        }
+
+        try (workCoordinator;
              var processManager = new LeaseExpireTrigger(
                 w -> exitOnLeaseTimeout(
                         workItemRef,
@@ -432,7 +476,8 @@ public class RfsMigrateDocuments {
                 arguments.numDocsPerBulkRequest,
                 arguments.numBytesPerBulkRequest,
                 arguments.maxConnections,
-                docTransformerSupplier);
+                docTransformerSupplier,
+                arguments.allowServerGeneratedIds);
 
             var finder = ClusterProviderRegistry.getSnapshotFileFinder(
                     arguments.sourceVersion,

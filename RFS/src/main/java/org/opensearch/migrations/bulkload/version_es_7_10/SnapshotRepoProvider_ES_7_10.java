@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import lombok.extern.slf4j.Slf4j;
 import org.opensearch.migrations.bulkload.common.InvalidSnapshotFormatException;
 import org.opensearch.migrations.bulkload.common.SnapshotRepo;
 import org.opensearch.migrations.bulkload.common.SourceRepo;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class SnapshotRepoProvider_ES_7_10 implements SnapshotRepo.Provider {
