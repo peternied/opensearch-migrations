@@ -421,7 +421,6 @@ public class RfsMigrateDocuments {
             );
             workCoordinator = coordinatorFactory.getPostgres(
                 postgresConfig,
-                TOLERABLE_CLIENT_SERVER_CLOCK_DIFFERENCE_SECONDS,
                 workerId,
                 Clock.systemUTC(),
                 workItemRef::set

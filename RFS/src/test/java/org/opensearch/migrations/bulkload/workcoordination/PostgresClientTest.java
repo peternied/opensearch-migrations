@@ -42,7 +42,7 @@ class PostgresClientTest {
     }
 
     @Test
-    void testBasicQueryExecution() throws SQLException {
+    void testBasicQueryExecution() throws Exception {
         var result = client.executeQuery(
             "SELECT 1 as value",
             rs -> {
@@ -57,7 +57,7 @@ class PostgresClientTest {
     }
 
     @Test
-    void testQueryWithParameters() throws SQLException {
+    void testQueryWithParameters() throws Exception {
         client.executeUpdate(
             "CREATE TEMP TABLE test_table (id INT, name VARCHAR(50))"
         );
@@ -82,7 +82,7 @@ class PostgresClientTest {
     }
 
     @Test
-    void testTransactionCommit() throws SQLException {
+    void testTransactionCommit() throws Exception {
         client.executeUpdate(
             "CREATE TEMP TABLE test_table (id INT, value VARCHAR(50))"
         );
@@ -119,7 +119,7 @@ class PostgresClientTest {
     }
 
     @Test
-    void testTransactionRollback() throws SQLException {
+    void testTransactionRollback() throws Exception {
         client.executeUpdate(
             "CREATE TEMP TABLE test_table (id INT PRIMARY KEY, value VARCHAR(50))"
         );
@@ -156,7 +156,7 @@ class PostgresClientTest {
     }
 
     @Test
-    void testConcurrentConnections() throws InterruptedException, ExecutionException {
+    void testConcurrentConnections() throws Exception {
         client.executeUpdate(
             "CREATE TEMP TABLE test_table (id INT, thread_name VARCHAR(100))"
         );
@@ -202,7 +202,7 @@ class PostgresClientTest {
     }
 
     @Test
-    void testConnectionPoolReuse() throws SQLException {
+    void testConnectionPoolReuse() throws Exception {
         for (int i = 0; i < 50; i++) {
             var result = client.executeQuery(
                 "SELECT ? as value",
@@ -230,7 +230,7 @@ class PostgresClientTest {
     }
 
     @Test
-    void testNullParameterHandling() throws SQLException {
+    void testNullParameterHandling() throws Exception {
         client.executeUpdate(
             "CREATE TEMP TABLE test_table (id INT, nullable_value VARCHAR(50))"
         );
@@ -255,7 +255,7 @@ class PostgresClientTest {
     }
 
     @Test
-    void testMultipleResultSetRows() throws SQLException {
+    void testMultipleResultSetRows() throws Exception {
         client.executeUpdate(
             "CREATE TEMP TABLE test_table (id INT, value VARCHAR(50))"
         );

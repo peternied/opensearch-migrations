@@ -133,20 +133,6 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
         AbstractedHttpClient httpClient,
         String indexNameAppendage,
         long tolerableClientServerClockDifferenceSeconds,
-        String workerId
-    ) {
-        this(httpClient,
-            indexNameAppendage,
-            tolerableClientServerClockDifferenceSeconds,
-            workerId,
-            Clock.systemUTC(),
-            w -> {});
-    }
-
-    protected OpenSearchWorkCoordinator(
-        AbstractedHttpClient httpClient,
-        String indexNameAppendage,
-        long tolerableClientServerClockDifferenceSeconds,
         String workerId,
         Clock clock,
         Consumer<WorkItemAndDuration> workItemConsumer

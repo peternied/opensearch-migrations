@@ -7,11 +7,14 @@ import java.sql.SQLException;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 
-public class PostgresClient implements AbstractedDatabaseClient {
+@Slf4j
+public class PostgresClient implements DatabaseClient {
     private final HikariDataSource dataSource;
     
     public PostgresClient(String jdbcUrl, String username, String password) {
+        log.debug("Initializing PostgresClient with jdbcUrl={}, username={}", jdbcUrl, username);
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
         config.setUsername(username);
@@ -21,53 +24,64 @@ public class PostgresClient implements AbstractedDatabaseClient {
         config.setConnectionTimeout(30000);
         config.setIdleTimeout(600000);
         config.setMaxLifetime(1800000);
+        
+        config.addDataSourceProperty("ssl", "true");
+        config.addDataSourceProperty("sslmode", "require");
+        
         this.dataSource = new HikariDataSource(config);
+        log.debug("PostgresClient initialized successfully");
     }
     
     @Override
     public <T> T executeInTransaction(TransactionFunction<T> operation) throws SQLException {
-        try (Connection conn = dataSource.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                T result = operation.apply(conn);
-                conn.commit();
-                return result;
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
+        log.debug("Executing transaction");
+        return retryOnce(() -> {
+            try (var conn = dataSource.getConnection()) {
+                conn.setAutoCommit(false);
+                try {
+                    T result = operation.apply(conn);
+                    conn.commit();
+                    log.debug("Transaction committed successfully");
+                    return result;
+                } catch (SQLException e) {
+                    log.debug("Transaction failed, rolling back: {}", e.getMessage());
+                    conn.rollback();
+                    throw e;
+                }
             }
-        }
+        });
     }
     
-    @Override
-    public <T> T executeQuery(String sql, ResultSetMapper<T> mapper, Object... params) throws SQLException {
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            setParameters(stmt, params);
-            try (ResultSet rs = stmt.executeQuery()) {
-                return mapper.map(rs);
+    private <T> T retryOnce(SqlOperation<T> operation) throws SQLException {
+        try {
+            return operation.execute();
+        } catch (SQLException e) {
+            if (isTransientError(e)) {
+                log.debug("Transient error detected, retrying once: {}", e.getMessage());
+                return operation.execute();
             }
+            throw e;
         }
     }
     
-    @Override
-    public int executeUpdate(String sql, Object... params) throws SQLException {
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            setParameters(stmt, params);
-            return stmt.executeUpdate();
-        }
+    private boolean isTransientError(SQLException e) {
+        String sqlState = e.getSQLState();
+        return sqlState != null && (
+            sqlState.startsWith("08") ||  // Connection exception
+            sqlState.equals("40001") ||   // Serialization failure
+            sqlState.equals("40P01")      // Deadlock detected
+        );
     }
     
-    private void setParameters(PreparedStatement stmt, Object... params) throws SQLException {
-        for (int i = 0; i < params.length; i++) {
-            stmt.setObject(i + 1, params[i]);
-        }
+    @FunctionalInterface
+    private interface SqlOperation<T> {
+        T execute() throws SQLException;
     }
     
     @Override
     public void close() {
         if (dataSource != null) {
+            log.debug("Closing PostgresClient connection pool");
             dataSource.close();
         }
     }

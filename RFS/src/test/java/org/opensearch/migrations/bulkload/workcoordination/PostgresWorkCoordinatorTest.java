@@ -22,7 +22,7 @@ class PostgresWorkCoordinatorTest {
         .withPassword("test");
 
     private PostgresWorkCoordinator coordinator;
-    private AbstractedDatabaseClient dbClient;
+    private DatabaseClient dbClient;
 
     @BeforeEach
     void setUp() throws Exception {

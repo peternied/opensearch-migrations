@@ -27,7 +27,7 @@ class PostgresWorkCoordinatorMultiWorkerTest {
         .withPassword("test");
 
     private List<PostgresWorkCoordinator> coordinators;
-    private AbstractedDatabaseClient dbClient;
+    private DatabaseClient dbClient;
 
     @BeforeEach
     void setUp() throws Exception {
