@@ -62,9 +62,11 @@ class ServerlessDocIdTest {
         DocumentReindexer reindexer = new DocumentReindexer(mockClient, 10, 1024, 1, null, false);
         
         String serverlessErrorResponse = "{\"took\":1,\"errors\":true,\"items\":[{\"index\":{\"_index\":\"test\",\"_id\":\"1\",\"status\":400,\"error\":{\"type\":\"illegal_argument_exception\",\"reason\":\"Document ID is not supported in create/index operation request\"}}}]}";
+        var response = new OpenSearchClient.BulkResponse(400, "Bad Request", Map.of(), serverlessErrorResponse);
         
-        when(mockClient.sendBulkRequest(eq("test-index"), any(), any(), anyBoolean()))
-            .thenReturn(Mono.just(new OpenSearchClient.BulkResponse(400, "Bad Request", Map.of(), serverlessErrorResponse)));
+        when(mockClient.sendBulkRequest(eq("test-index"), any(), any(), eq(false)))
+            .thenReturn(Mono.error(new OpenSearchClient.ServerlessDocIdNotSupportedException(
+                "Target cluster does not support custom document IDs.", response)));
         
         Flux<RfsLuceneDocument> documentStream = Flux.just(
             new RfsLuceneDocument(1, "1", null, "{\"field\":\"value\"}", null, RfsDocumentOperation.INDEX)

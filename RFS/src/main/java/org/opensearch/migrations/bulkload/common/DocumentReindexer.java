@@ -130,7 +130,7 @@ public class DocumentReindexer {
                 }
                 return Mono.empty();
             })
-            .then(Mono.just(new WorkItemCursor(lastDoc.progressCheckpointNum))
+            .flatMap(unused -> Mono.just(new WorkItemCursor(lastDoc.progressCheckpointNum))
             .subscribeOn(scheduler));
     }
 
