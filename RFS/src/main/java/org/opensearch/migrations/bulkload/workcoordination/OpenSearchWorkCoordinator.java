@@ -291,7 +291,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
             + "    },\n"
             + "    \"source\": \""
             + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
-            + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx._source.scriptVersion);"
+            + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx.source.scriptVersion);"
             + "      } "
             + "      long serverTimeSeconds = System.currentTimeMillis() / 1000;"
             + "      if (Math.abs(params.clientTimestamp - serverTimeSeconds) > {CLOCK_DEVIATION_SECONDS_THRESHOLD}) {"
@@ -451,7 +451,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
                 + "    },\n"
                 + "    \"source\": \""
                 + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
-                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx._source.scriptVersion);"
+                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx.source.scriptVersion);"
                 + "      } "
                 + "      if (ctx._source." + LEASE_HOLDER_ID_FIELD_NAME + " != params.workerId) {"
                 + "        throw new IllegalArgumentException(\\\"work item was owned by \\\" + ctx._source."
@@ -605,7 +605,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
                 + "    },\n"
                 + "    \"source\": \""
                 + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
-                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx._source.scriptVersion);"
+                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx.source.scriptVersion);"
                 + "      } "
                 + "      long serverTimeSeconds = System.currentTimeMillis() / 1000;"
                 + "      if (Math.abs(params.clientTimestamp - serverTimeSeconds) > " + CLOCK_DEVIATION_SECONDS_THRESHOLD_TEMPLATE + ") {"
@@ -655,7 +655,6 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
         }
         var updateResultTree = objectMapper.readTree(updateResponse.getPayloadBytes());
         String result = updateResultTree.path("result").asText();
-        Thread.sleep(15000);
         if ("noop".equals(result)) {
             throw new PotentialClockDriftDetectedException(
                     "No update performed (noop) on document update for docId: " + docId,
@@ -775,7 +774,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
                 + "    },\n"
                 + "    \"source\": \""
                 + "      if (ctx._source.scriptVersion != \\\"" + SCRIPT_VERSION_TEMPLATE + "\\\") {"
-                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx._source.scriptVersion);"
+                + "        throw new IllegalArgumentException(\\\"scriptVersion mismatch.  Not all participants are using the same script: sourceVersion=\\\" + ctx.source.scriptVersion);"
                 + "      }"
                 + "      if (ctx._source." + LEASE_HOLDER_ID_FIELD_NAME + " != params.workerId) {"
                 + "        throw new IllegalArgumentException(\\\"work item was owned by \\\" + ctx._source."
@@ -1052,7 +1051,6 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
 
     private void refresh(Supplier<IWorkCoordinationContexts.IRefreshContext> contextSupplier) throws IOException,
         InterruptedException {
-        Thread.sleep(15000);
 //        try {
 //            doUntil("refresh", 100, MAX_REFRESH_RETRIES, contextSupplier::get, () -> {
 //                try {

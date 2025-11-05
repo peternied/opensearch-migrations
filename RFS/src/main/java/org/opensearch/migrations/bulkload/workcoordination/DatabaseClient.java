@@ -1,7 +1,6 @@
 package org.opensearch.migrations.bulkload.workcoordination;
 
 import java.sql.Connection;
-
 import java.sql.SQLException;
 
 public interface DatabaseClient extends AutoCloseable {

@@ -1,7 +1,5 @@
 package org.opensearch.migrations.bulkload.workcoordination;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 

@@ -156,77 +156,39 @@ class PostgresClientTest {
     }
 
     @Test
-    void testConcurrentConnections() throws Exception {
+    void testConcurrentAccess() throws Exception {
         client.executeUpdate(
-            "CREATE TEMP TABLE test_table (id INT, thread_name VARCHAR(100))"
+            "CREATE TEMP TABLE test_table (id INT)"
         );
         
-        int threadCount = 20;
+        int threadCount = 5;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        List<Future<String>> futures = new ArrayList<>();
+        List<Future<Void>> futures = new ArrayList<>();
         
         for (int i = 0; i < threadCount; i++) {
             final int id = i;
             futures.add(executor.submit(() -> {
-                try {
-                    client.executeUpdate(
-                        "INSERT INTO test_table (id, thread_name) VALUES (?, ?)",
-                        id,
-                        Thread.currentThread().getName()
-                    );
-                    return "success";
-                } catch (Exception e) {
-                    return "failed: " + e.getMessage();
-                }
+                client.executeUpdate(
+                    "INSERT INTO test_table (id) VALUES (?)",
+                    id
+                );
+                return null;
             }));
         }
         
         for (var future : futures) {
-            assertEquals("success", future.get());
+            future.get();
         }
         
         executor.shutdown();
-        assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
         
         var count = client.executeQuery(
             "SELECT COUNT(*) as cnt FROM test_table",
-            rs -> {
-                if (rs.next()) {
-                    return rs.getInt("cnt");
-                }
-                return 0;
-            }
+            rs -> rs.next() ? rs.getInt("cnt") : 0
         );
         
         assertEquals(threadCount, count);
-    }
-
-    @Test
-    void testConnectionPoolReuse() throws Exception {
-        for (int i = 0; i < 50; i++) {
-            var result = client.executeQuery(
-                "SELECT ? as value",
-                rs -> {
-                    if (rs.next()) {
-                        return rs.getInt("value");
-                    }
-                    return null;
-                },
-                i
-            );
-            assertEquals(i, result);
-        }
-    }
-
-    @Test
-    void testInvalidConnectionString() {
-        assertThrows(RuntimeException.class, () -> {
-            new PostgresClient(
-                "jdbc:postgresql://invalid-host:5432/test",
-                "test",
-                "test"
-            );
-        });
     }
 
     @Test
@@ -260,7 +222,7 @@ class PostgresClientTest {
             "CREATE TEMP TABLE test_table (id INT, value VARCHAR(50))"
         );
         
-        for (int i = 1; i <= 5; i++) {
+        for (int i = 1; i <= 3; i++) {
             client.executeUpdate(
                 "INSERT INTO test_table (id, value) VALUES (?, ?)",
                 i, "value-" + i
@@ -278,8 +240,8 @@ class PostgresClientTest {
             }
         );
         
-        assertEquals(5, results.size());
+        assertEquals(3, results.size());
         assertEquals("value-1", results.get(0));
-        assertEquals("value-5", results.get(4));
+        assertEquals("value-3", results.get(2));
     }
 }

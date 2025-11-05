@@ -1,69 +1,35 @@
 package org.opensearch.migrations.bulkload.workcoordination;
 
-import java.time.Clock;
 import java.time.Duration;
 
-import org.junit.jupiter.api.AfterEach;
+import org.opensearch.migrations.bulkload.workcoordination.IWorkCoordinator.WorkItemAndDuration;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.*;
 
-@Testcontainers
-class PostgresWorkCoordinatorTest {
-
-    @Container
-    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
-        .withDatabaseName("test")
-        .withUsername("test")
-        .withPassword("test");
+class PostgresWorkCoordinatorTest extends PostgresWorkCoordinatorTestBase {
 
     private PostgresWorkCoordinator coordinator;
-    private DatabaseClient dbClient;
 
     @BeforeEach
+    @Override
     void setUp() throws Exception {
-        dbClient = new PostgresClient(
-            postgres.getJdbcUrl(),
-            postgres.getUsername(),
-            postgres.getPassword()
-        );
-        
-        coordinator = new PostgresWorkCoordinator(
-            dbClient,
-            "work_items",
-            "test-worker-1",
-            Clock.systemUTC(),
-            w -> {}
-        );
-        
-        coordinator.setup(() -> null);
-    }
-
-    @AfterEach
-    void tearDown() throws Exception {
-        if (dbClient != null && dbClient instanceof PostgresClient) {
-            try {
-                ((PostgresClient) dbClient).executeUpdate("DROP TABLE IF EXISTS work_items CASCADE");
-            } catch (Exception e) {
-                // Ignore cleanup errors
-            }
-        }
-        if (coordinator != null) {
-            coordinator.close();
-        }
+        super.setUp();
+        coordinator = createCoordinator("test-worker-1");
     }
 
     @Test
     void testCreateUnassignedWorkItem() throws Exception {
         boolean created = coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
-        assertTrue(created, "First creation should return true");
+        assertThat(created, is(true));
         
         boolean createdAgain = coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
-        assertFalse(createdAgain, "Second creation should return false");
+        assertThat(createdAgain, is(false));
     }
 
     @Test
@@ -72,26 +38,13 @@ class PostgresWorkCoordinatorTest {
         
         var outcome = coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
-        assertNotNull(outcome);
-        outcome.visit(new IWorkCoordinator.WorkAcquisitionOutcomeVisitor<Void>() {
-            @Override
-            public Void onAlreadyCompleted() {
-                fail("Should not be already completed");
-                return null;
-            }
-
-            @Override
-            public Void onNoAvailableWorkToBeDone() {
-                fail("Should have work available");
-                return null;
-            }
-
-            @Override
-            public Void onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) {
-                assertEquals("index__0__0", workItem.getWorkItem().toString());
-                return null;
-            }
-        });
+        assertThat(outcome, is(notNullValue()));
+        var visitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
+        outcome.visit(visitor);
+        
+        verify(visitor).onAcquiredWork(any());
+        verify(visitor, never()).onAlreadyCompleted();
+        verify(visitor, never()).onNoAvailableWorkToBeDone();
     }
 
     @Test
@@ -99,73 +52,41 @@ class PostgresWorkCoordinatorTest {
         coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
-        assertDoesNotThrow(() -> coordinator.completeWorkItem(new WorkItem("index", 0, 0), () -> null));
+        coordinator.completeWorkItem(new WorkItem("index", 0, 0), () -> null);
         
         int remaining = coordinator.numWorkItemsNotYetComplete(() -> null);
-        assertEquals(0, remaining);
+        assertThat(remaining, is(0));
     }
 
     @Test
     void testNoAvailableWork() throws Exception {
         var outcome = coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
-        outcome.visit(new IWorkCoordinator.WorkAcquisitionOutcomeVisitor<Void>() {
-            @Override
-            public Void onAlreadyCompleted() {
-                fail("Should not be already completed");
-                return null;
-            }
-
-            @Override
-            public Void onNoAvailableWorkToBeDone() {
-                return null;
-            }
-
-            @Override
-            public Void onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) {
-                fail("Should have no work available");
-                return null;
-            }
-        });
+        var visitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
+        outcome.visit(visitor);
+        
+        verify(visitor).onNoAvailableWorkToBeDone();
+        verify(visitor, never()).onAlreadyCompleted();
+        verify(visitor, never()).onAcquiredWork(any());
     }
 
     @Test
     void testLeaseExpirationAndRecovery() throws Exception {
         coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         
-        var shortLeaseCoordinator = new PostgresWorkCoordinator(
-            dbClient,
-            "work_items",
-            "worker-with-short-lease",
-            Clock.systemUTC(),
-            w -> {}
-        );
-        
+        var shortLeaseCoordinator = createCoordinator("worker-with-short-lease");
         shortLeaseCoordinator.acquireNextWorkItem(Duration.ofSeconds(1), () -> null);
         
         Thread.sleep(1500);
         
         var outcome = coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
-        outcome.visit(new IWorkCoordinator.WorkAcquisitionOutcomeVisitor<Void>() {
-            @Override
-            public Void onAlreadyCompleted() {
-                fail("Should not be already completed");
-                return null;
-            }
-
-            @Override
-            public Void onNoAvailableWorkToBeDone() {
-                fail("Expired work should be available");
-                return null;
-            }
-
-            @Override
-            public Void onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) {
-                assertEquals("index__0__0", workItem.getWorkItem().toString());
-                return null;
-            }
-        });
+        var visitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
+        outcome.visit(visitor);
+        
+        verify(visitor).onAcquiredWork(any());
+        verify(visitor, never()).onAlreadyCompleted();
+        verify(visitor, never()).onNoAvailableWorkToBeDone();
         
         shortLeaseCoordinator.close();
     }
@@ -183,10 +104,9 @@ class PostgresWorkCoordinatorTest {
         );
         
         int remaining = coordinator.numWorkItemsNotYetComplete(() -> null);
-        assertEquals(2, remaining, "Should have 2 successor items");
+        assertThat(remaining, is(2));
         
-        // Verify successor items exist by checking count
-        assertTrue(coordinator.workItemsNotYetComplete(() -> null));
+        assertThat(coordinator.workItemsNotYetComplete(() -> null), is(true));
     }
 
     @Test
@@ -194,13 +114,7 @@ class PostgresWorkCoordinatorTest {
         coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
-        var otherCoordinator = new PostgresWorkCoordinator(
-            dbClient,
-            "work_items",
-            "other-worker",
-            Clock.systemUTC(),
-            w -> {}
-        );
+        var otherCoordinator = createCoordinator("other-worker");
         
         assertThrows(Exception.class, () -> {
             otherCoordinator.completeWorkItem(new WorkItem("index", 0, 0), () -> null);
@@ -215,13 +129,19 @@ class PostgresWorkCoordinatorTest {
         coordinator.createUnassignedWorkItem(new WorkItem("index", 1, 0), () -> null);
         coordinator.createUnassignedWorkItem(new WorkItem("index", 2, 0), () -> null);
         
-        assertEquals(3, coordinator.numWorkItemsNotYetComplete(() -> null));
+        assertThat(coordinator.numWorkItemsNotYetComplete(() -> null), is(3));
         
-        coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
-        coordinator.completeWorkItem(new WorkItem("index", 0, 0), () -> null);
+        var outcome = coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
+        var visitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
+        when(visitor.onAcquiredWork(any())).thenAnswer(inv -> {
+            var acquiredItem = (WorkItemAndDuration)inv.getArgument(0);
+            coordinator.completeWorkItem(acquiredItem.getWorkItem(), () -> null);
+            return acquiredItem;
+        });
+        outcome.visit(visitor);
         
-        assertEquals(2, coordinator.numWorkItemsNotYetComplete(() -> null));
+        assertThat(coordinator.numWorkItemsNotYetComplete(() -> null), is(2));
         
-        assertTrue(coordinator.workItemsNotYetComplete(() -> null));
+        assertThat(coordinator.workItemsNotYetComplete(() -> null), is(true));
     }
 }
