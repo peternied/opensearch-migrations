@@ -86,15 +86,7 @@ class PostgresWorkCoordinatorMultiWorkerTest extends PostgresWorkCoordinatorTest
         
         var workerCount = 3;
         var executor = Executors.newFixedThreadPool(workerCount);
-        var sharedVisitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
         var completedCount = new AtomicInteger(0);
-        
-        doAnswer(invocation -> {
-            IWorkCoordinator.WorkItemAndDuration workItem = invocation.getArgument(0);
-            workerCoordinator.completeWorkItem(workItem.getWorkItem(), () -> null);
-            completedCount.incrementAndGet();
-            return null;
-        }).when(sharedVisitor).onAcquiredWork(any());
         
         for (int i = 0; i < workerCount; i++) {
             final var workerId = "worker-" + i;
@@ -104,9 +96,17 @@ class PostgresWorkCoordinatorMultiWorkerTest extends PostgresWorkCoordinatorTest
                     var noWorkCount = 0;
                     while (noWorkCount < 5) {
                         var outcome = workerCoordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
-                        outcome.visit(sharedVisitor);
+                        var visitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
+                        outcome.visit(visitor);
                         
-                        if (completedCount.get() < itemCount) {
+                        var acquiredWork = mockingDetails(visitor).getInvocations().stream()
+                                .filter(inv -> inv.getMethod().getName().equals("onAcquiredWork"))
+                                .findFirst();
+                        
+                        if (acquiredWork.isPresent()) {
+                            var workItem = (IWorkCoordinator.WorkItemAndDuration) acquiredWork.get().getArgument(0);
+                            workerCoordinator.completeWorkItem(workItem.getWorkItem(), () -> null);
+                            completedCount.incrementAndGet();
                             noWorkCount = 0;
                         } else {
                             noWorkCount++;
@@ -122,7 +122,7 @@ class PostgresWorkCoordinatorMultiWorkerTest extends PostgresWorkCoordinatorTest
         executor.shutdown();
         assertThat(executor.awaitTermination(30, TimeUnit.SECONDS), is(true));
         
-        verify(sharedVisitor, times(itemCount)).onAcquiredWork(any());
+        assertThat("All items completed", completedCount.get(), is(itemCount));
         assertThat("No incomplete items", coordinator.numWorkItemsNotYetComplete(() -> null), is(0));
     }
 
