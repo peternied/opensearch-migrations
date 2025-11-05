@@ -30,7 +30,7 @@ public class OpenSearchWorkCoordinator_OS_2_11 extends OpenSearchWorkCoordinator
             + "  \"settings\": {\n"
             + "   \"index\": {"
             + "    \"number_of_shards\": 1,\n"
-            + "    \"number_of_replicas\": 0,\n"
+            + "    \"number_of_replicas\": 1,\n"
             + "    \"refresh_interval\": \"30s\"\n"
             + "   }\n"
             + "  },\n"
