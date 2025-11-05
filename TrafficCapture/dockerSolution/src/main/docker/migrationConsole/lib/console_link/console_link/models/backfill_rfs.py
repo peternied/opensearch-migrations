@@ -22,7 +22,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-WORKING_STATE_INDEX = "migrations_working_state"
+WORKING_STATE_INDEX = ".migrations_working_state"
 
 DOCKER_RFS_SCHEMA = {
     "type": "dict",

@@ -3,10 +3,6 @@
 def call(Map config = [:]) {
     def sourceContextId = 'source-single-node-ec2'
     def migrationContextId = 'migration-rfs'
-    def stageId = config.stageId ?: 'rfs-integ'
-    // Get the lock resource name from config or default to the stageId
-    def lockResourceName = config.lockResourceName ?: stageId
-    
     def source_cdk_context = """
         {
           "source-single-node-ec2": {
@@ -62,8 +58,7 @@ def call(Map config = [:]) {
             migrationContext: migration_cdk_context,
             sourceContextId: sourceContextId,
             migrationContextId: migrationContextId,
-            defaultStageId: stageId,
-            lockResourceName: lockResourceName,  // Use the lock resource name for Jenkins locks
+            defaultStageId: 'rfs-integ',
             skipCaptureProxyOnNodeSetup: true,
             jobName: 'rfs-default-e2e-test',
             integTestCommand: '/root/lib/integ_test/integ_test/backfill_tests.py'

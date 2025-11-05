@@ -269,7 +269,7 @@ def test_ecs_rfs_backfill_archive_as_expected(ecs_rfs_backfill, mocker, tmpdir):
         assert json.load(f) == mocked_docs
 
     mock_api.assert_called_once_with(
-        ANY, "/migrations_working_state", method=HttpMethod.DELETE,
+        ANY, "/.migrations_working_state", method=HttpMethod.DELETE,
         params={"ignore_unavailable": "true"}
     )
 

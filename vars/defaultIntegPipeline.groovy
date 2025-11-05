@@ -24,22 +24,18 @@ def call(Map config = [:]) {
     def testUniqueId = config.testUniqueId ?: "integ_full_${time}_${currentBuild.number}"
     def testDir = "/root/lib/integ_test/integ_test"
     def integTestCommand = config.integTestCommand ?: "${testDir}/replayer_tests.py"
-    // Use a custom lock resource name if provided, otherwise use the stage parameter
-    def lockResourceName = config.lockResourceName ?: params.STAGE
-    
     pipeline {
         agent { label config.workerAgent ?: 'Jenkins-Default-Agent-X64-C5xlarge-Single-Host' }
 
         parameters {
-            string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/AndreKurait/opensearch-migrations.git', description: 'Git repository url')
-            string(name: 'GIT_BRANCH', defaultValue: 'JenkinsLargeSnapshotMigration', description: 'Git branch to use for repository')
+            string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/opensearch-project/opensearch-migrations.git', description: 'Git repository url')
+            string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch to use for repository')
             string(name: 'STAGE', defaultValue: "${defaultStageId}", description: 'Stage name for deployment environment')
         }
 
         options {
-            // Acquire lock on a given deployment stage, use lockResourceName if provided
-            // The variable 'lockVar' is only used internally for the lock mechanism
-            lock(label: lockResourceName, quantity: 1, variable: 'lockVar')
+            // Acquire lock on a given deployment stage
+            lock(label: params.STAGE, quantity: 1, variable: 'stage')
             timeout(time: 3, unit: 'HOURS')
             buildDiscarder(logRotator(daysToKeepStr: '30'))
             skipDefaultCheckout(true)
@@ -120,7 +116,7 @@ def call(Map config = [:]) {
                             if (config.buildStep) {
                                 config.buildStep()
                             } else {
-                                sh 'sudo --preserve-env ./gradlew clean build -x test --no-daemon'
+                                sh './gradlew clean build --no-daemon --stacktrace'
                             }
                         }
                     }
@@ -136,17 +132,12 @@ def call(Map config = [:]) {
                                 if (config.deployStep) {
                                     config.deployStep()
                                 } else {
-                                    // Use the actual stage parameter for deployment, not the lock variable
-                                    def deployStage = params.STAGE
-                                    echo "Acquired lock resource: ${lockVar}"
-                                    echo "Deploying with stage: ${deployStage}"
-                                    sh 'sudo usermod -aG docker $USER'
-                                    sh 'sudo newgrp docker'
-                                    def baseCommand = "sudo --preserve-env ./awsE2ESolutionSetup.sh --source-context-file './$source_context_file_name' " +
+                                    echo "Acquired deployment stage: ${stage}"
+                                    def baseCommand = "./awsE2ESolutionSetup.sh --source-context-file './$source_context_file_name' " +
                                             "--migration-context-file './$migration_context_file_name' " +
                                             "--source-context-id $source_context_id " +
                                             "--migration-context-id $migration_context_id " +
-                                            "--stage ${deployStage} " +
+                                            "--stage ${stage} " +
                                             "--migrations-git-url ${params.GIT_REPO_URL} " +
                                             "--migrations-git-branch ${params.GIT_BRANCH}"
                                     if (skipCaptureProxyOnNodeSetup) {
@@ -173,19 +164,18 @@ def call(Map config = [:]) {
                                 if (config.integTestStep) {
                                     config.integTestStep()
                                 } else {
-                                    def deployStage = params.STAGE
                                     def test_result_file = "${testDir}/reports/${testUniqueId}/report.xml"
-                                    def populatedIntegTestCommand = integTestCommand.replaceAll("<STAGE>", deployStage)
+                                    def populatedIntegTestCommand = integTestCommand.replaceAll("<STAGE>", stage)
                                     def command = "pipenv run pytest --log-file=${testDir}/reports/${testUniqueId}/pytest.log " +
                                             "--junitxml=${test_result_file} ${populatedIntegTestCommand} " +
                                             "--unique_id ${testUniqueId} " +
-                                            "--stage ${deployStage} " +
+                                            "--stage ${stage} " +
                                             "-s"
                                     withCredentials([string(credentialsId: 'migrations-test-account-id', variable: 'MIGRATIONS_TEST_ACCOUNT_ID')]) {
                                         withAWS(role: 'JenkinsDeploymentRole', roleAccount: "${MIGRATIONS_TEST_ACCOUNT_ID}", duration: 3600, roleSessionName: 'jenkins-session') {
                                             sh "./awsRunIntegTests.sh --command '${command}' " +
                                                     "--test-result-file ${test_result_file} " +
-                                                    "--stage ${deployStage}"
+                                                    "--stage ${stage}"
                                         }
                                     }
                                 }
