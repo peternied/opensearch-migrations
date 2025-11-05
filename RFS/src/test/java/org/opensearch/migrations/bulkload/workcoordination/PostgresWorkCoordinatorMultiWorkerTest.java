@@ -73,8 +73,9 @@ class PostgresWorkCoordinatorMultiWorkerTest {
         var coordinator1 = createCoordinator("worker-1");
         var coordinator2 = createCoordinator("worker-2");
         
-        coordinator1.createUnassignedWorkItem("item-1", () -> null);
-        coordinator1.createUnassignedWorkItem("item-2", () -> null);
+        assertTrue(coordinator1.createUnassignedWorkItem(new WorkItem("item", 1, 0), () -> null));
+        assertTrue(coordinator1.createUnassignedWorkItem(new WorkItem("item", 2, 0), () -> null));
+        assertEquals(2, coordinator1.numWorkItemsNotYetComplete(() -> null));
         
         var acquired1 = new ArrayList<String>();
         var acquired2 = new ArrayList<String>();
@@ -90,6 +91,9 @@ class PostgresWorkCoordinatorMultiWorkerTest {
             @Override public Void onNoAvailableWorkToBeDone() { return null; }
         });
         
+        int remainingAfterFirst = coordinator1.numWorkItemsNotYetComplete(() -> null);
+        assertEquals(2, remainingAfterFirst, "Should still have 2 incomplete items after acquisition");
+        
         var outcome2 = coordinator2.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         outcome2.visit(new IWorkCoordinator.WorkAcquisitionOutcomeVisitor<Void>() {
             @Override
@@ -98,11 +102,14 @@ class PostgresWorkCoordinatorMultiWorkerTest {
                 return null;
             }
             @Override public Void onAlreadyCompleted() { return null; }
-            @Override public Void onNoAvailableWorkToBeDone() { return null; }
+            @Override public Void onNoAvailableWorkToBeDone() { 
+                fail("Worker 2 should find available work");
+                return null; 
+            }
         });
         
-        assertEquals(1, acquired1.size());
-        assertEquals(1, acquired2.size());
+        assertEquals(1, acquired1.size(), "Worker 1 should acquire 1 item");
+        assertEquals(1, acquired2.size(), "Worker 2 should acquire 1 item");
         assertNotEquals(acquired1.get(0), acquired2.get(0), "Workers should acquire different items");
     }
 
@@ -110,7 +117,7 @@ class PostgresWorkCoordinatorMultiWorkerTest {
     void testConcurrentWorkAcquisitionNoDuplicates() throws Exception {
         var coordinator = createCoordinator("setup");
         for (int i = 0; i < 10; i++) {
-            coordinator.createUnassignedWorkItem("item-" + i, () -> null);
+            coordinator.createUnassignedWorkItem(new WorkItem("item", i, 0), () -> null);
         }
         
         int workerCount = 5;
@@ -155,7 +162,7 @@ class PostgresWorkCoordinatorMultiWorkerTest {
         var coordinator = createCoordinator("setup");
         int itemCount = 20;
         for (int i = 0; i < itemCount; i++) {
-            coordinator.createUnassignedWorkItem("item-" + i, () -> null);
+            coordinator.createUnassignedWorkItem(new WorkItem("item", i, 0), () -> null);
         }
         
         int workerCount = 3;
@@ -168,7 +175,8 @@ class PostgresWorkCoordinatorMultiWorkerTest {
             executor.submit(() -> {
                 try {
                     var workerCoordinator = createCoordinator(workerId);
-                    while (true) {
+                    var noWorkCount = new int[]{0};
+                    while (noWorkCount[0] < 5) {
                         var outcome = workerCoordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
                         var acquired = new boolean[]{false};
                         var itemId = new String[1];
@@ -180,16 +188,24 @@ class PostgresWorkCoordinatorMultiWorkerTest {
                                 itemId[0] = workItem.getWorkItem().toString();
                                 return null;
                             }
-                            @Override public Void onAlreadyCompleted() { return null; }
-                            @Override public Void onNoAvailableWorkToBeDone() { return null; }
+                            @Override public Void onAlreadyCompleted() { 
+                                noWorkCount[0]++;
+                                return null; 
+                            }
+                            @Override public Void onNoAvailableWorkToBeDone() { 
+                                noWorkCount[0]++;
+                                return null; 
+                            }
                         });
                         
                         if (!acquired[0]) {
-                            break;
+                            Thread.sleep(50);
+                            continue;
                         }
                         
+                        noWorkCount[0] = 0;
                         processedItems.add(itemId[0]);
-                        workerCoordinator.completeWorkItem(itemId[0], () -> null);
+                        workerCoordinator.completeWorkItem(WorkItem.fromString(itemId[0]), () -> null);
                         completedCount.incrementAndGet();
                     }
                 } catch (Exception e) {
@@ -211,7 +227,7 @@ class PostgresWorkCoordinatorMultiWorkerTest {
         var coordinator1 = createCoordinator("worker-1");
         var coordinator2 = createCoordinator("worker-2");
         
-        coordinator1.createUnassignedWorkItem("parent-item", () -> null);
+        coordinator1.createUnassignedWorkItem(new WorkItem("parent-item", 0, 0), () -> null);
         
         var outcome = coordinator1.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         outcome.visit(new IWorkCoordinator.WorkAcquisitionOutcomeVisitor<Void>() {
@@ -219,8 +235,8 @@ class PostgresWorkCoordinatorMultiWorkerTest {
             public Void onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) {
                 try {
                     coordinator1.createSuccessorWorkItemsAndMarkComplete(
-                        "parent-item",
-                        List.of("child-1", "child-2"),
+                        new WorkItem("parent-item", 0, 0),
+                        List.of(new WorkItem("child", 1, 0), new WorkItem("child", 2, 0)),
                         0,
                         () -> null
                     );

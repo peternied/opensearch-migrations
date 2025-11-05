@@ -135,8 +135,8 @@ public class WorkCoordinatorTest {
             Assertions.assertFalse(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
             for (var i = 0; i < NUM_DOCS; ++i) {
                 final var docId = "R" + i;
-                var newWorkItem = IWorkCoordinator.WorkItemAndDuration.WorkItem.valueFromWorkItemString(docId + "__0__0");
-                workCoordinator.createUnassignedWorkItem(newWorkItem.toString(), testContext::createUnassignedWorkContext);
+                var newWorkItem = WorkItem.fromString(docId + "__0__0");
+                workCoordinator.createUnassignedWorkItem(newWorkItem, testContext::createUnassignedWorkContext);
             }
             Assertions.assertTrue(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
         }
@@ -184,8 +184,8 @@ public class WorkCoordinatorTest {
                     IntStream.range(0, NUM_DOCS)
                             .mapToObj(i -> CompletableFuture.supplyAsync(() -> {
                                 try {
-                                    return workCoordinator.createUnassignedWorkItem("R__0__" + i, testContext::createUnassignedWorkContext);
-                                } catch (IOException e) {
+                                    return workCoordinator.createUnassignedWorkItem(new WorkItem("R", 0, i), testContext::createUnassignedWorkContext);
+                                } catch (Exception e) {
                                     throw new RuntimeException(e);
                                 }
                             }))
@@ -267,8 +267,7 @@ public class WorkCoordinatorTest {
         try (var workCoordinator = factory.get(httpClientSupplier.get(), 3600, "docCreatorWorker", Clock.systemUTC(), workItemRef::set)) {
             Assertions.assertFalse(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
             for (var i = 0; i < NUM_DOCS; ++i) {
-                final var docId = "R__0__" + i;
-                workCoordinator.createUnassignedWorkItem(docId, testContext::createUnassignedWorkContext);
+                workCoordinator.createUnassignedWorkItem(new WorkItem("R", 0, i), testContext::createUnassignedWorkContext);
             }
             Assertions.assertTrue(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
         }
@@ -286,13 +285,13 @@ public class WorkCoordinatorTest {
                 );
                 var currentNumPendingItems = workCoordinator.numWorkItemsNotYetComplete(testContext::createItemsPendingContext);
 
-                var successorWorkItems = new ArrayList<String>();
+                var successorWorkItems = new ArrayList<WorkItem>();
                 for (int j = 0; j < NUM_SUCCESSOR_ITEMS; j++) {
-                    successorWorkItems.add("successor__" + i + "__" + j);
+                    successorWorkItems.add(new WorkItem("successor", i, j));
                 }
 
                 workCoordinator.createSuccessorWorkItemsAndMarkComplete(
-                    workItemId,
+                    WorkItem.fromString(workItemId),
                     successorWorkItems,
                     0,
                     testContext::createSuccessorWorkItemsContext
@@ -339,8 +338,7 @@ public class WorkCoordinatorTest {
         try (var workCoordinator = factory.get(httpClientSupplier.get(), 3600, "docCreatorWorker", Clock.systemUTC(), workItemRef::set)) {
             Assertions.assertFalse(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
             for (var i = 0; i < NUM_DOCS; ++i) {
-                final var docId = "R__0__" + i;
-                workCoordinator.createUnassignedWorkItem(docId, testContext::createUnassignedWorkContext);
+                workCoordinator.createUnassignedWorkItem(new WorkItem("R", 0, i), testContext::createUnassignedWorkContext);
             }
             Assertions.assertTrue(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
         }
@@ -383,7 +381,7 @@ public class WorkCoordinatorTest {
         var workItemRef = new AtomicReference<IWorkCoordinator.WorkItemAndDuration>();
         try (var workCoordinator = factory.get(httpClientSupplier.get(), 3600, "successorTest", Clock.systemUTC(), workItemRef::set)) {
             Assertions.assertFalse(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
-            workCoordinator.createUnassignedWorkItem(initialWorkItem, testContext::createUnassignedWorkContext);
+            workCoordinator.createUnassignedWorkItem(WorkItem.fromString(initialWorkItem), testContext::createUnassignedWorkContext);
             Assertions.assertTrue(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
             // Claim the work item
             getWorkItemAndVerify(testContext, "successorTest", seenWorkerItems, originalWorkItemExpiration, false, false);
@@ -394,7 +392,7 @@ public class WorkCoordinatorTest {
             var response = client.makeJsonRequest("POST", updatePath, null, body);
             Assertions.assertEquals(200, response.getStatusCode(), "Unexpected response " + response.toDiagnosticString());
             // Create a successor item and then claim it with a long lease.
-            workCoordinator.createUnassignedWorkItem(successorItems.get(0), testContext::createUnassignedWorkContext);
+            workCoordinator.createUnassignedWorkItem(WorkItem.fromString(successorItems.get(0)), testContext::createUnassignedWorkContext);
             // Now, we should be able to claim the first successor item with a different worker id
             // We should NOT be able to claim the other successor items yet (since they haven't been created yet) or the original item
             String workItemId = getWorkItemAndVerify(testContext, "claimSuccessorItem", seenWorkerItems, Duration.ofSeconds(600), false, true);
@@ -442,7 +440,7 @@ public class WorkCoordinatorTest {
         var workItemRef = new AtomicReference<IWorkCoordinator.WorkItemAndDuration>();
         try (var workCoordinator = factory.get(httpClientSupplier.get(), 3600, "successorTest", Clock.systemUTC(), workItemRef::set)) {
             Assertions.assertFalse(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
-            workCoordinator.createUnassignedWorkItem(initialWorkItem, testContext::createUnassignedWorkContext);
+            workCoordinator.createUnassignedWorkItem(WorkItem.fromString(initialWorkItem), testContext::createUnassignedWorkContext);
             Assertions.assertTrue(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
             // Claim the work item
             getWorkItemAndVerify(testContext, "successorTest", new ConcurrentHashMap<>(), originalWorkItemExpiration, false, false);
@@ -455,8 +453,9 @@ public class WorkCoordinatorTest {
             Assertions.assertEquals(200, response.getStatusCode(), "Unexpected response " + response.toDiagnosticString());
 
             // Now attempt to go through with the correct successor item list
+            var successorWorkItems = successorItems.stream().map(WorkItem::fromString).collect(java.util.stream.Collectors.toList());
             Assertions.assertThrows(IllegalStateException.class,
-                    () -> workCoordinator.createSuccessorWorkItemsAndMarkComplete(docId, successorItems, 0,
+                    () -> workCoordinator.createSuccessorWorkItemsAndMarkComplete(WorkItem.fromString(docId + "__0__0"), successorWorkItems, 0,
                             testContext::createSuccessorWorkItemsContext));
         }
     }
@@ -470,19 +469,19 @@ public class WorkCoordinatorTest {
         // but not all.  This tests that the coordinator handles this case correctly by continuing to make the originally specific successor items.
         var testContext = WorkCoordinationTestContext.factory().withAllTracking();
         var initialWorkItem = "R0__0__0";
-        var successorItems = new ArrayList<>(List.of("R0__0__0", "R1__0__0", "R2__0__0"));
+        var successorItems = new ArrayList<>(List.of(new WorkItem("R0", 0, 0), new WorkItem("R1", 0, 0), new WorkItem("R2", 0, 0)));
 
         var workItemRef = new AtomicReference<IWorkCoordinator.WorkItemAndDuration>();
         try (var workCoordinator = factory.get(httpClientSupplier.get(), 3600, "successorTest", Clock.systemUTC(), workItemRef::set)) {
             Assertions.assertFalse(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
-            workCoordinator.createUnassignedWorkItem(initialWorkItem, testContext::createUnassignedWorkContext);
+            workCoordinator.createUnassignedWorkItem(WorkItem.fromString(initialWorkItem), testContext::createUnassignedWorkContext);
             Assertions.assertTrue(workCoordinator.workItemsNotYetComplete(testContext::createItemsPendingContext));
             // Claim the work item
             getWorkItemAndVerify(testContext, "successorTest", new ConcurrentHashMap<>(), Duration.ofSeconds(5), false, false);
 
             // Now attempt to go through with the correct successor item list
             Assertions.assertThrows(IllegalArgumentException.class,
-                    () -> workCoordinator.createSuccessorWorkItemsAndMarkComplete(initialWorkItem, successorItems,
+                    () -> workCoordinator.createSuccessorWorkItemsAndMarkComplete(WorkItem.fromString(initialWorkItem), successorItems,
                             0,
                             testContext::createSuccessorWorkItemsContext));
         }
@@ -505,15 +504,15 @@ public class WorkCoordinatorTest {
                 placeFinishedDoc,
                 false
         );
-        ArrayList<String> successorWorkItems = new ArrayList<>();
+        ArrayList<WorkItem> successorWorkItems = new ArrayList<>();
         for (int j = 0; j < numSuccessorItems; j++) {
             // Replace "__" with "_" in workerId to create a unique name
-            successorWorkItems.add(workItemId.replace("__", "_") + "__0__" + j);
+            successorWorkItems.add(WorkItem.fromString(workItemId.replace("__", "_") + "__0__" + j));
         }
         var workItemRef = new AtomicReference<IWorkCoordinator.WorkItemAndDuration>();
         try (var workCoordinator = factory.get(httpClientSupplier.get(), 3600, workerName, Clock.systemUTC(), workItemRef::set)) {
             workCoordinator.createSuccessorWorkItemsAndMarkComplete(
-                    workItemId, successorWorkItems,
+                    WorkItem.fromString(workItemId), successorWorkItems,
                     0,
                     testContext::createSuccessorWorkItemsContext
             );
@@ -551,7 +550,7 @@ public class WorkCoordinatorTest {
             var doneId = DUMMY_FINISHED_DOC_ID + "__" + nonce.incrementAndGet() + "__0";
             if (placeFinishedDoc) {
                 workCoordinator.createOrUpdateLeaseForDocument(doneId, 1);
-                workCoordinator.completeWorkItem(doneId, testContext::createCompleteWorkContext);
+                workCoordinator.completeWorkItem(WorkItem.fromString(doneId), testContext::createCompleteWorkContext);
             }
 
             final var oldNow = workCoordinator.getClock().instant(); //
@@ -580,7 +579,7 @@ public class WorkCoordinatorTest {
 
                         if (markCompleted) {
                             workCoordinator.completeWorkItem(
-                                workItem.getWorkItem().toString(),
+                                workItem.getWorkItem(),
                                 testContext::createCompleteWorkContext
                             );
                         }

@@ -59,16 +59,16 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testCreateUnassignedWorkItem() throws Exception {
-        boolean created = coordinator.createUnassignedWorkItem("index__0__0", () -> null);
+        boolean created = coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         assertTrue(created, "First creation should return true");
         
-        boolean createdAgain = coordinator.createUnassignedWorkItem("index__0__0", () -> null);
+        boolean createdAgain = coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         assertFalse(createdAgain, "Second creation should return false");
     }
 
     @Test
     void testAcquireNextWorkItem() throws Exception {
-        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
+        coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         
         var outcome = coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
@@ -96,10 +96,10 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testCompleteWorkItem() throws Exception {
-        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
+        coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
-        assertDoesNotThrow(() -> coordinator.completeWorkItem("index__0__0", () -> null));
+        assertDoesNotThrow(() -> coordinator.completeWorkItem(new WorkItem("index", 0, 0), () -> null));
         
         int remaining = coordinator.numWorkItemsNotYetComplete(() -> null);
         assertEquals(0, remaining);
@@ -131,7 +131,7 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testLeaseExpirationAndRecovery() throws Exception {
-        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
+        coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         
         var shortLeaseCoordinator = new PostgresWorkCoordinator(
             dbClient,
@@ -172,12 +172,12 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testCreateSuccessorWorkItems() throws Exception {
-        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
+        coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
         coordinator.createSuccessorWorkItemsAndMarkComplete(
-            "index__0__0",
-            java.util.List.of("index__1__0", "index__2__0"),
+            new WorkItem("index", 0, 0),
+            java.util.List.of(new WorkItem("index", 1, 0), new WorkItem("index", 2, 0)),
             0,
             () -> null
         );
@@ -191,7 +191,7 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testCannotCompleteWorkItemWithWrongLeaseHolder() throws Exception {
-        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
+        coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         
         var otherCoordinator = new PostgresWorkCoordinator(
@@ -203,7 +203,7 @@ class PostgresWorkCoordinatorTest {
         );
         
         assertThrows(Exception.class, () -> {
-            otherCoordinator.completeWorkItem("index__0__0", () -> null);
+            otherCoordinator.completeWorkItem(new WorkItem("index", 0, 0), () -> null);
         });
         
         otherCoordinator.close();
@@ -211,14 +211,14 @@ class PostgresWorkCoordinatorTest {
 
     @Test
     void testWorkItemsNotYetComplete() throws Exception {
-        coordinator.createUnassignedWorkItem("index__0__0", () -> null);
-        coordinator.createUnassignedWorkItem("index__1__0", () -> null);
-        coordinator.createUnassignedWorkItem("index__2__0", () -> null);
+        coordinator.createUnassignedWorkItem(new WorkItem("index", 0, 0), () -> null);
+        coordinator.createUnassignedWorkItem(new WorkItem("index", 1, 0), () -> null);
+        coordinator.createUnassignedWorkItem(new WorkItem("index", 2, 0), () -> null);
         
         assertEquals(3, coordinator.numWorkItemsNotYetComplete(() -> null));
         
         coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
-        coordinator.completeWorkItem("index__0__0", () -> null);
+        coordinator.completeWorkItem(new WorkItem("index", 0, 0), () -> null);
         
         assertEquals(2, coordinator.numWorkItemsNotYetComplete(() -> null));
         

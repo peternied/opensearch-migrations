@@ -72,7 +72,7 @@ class PostgresWorkCoordinatorPerformanceTest {
         var setupCoordinator = createCoordinator("setup");
         long startSetup = System.currentTimeMillis();
         for (int i = 0; i < totalItems; i++) {
-            setupCoordinator.createUnassignedWorkItem("item-" + i, () -> null);
+            setupCoordinator.createUnassignedWorkItem(new WorkItem("item", i, 0), () -> null);
         }
         long setupTime = System.currentTimeMillis() - startSetup;
         System.out.println("Setup time for " + totalItems + " items: " + setupTime + "ms");
@@ -111,7 +111,7 @@ class PostgresWorkCoordinatorPerformanceTest {
                             break;
                         }
                         
-                        workerCoordinator.completeWorkItem(itemId[0], () -> null);
+                        workerCoordinator.completeWorkItem(WorkItem.fromString(itemId[0]), () -> null);
                         completedCount.incrementAndGet();
                     }
                 } catch (Exception e) {
@@ -146,7 +146,7 @@ class PostgresWorkCoordinatorPerformanceTest {
         
         var setupCoordinator = createCoordinator("setup");
         for (int i = 0; i < itemCount; i++) {
-            setupCoordinator.createUnassignedWorkItem("item-" + i, () -> null);
+            setupCoordinator.createUnassignedWorkItem(new WorkItem("item", i, 0), () -> null);
         }
         
         ExecutorService executor = Executors.newFixedThreadPool(workerCount);
@@ -195,7 +195,7 @@ class PostgresWorkCoordinatorPerformanceTest {
         var coordinator = createCoordinator("worker");
         
         for (int i = 0; i < parentCount; i++) {
-            coordinator.createUnassignedWorkItem("parent-" + i, () -> null);
+            coordinator.createUnassignedWorkItem(new WorkItem("parent", i, 0), () -> null);
         }
         
         long startTime = System.currentTimeMillis();
@@ -208,12 +208,12 @@ class PostgresWorkCoordinatorPerformanceTest {
                 @Override
                 public Void onAcquiredWork(IWorkCoordinator.WorkItemAndDuration workItem) {
                     try {
-                        var successors = new ArrayList<String>();
+                        var successors = new ArrayList<WorkItem>();
                         for (int j = 0; j < successorsPerParent; j++) {
-                            successors.add("child-" + parentIndex + "-" + j);
+                            successors.add(new WorkItem("child-" + parentIndex, 0, j));
                         }
                         coordinator.createSuccessorWorkItemsAndMarkComplete(
-                            workItem.getWorkItem().toString(),
+                            workItem.getWorkItem(),
                             successors,
                             0,
                             () -> null

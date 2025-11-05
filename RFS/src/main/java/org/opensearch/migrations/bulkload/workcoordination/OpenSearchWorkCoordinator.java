@@ -372,11 +372,11 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
     @Override
     @SneakyThrows
     public boolean createUnassignedWorkItem(
-        String workItemId,
+        WorkItem workItem,
         Supplier<IWorkCoordinationContexts.ICreateUnassignedWorkItemContext> contextSupplier
     ) throws IOException {
         try (var ctx = contextSupplier.get()) {
-            var response = createOrUpdateLeaseForDocument(workItemId, 0);
+            var response = createOrUpdateLeaseForDocument(workItem.toString(), 0);
             return getResult(response) == DocumentModificationResult.CREATED;
         }
     }
@@ -391,18 +391,18 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
     @Override
     @NonNull
     public WorkAcquisitionOutcome createOrUpdateLeaseForWorkItem(
-        String workItemId,
+        WorkItem workItem,
         Duration leaseDuration,
         Supplier<IWorkCoordinationContexts.IAcquireSpecificWorkContext> contextSupplier
     ) throws IOException, InterruptedException {
         try (var ctx = contextSupplier.get()) {
+            var workItemId = workItem.toString();
             var startTime = Instant.now();
             var updateResponse = createOrUpdateLeaseForDocument(workItemId, leaseDuration.toSeconds());
             var resultFromUpdate = getResult(updateResponse);
 
             if (resultFromUpdate == DocumentModificationResult.CREATED) {
-                return new WorkItemAndDuration(startTime.plus(leaseDuration),
-                        WorkItemAndDuration.WorkItem.valueFromWorkItemString(workItemId));
+                return new WorkItemAndDuration(startTime.plus(leaseDuration), workItem);
             } else {
                 final var httpResponse = httpClient.makeJsonRequest(
                     AbstractedHttpClient.GET_METHOD,
@@ -413,8 +413,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
                 final var responseDoc = objectMapper.readTree(httpResponse.getPayloadBytes()).path(SOURCE_FIELD_NAME);
                 if (resultFromUpdate == DocumentModificationResult.UPDATED) {
                     var leaseExpirationTime = Instant.ofEpochMilli(1000 * responseDoc.path(EXPIRATION_FIELD_NAME).longValue());
-                    return new WorkItemAndDuration(leaseExpirationTime,
-                            WorkItemAndDuration.WorkItem.valueFromWorkItemString(workItemId));
+                    return new WorkItemAndDuration(leaseExpirationTime, workItem);
                 } else if (!responseDoc.path(COMPLETED_AT_FIELD_NAME).isMissingNode()) {
                     return new AlreadyCompleted();
                 } else if (resultFromUpdate == DocumentModificationResult.IGNORED) {
@@ -427,11 +426,11 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
     }
 
     public void completeWorkItem(
-        String workItemId,
+        WorkItem workItem,
         Supplier<IWorkCoordinationContexts.ICompleteWorkItemContext> contextSupplier
     ) throws InterruptedException {
             retryWithExponentialBackoff(
-                () -> completeWorkItemWithoutRetry(workItemId, contextSupplier),
+                () -> completeWorkItemWithoutRetry(workItem.toString(), contextSupplier),
                 MAX_MARK_AS_COMPLETED_RETRIES,
                 CREATE_SUCCESSOR_WORK_ITEMS_RETRY_BASE_MS,
                 ignored -> {}
@@ -892,11 +891,16 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
 
     @Override
     public void createSuccessorWorkItemsAndMarkComplete(
-            String workItemId,
-            List<String> successorWorkItemIds,
+            WorkItem workItem,
+            List<WorkItem> successorWorkItems,
             int successorNextAcquisitionLeaseExponent,
             Supplier<IWorkCoordinationContexts.ICreateSuccessorWorkItemsContext> contextSupplier
     ) throws IOException, InterruptedException, IllegalStateException {
+        var workItemId = workItem.toString();
+        var successorWorkItemIds = successorWorkItems.stream()
+            .map(WorkItem::toString)
+            .collect(java.util.stream.Collectors.toList());
+        
         if (successorWorkItemIds.contains(workItemId)) {
             throw new IllegalArgumentException(String.format("successorWorkItemIds %s can not not contain the parent workItemId: %s", successorWorkItemIds, workItemId));
         }
@@ -1098,7 +1102,10 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
                             var workItem = getAssignedWorkItem(leaseChecker, ctx);
                             if (!workItem.successorWorkItemIds.isEmpty()) {
                                 // continue the previous work of creating the successors and marking this item as completed.
-                                createSuccessorWorkItemsAndMarkComplete(workItem.workItemId, workItem.successorWorkItemIds,
+                                var successorWorkItems = workItem.successorWorkItemIds.stream()
+                                    .map(WorkItem::fromString)
+                                    .collect(Collectors.toList());
+                                createSuccessorWorkItemsAndMarkComplete(WorkItem.fromString(workItem.workItemId), successorWorkItems,
                                         // in cases of partial successor creation, create with 0 nextAcquisitionLeaseExponent to use default
                                         // lease duration
                                         0,
@@ -1107,7 +1114,7 @@ public abstract class OpenSearchWorkCoordinator implements IWorkCoordinator {
                                 continue;
                             }
                             var workItemAndDuration = new WorkItemAndDuration(workItem.getLeaseExpirationTime(),
-                                    WorkItemAndDuration.WorkItem.valueFromWorkItemString(workItem.getWorkItemId()));
+                                    WorkItem.fromString(workItem.getWorkItemId()));
                             workItemConsumer.accept(workItemAndDuration);
                             return workItemAndDuration;
                         case NOTHING_TO_ACQUIRE:

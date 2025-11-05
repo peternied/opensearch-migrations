@@ -74,9 +74,10 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
 
     @Override
     public boolean createUnassignedWorkItem(
-        String workItemId,
+        WorkItem workItem,
         Supplier<IWorkCoordinationContexts.ICreateUnassignedWorkItemContext> contextSupplier
     ) throws IOException {
+        var workItemId = workItem.toString();
         try (var ctx = contextSupplier.get()) {
             log.debug("Worker {} creating unassigned work item {}", workerId, workItemId);
             
@@ -98,10 +99,11 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
     @Override
     @NonNull
     public WorkAcquisitionOutcome createOrUpdateLeaseForWorkItem(
-        String workItemId,
+        WorkItem workItem,
         Duration leaseDuration,
         Supplier<IWorkCoordinationContexts.IAcquireSpecificWorkContext> contextSupplier
     ) throws IOException, InterruptedException {
+        var workItemId = workItem.toString();
         try (var ctx = contextSupplier.get()) {
             log.debug("Worker {} attempting to acquire specific work item {}", workerId, workItemId);
             
@@ -120,7 +122,7 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
                         workerId, workItemId, Instant.ofEpochSecond(result.getExpiration()));
                     return new WorkItemAndDuration(
                         Instant.ofEpochSecond(result.getExpiration()),
-                        WorkItemAndDuration.WorkItem.valueFromWorkItemString(workItemId)
+                        workItem
                     );
                 } else {
                     log.warn("Worker {} failed to acquire work item {} - held by {}", 
@@ -193,7 +195,10 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
         var workItemId = work.getWorkItemId();
         log.debug("Work item {} has successors, creating and retrying", workItemId);
         var successorList = List.of(work.getSuccessorItems().split(","));
-        createSuccessorWorkItemsAndMarkComplete(workItemId, successorList, 0, 
+        var successorWorkItems = successorList.stream()
+            .map(WorkItem::fromString)
+            .collect(Collectors.toList());
+        createSuccessorWorkItemsAndMarkComplete(WorkItem.fromString(workItemId), successorWorkItems, 0, 
             ctx::getCreateSuccessorWorkItemsContext);
         return acquireNextWorkItem(leaseDuration, contextSupplier);
     }
@@ -220,7 +225,7 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
         }
         var workItemAndDuration = new WorkItemAndDuration(
             Instant.ofEpochSecond(newExpiration),
-            WorkItemAndDuration.WorkItem.valueFromWorkItemString(workItemId)
+            WorkItem.fromString(workItemId)
         );
         workItemConsumer.accept(workItemAndDuration);
         log.info("Worker {} acquired work item {} with lease until {}", 
@@ -230,9 +235,10 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
 
     @Override
     public void completeWorkItem(
-        String workItemId,
+        WorkItem workItem,
         Supplier<IWorkCoordinationContexts.ICompleteWorkItemContext> contextSupplier
     ) throws IOException {
+        var workItemId = workItem.toString();
         try (var ctx = contextSupplier.get()) {
             log.debug("Worker {} completing work item {}", workerId, workItemId);
             
@@ -253,11 +259,16 @@ public class PostgresWorkCoordinator implements IWorkCoordinator {
 
     @Override
     public void createSuccessorWorkItemsAndMarkComplete(
-        String workItemId,
-        List<String> successorWorkItemIds,
+        WorkItem workItem,
+        List<WorkItem> successorWorkItems,
         int initialNextAcquisitionLeaseExponent,
         Supplier<IWorkCoordinationContexts.ICreateSuccessorWorkItemsContext> contextSupplier
     ) throws IOException, InterruptedException {
+        var workItemId = workItem.toString();
+        var successorWorkItemIds = successorWorkItems.stream()
+            .map(WorkItem::toString)
+            .collect(Collectors.toList());
+        
         try (var ctx = contextSupplier.get()) {
             log.debug("Worker {} creating {} successors for work item {}", 
                 workerId, successorWorkItemIds.size(), workItemId);
