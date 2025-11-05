@@ -124,7 +124,12 @@ public class DocumentReindexer {
                 .addArgument(error::getMessage)
                 .log())
             // Prevent the error from stopping the entire stream, retries occurring within sendBulkRequest
-            .onErrorResume(e -> Mono.empty())
+            .onErrorResume(e -> {
+                if (e instanceof OpenSearchClient.ServerlessDocIdNotSupportedException) {
+                    return Mono.error(e);
+                }
+                return Mono.empty();
+            })
             .then(Mono.just(new WorkItemCursor(lastDoc.progressCheckpointNum))
             .subscribeOn(scheduler));
     }

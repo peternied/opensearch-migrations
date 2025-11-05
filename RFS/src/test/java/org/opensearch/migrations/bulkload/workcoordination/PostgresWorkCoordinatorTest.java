@@ -77,7 +77,7 @@ class PostgresWorkCoordinatorTest extends PostgresWorkCoordinatorTestBase {
         var shortLeaseCoordinator = createCoordinator("worker-with-short-lease");
         shortLeaseCoordinator.acquireNextWorkItem(Duration.ofSeconds(1), () -> null);
         
-        Thread.sleep(1500);
+        testClock.advance(Duration.ofSeconds(2));
         
         var outcome = coordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
         

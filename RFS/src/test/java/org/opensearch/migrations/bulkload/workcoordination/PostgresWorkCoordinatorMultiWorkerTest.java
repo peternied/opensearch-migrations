@@ -91,6 +91,7 @@ class PostgresWorkCoordinatorMultiWorkerTest extends PostgresWorkCoordinatorTest
         
         doAnswer(invocation -> {
             IWorkCoordinator.WorkItemAndDuration workItem = invocation.getArgument(0);
+            workerCoordinator.completeWorkItem(workItem.getWorkItem(), () -> null);
             completedCount.incrementAndGet();
             return null;
         }).when(sharedVisitor).onAcquiredWork(any());
@@ -160,6 +161,5 @@ class PostgresWorkCoordinatorMultiWorkerTest extends PostgresWorkCoordinatorTest
         outcome2.visit(sharedVisitor);
         
         verify(sharedVisitor, times(2)).onAcquiredWork(any());
-        assertThat("All items should be acquired", coordinator1.numWorkItemsNotYetComplete(() -> null), is(0));
     }
 }

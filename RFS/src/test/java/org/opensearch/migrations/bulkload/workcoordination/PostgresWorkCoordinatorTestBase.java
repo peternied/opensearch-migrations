@@ -1,6 +1,7 @@
 package org.opensearch.migrations.bulkload.workcoordination;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +23,7 @@ public abstract class PostgresWorkCoordinatorTestBase {
     protected static final String TABLE_NAME = "work_items";
     protected List<PostgresWorkCoordinator> coordinators;
     protected DatabaseClient dbClient;
+    protected TestClock testClock;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -31,6 +33,7 @@ public abstract class PostgresWorkCoordinatorTestBase {
             postgres.getPassword()
         );
         
+        testClock = new TestClock(Instant.now());
         coordinators = new ArrayList<>();
         var setupCoordinator = createCoordinator("setup-worker");
         setupCoordinator.setup(() -> null);
@@ -47,6 +50,10 @@ public abstract class PostgresWorkCoordinatorTestBase {
     }
 
     protected PostgresWorkCoordinator createCoordinator(String workerId) {
+        return createCoordinator(workerId, testClock);
+    }
+
+    protected PostgresWorkCoordinator createCoordinator(String workerId, Clock clock) {
         var client = new PostgresClient(
             postgres.getJdbcUrl(),
             postgres.getUsername(),
@@ -56,7 +63,7 @@ public abstract class PostgresWorkCoordinatorTestBase {
             client,
             TABLE_NAME,
             workerId,
-            Clock.systemUTC(),
+            clock,
             w -> {}
         );
         coordinators.add(coordinator);

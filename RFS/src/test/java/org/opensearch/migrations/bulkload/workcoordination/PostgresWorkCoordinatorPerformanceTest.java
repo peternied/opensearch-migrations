@@ -54,7 +54,7 @@ class PostgresWorkCoordinatorPerformanceTest extends PostgresWorkCoordinatorTest
                         
                         var visitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
                         doAnswer(invocation -> {
-                            var workItem = invocation.getArgument(0);
+                            IWorkCoordinator.WorkItemAndDuration workItem = invocation.getArgument(0);
                             acquired[0] = true;
                             itemId[0] = workItem.getWorkItem().toString();
                             return null;
@@ -119,7 +119,7 @@ class PostgresWorkCoordinatorPerformanceTest extends PostgresWorkCoordinatorTest
                     var outcome = workerCoordinator.acquireNextWorkItem(Duration.ofMinutes(5), () -> null);
                     var visitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
                     doAnswer(invocation -> {
-                        var workItem = invocation.getArgument(0);
+                        IWorkCoordinator.WorkItemAndDuration workItem = invocation.getArgument(0);
                         acquiredItems.add(workItem.getWorkItem().toString());
                         return null;
                     }).when(visitor).onAcquiredWork(any());
@@ -161,7 +161,7 @@ class PostgresWorkCoordinatorPerformanceTest extends PostgresWorkCoordinatorTest
             var visitor = mock(IWorkCoordinator.WorkAcquisitionOutcomeVisitor.class);
             doAnswer(invocation -> {
                 try {
-                    var workItem = invocation.getArgument(0);
+                    IWorkCoordinator.WorkItemAndDuration workItem = invocation.getArgument(0);
                     var successors = new ArrayList<WorkItem>();
                     for (int j = 0; j < successorsPerParent; j++) {
                         successors.add(new WorkItem("child-" + parentIndex, 0, j));
