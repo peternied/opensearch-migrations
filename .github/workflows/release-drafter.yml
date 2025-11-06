@@ -46,7 +46,7 @@ jobs:
       - name: Upload Solutions Artifact to S3
         run: |
           aws s3 cp deployment/migration-assistant-solution/build/artifact.zip \
-            s3://cornerstone-amazonaws/SO0290/2.5.9/artifact.zip \
+            s3://cornerstone-amazonaws/SO0290/2.5.9/${{ github.sha }}/artifact.zip \
             --content-type application/zip \
             --metadata branch=${{ github.ref_name }},\
           commitauthor="$(git log -1 --format='%an' | sed 's/"//g')",\
