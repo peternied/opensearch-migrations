@@ -45,6 +45,17 @@ jobs:
           echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.Credentials.SessionToken')" >> $GITHUB_ENV
       - name: Upload Solutions Artifact to S3
         run: |
-          aws s3 cp deployment/migration-assistant-solution/build/artifact.zip s3://cornerstone-amazonaws/SO0290/2.5.9/artifact.zip \
+          aws s3 cp deployment/migration-assistant-solution/build/artifact.zip \
+            s3://cornerstone-amazonaws/SO0290/${{ steps.get_data.outputs.version }}/artifact.zip \
             --content-type application/zip \
-            --metadata branch=${{ github.ref_name }},commitauthor="$(git log -1 --format='%an')",commitid=${{ github.sha }},commitmessage="$(git log -1 --format='%s')",committimestamp=$(git log -1 --format='%cI'),enablequicksight=No,package=https://github.com/${{ github.repository }},publishpublicecrimage=true,solutionid=SO0290,solutionname="Migration Assistant for Amazon OpenSearch Service",solutionversion=${{ steps.get_data.outputs.version }}
+            --metadata branch=${{ github.ref_name }},\
+          commitauthor="$(git log -1 --format='%an' | sed 's/"//g')",\
+          commitid=${{ github.sha }},\
+          commitmessage="$(git log -1 --format='%s' | sed 's/"//g')",\
+          committimestamp=$(git log -1 --format='%cI'),\
+          enablequicksight=No,\
+          package=https://github.com/${{ github.repository }},\
+          publishpublicecrimage=false,\
+          solutionid=SO0290,\
+          solutionname="Migration Assistant for Amazon OpenSearch Service",\
+          solutionversion=${{ steps.get_data.outputs.version }}
