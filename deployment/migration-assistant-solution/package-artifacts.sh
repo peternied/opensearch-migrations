@@ -29,9 +29,9 @@ echo "Synthesizing CloudFormation templates..."
 npx cdk synth "Migration-Assistant-Infra-Create-VPC" --asset-metadata false --path-metadata false > "${TEMP_DIR}/global-s3-assets/${SOLUTION_NAME}-create-vpc.template"
 npx cdk synth "Migration-Assistant-Infra-Import-VPC" --asset-metadata false --path-metadata false > "${TEMP_DIR}/global-s3-assets/${SOLUTION_NAME}-import-vpc.template"
 
-echo "Copying solution-manifest.yml..."
-cp "${SCRIPT_DIR}/solution-manifest.yml" "${TEMP_DIR}/solution-manifest.yml"
-sed -i "s/version: .*/version: ${CODE_VERSION}/" "${TEMP_DIR}/solution-manifest.yml"
+echo "Copying solution-manifest.yaml..."
+cp "${SCRIPT_DIR}/solution-manifest.yaml" "${TEMP_DIR}/solution-manifest.yaml"
+sed -i "s/version: .*/version: ${CODE_VERSION}/" "${TEMP_DIR}/solution-manifest.yaml"
 
 # Waiting for v3.0 release
 # npx cdk synth "Migration-Assistant-Infra-Create-VPC-v3" --asset-metadata false --path-metadata false > "${TEMP_DIR}/global-s3-assets/${SOLUTION_NAME}-create-vpc-v3.template"
