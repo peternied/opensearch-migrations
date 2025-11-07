@@ -27,8 +27,8 @@ cd "${SCRIPT_DIR}"
 npm install
 
 echo "Synthesizing CloudFormation templates..."
-npx cdk synth "Migration-Assistant-Infra-Create-VPC" --asset-metadata false --path-metadata false --quiet > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-create-vpc.template"
-npx cdk synth "Migration-Assistant-Infra-Import-VPC" --asset-metadata false --path-metadata false --quiet > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-import-vpc.template"
+npx cdk synth "Migration-Assistant-Infra-Create-VPC" --asset-metadata false --path-metadata false > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-create-vpc.template" 2>/dev/null
+npx cdk synth "Migration-Assistant-Infra-Import-VPC" --asset-metadata false --path-metadata false > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-import-vpc.template" 2>/dev/null
 
 echo "Copying solution-manifest.yaml..."
 cp "${SCRIPT_DIR}/solution-manifest.yaml" "${TEMP_DIR}/solution-manifest.yaml"
