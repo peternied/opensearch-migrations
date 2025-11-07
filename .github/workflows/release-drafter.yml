@@ -59,3 +59,8 @@ jobs:
           solutionid=SO0290,\
           solutionname="Migration Assistant for Amazon OpenSearch Service",\
           solutionversion=2.5.9
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-assistant-artifact
+          path: deployment/migration-assistant-solution/build/artifact.zip
