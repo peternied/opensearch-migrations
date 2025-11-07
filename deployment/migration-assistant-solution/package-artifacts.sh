@@ -21,23 +21,15 @@ mkdir -p "${TEMP_DIR}/deployment/global-s3-assets"
 mkdir -p "${TEMP_DIR}/deployment/regional-s3-assets"
 
 export CODE_BUCKET SOLUTION_NAME CODE_VERSION
-export CDK_DISABLE_NOTICES=true
-export CDK_DISABLE_VERSION_CHECK=true
 
 cd "${SCRIPT_DIR}"
 npm install
 
-# Make sure no warnings emitted for the following CDK constructs
-npx cdk ack @aws-cdk/aws-ec2:noSubnetRouteTableId
-
 echo "Synthesizing CloudFormation templates..."
-npx cdk synth "Migration-Assistant-Infra-Create-VPC" --asset-metadata false --path-metadata false --no-notices > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-create-vpc.template" 2>/dev/null
-npx cdk synth "Migration-Assistant-Infra-Import-VPC" --asset-metadata false --path-metadata false --no-notices > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-import-vpc.template" 2>/dev/null
+npx cdk synth --asset-metadata false --path-metadata false --quiet
 
-# Waiting for v3.0 release
-# npx cdk synth "Migration-Assistant-Infra-Create-VPC-v3" --asset-metadata false --path-metadata false > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-create-vpc-v3.template"
-# npx cdk synth "Migration-Assistant-Infra-Import-VPC-v3" --asset-metadata false --path-metadata false > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-import-vpc-v3.template"
-
+cp "cdk.out/Migration-Assistant-Infra-Create-VPC.template.json" "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-create-vpc.template"
+cp "cdk.out/Migration-Assistant-Infra-Import-VPC.template.json" "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-import-vpc.template"
 
 echo "Copying solution-manifest.yaml..."
 cp "${SCRIPT_DIR}/solution-manifest.yaml" "${TEMP_DIR}/solution-manifest.yaml"
