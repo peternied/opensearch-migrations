@@ -27,6 +27,9 @@ export CDK_DISABLE_VERSION_CHECK=true
 cd "${SCRIPT_DIR}"
 npm install
 
+# Accept any updated cdk flags default options
+yes | npx cdk flags --unstable=flags --set --default --unconfigured
+
 echo "Synthesizing CloudFormation templates..."
 npx cdk synth "Migration-Assistant-Infra-Create-VPC" --asset-metadata false --path-metadata false --notices false > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-create-vpc.template" 2>/dev/null
 npx cdk synth "Migration-Assistant-Infra-Import-VPC" --asset-metadata false --path-metadata false --notices false > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-import-vpc.template" 2>/dev/null
