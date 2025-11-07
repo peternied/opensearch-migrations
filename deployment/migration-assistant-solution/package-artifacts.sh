@@ -27,6 +27,9 @@ export CDK_DISABLE_VERSION_CHECK=true
 cd "${SCRIPT_DIR}"
 npm install
 
+# Make sure no warnings emitted for the following CDK constructs
+npx cdk ack @aws-cdk/aws-ec2:noSubnetRouteTableId
+
 echo "Synthesizing CloudFormation templates..."
 npx cdk synth "Migration-Assistant-Infra-Create-VPC" --asset-metadata false --path-metadata false --no-notices > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-create-vpc.template" 2>/dev/null
 npx cdk synth "Migration-Assistant-Infra-Import-VPC" --asset-metadata false --path-metadata false --no-notices > "${TEMP_DIR}/deployment/global-s3-assets/${SOLUTION_NAME}-import-vpc.template" 2>/dev/null
