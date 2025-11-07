@@ -22,6 +22,7 @@ mkdir -p "${TEMP_DIR}/deployment/regional-s3-assets"
 
 export CODE_BUCKET SOLUTION_NAME CODE_VERSION
 export CDK_DISABLE_NOTICES=true
+export CDK_DISABLE_VERSION_CHECK=true
 
 cd "${SCRIPT_DIR}"
 npm install
