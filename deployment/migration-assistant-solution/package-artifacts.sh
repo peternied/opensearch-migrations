@@ -50,7 +50,7 @@ cat > "${TEMP_DIR}/CHANGELOG.md" << EOF
 EOF
 
 
-echo "Creating artifact.zip..."
+echo "Creating artifact.zip... "
 cd "${TEMP_DIR}"
 zip -r "${BUILD_DIR}/artifact.zip" .
 
