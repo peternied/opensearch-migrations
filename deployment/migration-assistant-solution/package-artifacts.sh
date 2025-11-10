@@ -37,7 +37,7 @@ cp "${SCRIPT_DIR}/solution-manifest.yaml" "${TEMP_DIR}/solution-manifest.yaml"
 sed -i "s/version: .*/version: ${CODE_VERSION}/" "${TEMP_DIR}/solution-manifest.yaml"
 
 touch "${TEMP_DIR}/deployment/regional-s3-assets/test.txt"
-touch "${TEMP_DIR}/deployment/open-source/test.txt
+touch "${TEMP_DIR}/deployment/open-source/test.txt"
 
 cat > "${TEMP_DIR}/CHANGELOG.md" << EOF
 # Changelog
