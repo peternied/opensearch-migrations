@@ -40,9 +40,11 @@ touch "${TEMP_DIR}/deployment/regional-s3-assets/test.txt"
 cat > "${TEMP_DIR}/CHANGELOG.md" << EOF
 # Changelog
 
-## Version ${CODE_VERSION}
+## [${CODE_VERSION}] - $(date +%Y-%m-%d)
 
-For detailed changes, please refer to the [GitHub releases page](https://github.com/opensearch-project/opensearch-migrations/releases).
+### Added
+
+- For detailed changes, please refer to the [GitHub releases page](https://github.com/opensearch-project/opensearch-migrations/releases).
 EOF
 
 
