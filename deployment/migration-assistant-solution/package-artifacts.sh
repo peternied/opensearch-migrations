@@ -37,6 +37,15 @@ sed -i "s/version: .*/version: ${CODE_VERSION}/" "${TEMP_DIR}/solution-manifest.
 
 touch "${TEMP_DIR}/deployment/regional-s3-assets/test.txt"
 
+cat > "${TEMP_DIR}/CHANGELOG.md" << EOF
+# Changelog
+
+## Version ${CODE_VERSION}
+
+For detailed changes, please refer to the [GitHub releases page](https://github.com/opensearch-project/opensearch-migrations/releases).
+EOF
+
+
 echo "Creating artifact.zip..."
 cd "${TEMP_DIR}"
 zip -r "${BUILD_DIR}/artifact.zip" .
