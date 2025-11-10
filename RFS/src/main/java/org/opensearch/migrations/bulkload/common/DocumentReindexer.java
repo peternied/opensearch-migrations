@@ -123,14 +123,8 @@ public class DocumentReindexer {
                 .addArgument(batchId)
                 .addArgument(error::getMessage)
                 .log())
-            // Prevent the error from stopping the entire stream, retries occurring within sendBulkRequest
-            .onErrorResume(e -> {
-                if (e instanceof OpenSearchClient.ServerlessDocIdNotSupportedException) {
-                    return Mono.error(e);
-                }
-                return Mono.empty();
-            })
-            .flatMap(unused -> Mono.just(new WorkItemCursor(lastDoc.progressCheckpointNum))
+            .onErrorResume(e -> Mono.empty())
+            .then(Mono.just(new WorkItemCursor(lastDoc.progressCheckpointNum))
             .subscribeOn(scheduler));
     }
 

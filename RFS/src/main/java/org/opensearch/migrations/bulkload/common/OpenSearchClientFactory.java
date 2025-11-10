@@ -21,11 +21,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 @Getter
 @Slf4j
 public class OpenSearchClientFactory {
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Retry RETRY_WHEN_NOT_4XX_STRATEGY = Retry.max(1)
+        .filter(throwable -> !(throwable instanceof OpenSearchClient.UnexpectedStatusCode &&
+            ((OpenSearchClient.UnexpectedStatusCode) throwable).response.statusCode >= 400 &&
+            ((OpenSearchClient.UnexpectedStatusCode) throwable).response.statusCode < 500));
 
     private final ConnectionContext connectionContext;
     private Version version;
@@ -93,24 +98,8 @@ public class OpenSearchClientFactory {
                 .setMessage("Check cluster compression failed")
                 .setCause(e)
                 .log())
-            .retryWhen(reactor.util.retry.Retry.backoff(3, java.time.Duration.ofSeconds(1))
-                .maxBackoff(java.time.Duration.ofSeconds(10))
-                .filter(throwable -> {
-                    if (throwable instanceof OpenSearchClient.UnexpectedStatusCode) {
-                        var statusCode = ((OpenSearchClient.UnexpectedStatusCode) throwable).response.statusCode;
-                        return statusCode != 403;
-                    }
-                    return true;
-                }))
-            .onErrorResume(throwable -> {
-                if (throwable instanceof OpenSearchClient.UnexpectedStatusCode) {
-                    var statusCode = ((OpenSearchClient.UnexpectedStatusCode) throwable).response.statusCode;
-                    if (statusCode == 403) {
-                        return Mono.error(throwable);
-                    }
-                }
-                return Mono.just(false);
-            })
+            .retryWhen(RETRY_WHEN_NOT_4XX_STRATEGY)
+            .onErrorReturn(false)
             .doOnNext(hasCompressionEnabled -> log.atInfo()
                 .setMessage("After querying target, compression={}")
                 .addArgument(hasCompressionEnabled).log())
@@ -133,7 +122,7 @@ public class OpenSearchClientFactory {
                 .setMessage("Check cluster version failed")
                 .setCause(e)
                 .log())
-            .retryWhen(OpenSearchClient.CHECK_IF_ITEM_EXISTS_RETRY_STRATEGY)
+            .retryWhen(RETRY_WHEN_NOT_4XX_STRATEGY)
             .block();
 
         // Compatibility mode is only enabled on OpenSearch clusters responding with the version of 7.10.2
@@ -143,7 +132,7 @@ public class OpenSearchClientFactory {
         return client.getAsync("_cluster/settings?include_defaults=true", null)
                 .flatMap(this::checkCompatibilityModeFromResponse)
                 .doOnError(e -> log.error(e.getMessage()))
-                .retryWhen(OpenSearchClient.CHECK_IF_ITEM_EXISTS_RETRY_STRATEGY)
+                .retryWhen(RETRY_WHEN_NOT_4XX_STRATEGY)
                 .flatMap(hasCompatibilityModeEnabled -> {
                     log.atInfo().setMessage("After querying target, compatibilityMode={}").addArgument(hasCompatibilityModeEnabled).log();
                     if (Boolean.FALSE.equals(hasCompatibilityModeEnabled)) {
@@ -153,7 +142,7 @@ public class OpenSearchClientFactory {
                     return client.getAsync("_nodes/_all/nodes,version?format=json", null)
                             .flatMap(this::getVersionFromNodes)
                             .doOnError(e -> log.error(e.getMessage()))
-                            .retryWhen(OpenSearchClient.CHECK_IF_ITEM_EXISTS_RETRY_STRATEGY);
+                            .retryWhen(RETRY_WHEN_NOT_4XX_STRATEGY);
                 })
                 .onErrorResume(e -> {
                     log.atWarn()

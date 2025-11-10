@@ -473,15 +473,6 @@ public abstract class OpenSearchClient {
                     var resp =
                         new BulkResponse(response.statusCode, response.statusText, response.headers, response.body);
                     
-                    if (resp.hasServerlessDocIdError() && !allowServerGeneratedIds) {
-                        String errorMsg = "Target cluster does not support custom document IDs. " +
-                            "This is common with OpenSearch Serverless. " +
-                            "Use --allow-server-generated-ids flag to allow server-generated IDs. " +
-                            "WARNING: This will result in different document IDs on the target cluster.";
-                        log.atError().setMessage(errorMsg).log();
-                        return Mono.error(new ServerlessDocIdNotSupportedException(errorMsg, resp));
-                    }
-                    
                     if (!resp.hasBadStatusCode() && !resp.hasFailedOperations()) {
                         return Mono.just(resp);
                     }
@@ -545,10 +536,6 @@ public abstract class OpenSearchClient {
             return matcher.find();
         }
 
-        public boolean hasServerlessDocIdError() {
-            return body != null && body.contains("Document ID is not supported in create/index operation request");
-        }
-
         public List<String> getSuccessfulDocs() {
             try {
                 return BulkResponseParser.findSuccessDocs(body);
@@ -583,12 +570,6 @@ public abstract class OpenSearchClient {
     public static class UnexpectedStatusCode extends OperationFailed {
         public UnexpectedStatusCode(HttpResponse response) {
             super("Unexpected status code " + response.statusCode, response);
-        }
-    }
-
-    public static class ServerlessDocIdNotSupportedException extends OperationFailed {
-        public ServerlessDocIdNotSupportedException(String message, HttpResponse response) {
-            super(message, response);
         }
     }
 }
