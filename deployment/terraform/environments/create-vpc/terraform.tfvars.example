@@ -1,0 +1,21 @@
+# Example terraform.tfvars for create-vpc environment
+# Copy this file to terraform.tfvars and modify as needed
+
+aws_region = "us-west-2"
+stage      = "dev"
+
+# VPC Configuration
+vpc_cidr_block = "10.212.0.0/16"
+az_count       = 2
+enable_ipv6    = true
+
+# EKS Configuration
+kubernetes_version      = "1.32"
+endpoint_private_access = true
+endpoint_public_access  = true
+
+# Optional: Grant cluster admin access to a specific IAM role/user
+# admin_principal_arn = "arn:aws:iam::123456789012:role/AdminRole"
+
+# Kubernetes namespace for migrations
+namespace = "ma"

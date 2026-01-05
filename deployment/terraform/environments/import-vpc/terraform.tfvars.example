@@ -1,0 +1,23 @@
+# Example terraform.tfvars for import-vpc environment
+# Copy this file to terraform.tfvars and modify as needed
+
+aws_region = "us-west-2"
+stage      = "dev"
+
+# Required: Existing VPC Configuration
+vpc_id = "vpc-0123456789abcdef0"
+subnet_ids = [
+  "subnet-0123456789abcdef0",
+  "subnet-0123456789abcdef1"
+]
+
+# EKS Configuration
+kubernetes_version      = "1.32"
+endpoint_private_access = true
+endpoint_public_access  = true
+
+# Optional: Grant cluster admin access to a specific IAM role/user
+# admin_principal_arn = "arn:aws:iam::123456789012:role/AdminRole"
+
+# Kubernetes namespace for migrations
+namespace = "ma"

@@ -1,0 +1,14 @@
+################################################################################
+# IAM Module Variables
+################################################################################
+
+variable "name_prefix" {
+  description = "Prefix for IAM resource names"
+  type        = string
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
